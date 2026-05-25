@@ -1,10 +1,56 @@
 ﻿import { NextResponse } from 'next/server';
-import {
-  lookupHargaPerMeter,
-  calculateItemSubtotal,
-  recalculateTotalPOR,
-} from '@/lib/preorder-helper';
 import supabaseAdmin from '@/lib/supabase-admin';
+
+// =====================================================
+// HELPER LOKAL (Pengganti @/lib/preorder-helper)
+// =====================================================
+
+// 1. Menghitung subtotal per item (panjang * jumlah * harga_per_meter)
+function localCalculateItemSubtotal(panjang, jumlah, hargaPerMeter) {
+  return Number(panjang || 0) * Number(jumlah || 0) * Number(hargaPerMeter || 0);
+}
+
+// 2. Mencari harga per meter berdasarkan jenis pewarna, motif, dan lebar data
+async function localLookupHargaPerMeter(jenisPewarna, motifId, lebar) {
+  const { data: hargaData } = await supabaseAdmin
+    .from('master_harga_reguler')
+    .select('harga_per_meter')
+    .eq('jenis_pewarna', jenisPewarna)
+    .eq('motif_id', motifId)
+    .eq('lebar', lebar)
+    .maybeSingle();
+
+  return hargaData ? Number(hargaData.harga_per_meter) : 0;
+}
+
+// 3. Menghitung ulang total harga header berdasarkan semua item_pre_order_reguler
+async function localRecalculateTotalPOR(poId) {
+  // Ambil semua item terkait
+  const { data: items } = await supabaseAdmin
+    .from('item_pre_order_reguler')
+    .select('subtotal')
+    .eq('pre_order_reguler_id', poId);
+
+  // Hitung total item
+  const sumItems = (items || []).reduce((acc, curr) => acc + Number(curr.subtotal || 0), 0);
+
+  // Ambil data diskon dari header
+  const { data: header } = await supabaseAdmin
+    .from('pre_order_reguler')
+    .select('diskon')
+    .eq('id', poId)
+    .single();
+
+  const diskon = header ? Number(header.diskon || 0) : 0;
+  const totalHarga = Math.max(0, sumItems - diskon);
+
+  // Update kembali header-nya
+  await supabaseAdmin
+    .from('pre_order_reguler')
+    .update({ total_harga: totalHarga })
+    .eq('id', poId);
+}
+
 
 // =====================================================
 // GET - list PO reguler (Tanpa nomor_po dan created_by)
@@ -54,7 +100,6 @@ export async function POST(request) {
     const { data: poHeader, error: headerErr } = await supabaseAdmin
       .from('pre_order_reguler')
       .insert({
-        // created_by dihapus karena tidak memerlukan pengecekan auth
         nama_customer: body.nama_customer?.trim(),
         kontak_customer: body.kontak_customer || null,
         alamat_customer: body.alamat_customer || null,
@@ -83,7 +128,8 @@ export async function POST(request) {
 
       if (!produk) throw new Error(`Produk tidak ditemukan: ${item.produk_id}`);
 
-      const hargaPerMeter = await lookupHargaPerMeter(produk.jenis_pewarna, produk.motif_id, item.lebar);
+      // Menggunakan helper lokal
+      const hargaPerMeter = await localLookupHargaPerMeter(produk.jenis_pewarna, produk.motif_id, item.lebar);
       
       if (hargaPerMeter === 0) throw new Error(`Harga untuk ${produk.jenis_pewarna} ${item.lebar}cm belum diset`);
 
@@ -94,7 +140,7 @@ export async function POST(request) {
         panjang: Number(item.panjang),
         jumlah: Number(item.jumlah),
         harga_per_meter: hargaPerMeter,
-        subtotal: calculateItemSubtotal(item.panjang, item.jumlah, hargaPerMeter),
+        subtotal: localCalculateItemSubtotal(item.panjang, item.jumlah, hargaPerMeter), // Menggunakan helper lokal
       });
     }
 
@@ -104,8 +150,8 @@ export async function POST(request) {
 
     if (itemsErr) throw new Error(itemsErr.message);
 
-    // 3. Recalculate & Finalize
-    await recalculateTotalPOR(poHeader.id);
+    // 3. Recalculate & Finalize menggunakan helper lokal
+    await localRecalculateTotalPOR(poHeader.id);
 
     const { data: poComplete } = await supabaseAdmin
       .from('pre_order_reguler')
