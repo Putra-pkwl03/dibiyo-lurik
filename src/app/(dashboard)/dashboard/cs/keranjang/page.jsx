@@ -157,27 +157,23 @@
 //     </div>
 //   );
 // }
-
-
 'use client'
 
-export const dynamic = 'force-dynamic'; // Konfigurasi murni dynamic route Next.js
-
-import React, { useEffect, useState } from "react";
-import dynamic from "next/dynamic"; // FIX: Gunakan nama standar 'dynamic' agar compiler Turbopack tidak bingung
+import React, { useEffect, useState, Suspense } from "react";
+import nextDynamic from "next/dynamic"; // Gunakan alias nextDynamic agar tidak tabrakan
 import { ShoppingCart } from "lucide-react";
 import { useRouter, useSearchParams } from 'next/navigation';
-
 import CheckoutSection from "../../../../components/cs/produk/keranjang/CheckoutSection"; 
 
-// FIX: Panggil langsung menggunakan fungsi dynamic bawaan Next.js
-const CartItemDynamic = dynamic(() => import("../../../../components/cs/produk/keranjang/CartItem"), { ssr: false });
+// Menggunakan alias nextDynamic yang aman
+const CartItemDynamic = nextDynamic(() => import("../../../../components/cs/produk/keranjang/CartItem"), { ssr: false });
 
-export default function KeranjangPage() {
+// 1. Komponen Internal yang memproses Logika Keranjang
+function KeranjangContent() {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams(); // Aman karena sudah dibungkus Suspense di bawah
   const isCheckout = searchParams.has('checkout');
 
   useEffect(() => { fetchCart(); }, []);
@@ -312,5 +308,14 @@ export default function KeranjangPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// 2. Main Export yang membungkus komponen utama dengan Suspense murni
+export default function KeranjangPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-stone-500">Memuat Keranjang...</div>}>
+      <KeranjangContent />
+    </Suspense>
   );
 }
