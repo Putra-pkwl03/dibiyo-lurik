@@ -16,17 +16,17 @@ export default function ManagePOContent() {
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState(null);
 
-  // State Filter Baru untuk Sinkronisasi ke API Backend
+  // State Filter untuk Sinkronisasi ke API Backend
   const [status, setStatus] = useState('');
   const [statusPembayaran, setStatusPembayaran] = useState('');
 
   const fetchPOData = () => {
     setLoading(true);
     
-    // 1. Tentukan path endpoint berdasarkan tipe dokumen
+    // Tentukan path endpoint berdasarkan tipe dokumen
     const apiPath = tipe === 'reguler' ? '/api/pre-order-reguler' : '/api/pre-order-custom';
     
-    // 2. Susun query params sesuai kebutuhan route backend
+    // Susun query params sesuai kebutuhan route backend
     let queryParams = [`page=1`, `limit=50`];
     if (status) queryParams.push(`status=${status}`);
     if (statusPembayaran) queryParams.push(`status_pembayaran=${statusPembayaran}`);
@@ -57,8 +57,12 @@ export default function ManagePOContent() {
 
   return (
     <>
-      <div className="border border-[#D4C5B9] font-inter shadow-sm bg-white rounded-lg overflow-hidden">
-        {/* Sub-Komponen Filter dengan State Props Baru */}
+      {/* Catatan: 'overflow-hidden' DIHAPUS dari div boks putih ini 
+        agar dropdown filter melayang bebas ke luar batas border boks tanpa terpotong.
+      */}
+      <div className="border border-[#D4C5B9] font-inter shadow-sm bg-white rounded-lg">
+        
+        {/* Sub-Komponen Filter */}
         <POFilter 
           search={search} 
           setSearch={setSearch} 
