@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Loader2, ThumbsUp } from 'lucide-react'
 
+// Style backdrop disesuaikan: Navy semi-transparan (#1A335A7A) + blur
 const BACKDROP_STYLE = {
-  backgroundColor: 'rgba(174, 131, 78, 0.53)',
+  backgroundColor: '#1A335A7A',
   backdropFilter: 'blur(2px)',
   WebkitBackdropFilter: 'blur(2px)',
 }
@@ -56,7 +57,7 @@ export default function HargaEditModal({ isOpen, onClose, onSuccess, hargaData, 
         title: 'Error ❌', 
         text: 'ID Aturan Harga tidak valid atau tidak ditemukan.', 
         icon: 'error',
-        confirmButtonColor: '#a47352'
+        confirmButtonColor: '#1A335A'
       })
       return
     }
@@ -65,7 +66,6 @@ export default function HargaEditModal({ isOpen, onClose, onSuccess, hargaData, 
     setErrorMessage('')
 
     // PERBAIKAN 2: Jika ID berupa angka di database, konversi kembali sebelum dikirim ke BE
-    // Jika database Anda menggunakan UUID (string), biarkan tetap motifId atau null
     const finalMotifId = motifId === "" ? null : (isNaN(motifId) ? motifId : parseInt(motifId))
 
     try {
@@ -99,7 +99,7 @@ export default function HargaEditModal({ isOpen, onClose, onSuccess, hargaData, 
         title: 'Gagal Memperbarui',
         text: err.message,
         icon: 'error',
-        confirmButtonColor: '#a47352'
+        confirmButtonColor: '#1A335A'
       })
     }
   }
@@ -126,16 +126,21 @@ export default function HargaEditModal({ isOpen, onClose, onSuccess, hargaData, 
     parseInt(lebar) !== lebarAsli ||
     normalisasiMotifInput !== normalisasiMotifAsli
 
+  // ── SUCCESS STATE — Tema Baru ──
   if (showSuccess) {
     return createPortal(
       <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={BACKDROP_STYLE}>
-        <div className="bg-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] w-[372px] relative">
-          <button onClick={() => { setShowSuccess(false); onClose(); if (onSuccess) onSuccess(); }} className="absolute top-3.5 right-3.5 text-[#a47352] hover:text-[#8c5f3f]">
+        <div className="bg-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] w-[372px] relative animate-in fade-in zoom-in-95 duration-150">
+          <button 
+            type="button"
+            onClick={() => { setShowSuccess(false); onClose(); if (onSuccess) onSuccess(); }} 
+            className="absolute top-4 right-4 text-[#1A335A] hover:opacity-80 transition-opacity"
+          >
             <X size={18} strokeWidth={2.5} />
           </button>
           <div className="flex flex-col items-center justify-center py-12 px-6">
-            <ThumbsUp size={56} className="text-[#a47352] mb-5" strokeWidth={1.5} />
-            <p className="text-[#a47352] text-[18px] font-medium tracking-[0.18px] text-center leading-snug">
+            <ThumbsUp size={56} className="text-[#1A335A] mb-5" strokeWidth={1.5} />
+            <p className="text-[#000000] text-[18px] font-bold text-center leading-snug">
               Harga Berhasil Diperbarui
             </p>
           </div>
@@ -145,32 +150,40 @@ export default function HargaEditModal({ isOpen, onClose, onSuccess, hargaData, 
     )
   }
 
+  // ── FORM STATE — Tema Baru ──
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={BACKDROP_STYLE}>
       <div className="absolute inset-0" onClick={!isSubmitting ? handleClose : undefined} />
-      <div className="relative z-10 bg-white rounded-[20px] shadow-[2px_4px_4px_0px_rgba(0,0,0,0.25)] w-[390px] overflow-hidden">
-        <div className="flex items-center justify-between px-5 pt-4 pb-3">
-          <h4 className="text-[#a47352] text-[22px] font-medium tracking-[-0.24px]">Edit Aturan Harga</h4>
-          <button type="button" onClick={handleClose} disabled={isSubmitting} className="text-[#a47352] hover:text-[#8c5f3f]">
+      <div className="relative z-10 bg-white rounded-[20px] shadow-[2px_4px_4px_0px_rgba(0,0,0,0.25)] w-[390px] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        
+        {/* Header: Title + Close X */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <h4 className="text-[#000000] text-[20px] font-bold tracking-tight">Edit Aturan Harga</h4>
+          <button type="button" onClick={handleClose} disabled={isSubmitting} className="text-[#1A335A] hover:opacity-80 transition-opacity disabled:opacity-50">
             <X size={20} strokeWidth={2.5} />
           </button>
         </div>
-        <div className="border-t border-[#a47352]/40 mx-5" />
+        
+        {/* Divider tipis warna Navy */}
+        <div className="border-t border-[#1A335A]/10 mx-5" />
         
         <form onSubmit={handleSubmit} className="px-5 pt-4 pb-5 space-y-4">
           
-          <div className="p-4 rounded-[10px] border border-[#a47352]/30 space-y-3" style={{ backgroundColor: 'rgba(227, 194, 172, 0.18)' }}>
-            <div className="text-[11px] font-bold text-[#a47352] tracking-wide uppercase opacity-90 mb-1">Ubah Kombinasi Aturan:</div>
+          {/* Box Kombinasi Aturan (Cyan Tint background) */}
+          <div className="p-4 rounded-[10px] border border-[#1A335A]/10 space-y-3" style={{ backgroundColor: '#5AE3ED1C' }}>
+            <div className="text-[11px] font-bold text-[#000000] tracking-wide uppercase mb-1">
+              Ubah Kombinasi Aturan:
+            </div>
             
             <div className="grid grid-cols-2 gap-3">
               {/* Dropdown Pewarna */}
               <div>
-                <label className="block text-[11px] text-[#a47352]/70 font-medium mb-1">Pewarna</label>
+                <label className="block text-[11px] text-gray-500 font-bold uppercase tracking-wider mb-1">Pewarna</label>
                 <select
                   value={jenisPewarna}
                   onChange={(e) => setJenisPewarna(e.target.value)}
                   disabled={isSubmitting}
-                  className="w-full h-[36px] px-2 rounded-[6px] border border-[#a47352]/50 text-[#a47352] text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#a47352] font-semibold cursor-pointer disabled:opacity-60"
+                  className="w-full h-[36px] px-2 rounded-[6px] border border-[#1A335A] text-[#000000] text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#1A335A] font-semibold cursor-pointer disabled:opacity-60"
                 >
                   <option value="alami">Alami</option>
                   <option value="sintetis">Sintetis</option>
@@ -179,12 +192,12 @@ export default function HargaEditModal({ isOpen, onClose, onSuccess, hargaData, 
 
               {/* Dropdown Lebar */}
               <div>
-                <label className="block text-[11px] text-[#a47352]/70 font-medium mb-1">Lebar Kain</label>
+                <label className="block text-[11px] text-gray-500 font-bold uppercase tracking-wider mb-1">Lebar Kain</label>
                 <select
                   value={lebar}
                   onChange={(e) => setLebar(e.target.value)}
                   disabled={isSubmitting}
-                  className="w-full h-[36px] px-2 rounded-[6px] border border-[#a47352]/50 text-[#a47352] text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#a47352] font-semibold cursor-pointer disabled:opacity-60"
+                  className="w-full h-[36px] px-2 rounded-[6px] border border-[#1A335A] text-[#000000] text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#1A335A] font-semibold cursor-pointer disabled:opacity-60"
                 >
                   <option value="70">70 cm</option>
                   <option value="110">110 cm</option>
@@ -194,17 +207,15 @@ export default function HargaEditModal({ isOpen, onClose, onSuccess, hargaData, 
 
             {/* Dropdown Pilihan Motif */}
             <div>
-              <label className="block text-[11px] text-[#a47352]/70 font-medium mb-1">Motif Aturan</label>
+              <label className="block text-[11px] text-gray-500 font-bold uppercase tracking-wider mb-1">Motif Aturan</label>
               <select
                 value={motifId}
-                // PERBAIKAN 4: Pastikan menyimpan value id bermotif sebagai string murni
                 onChange={(e) => setMotifId(e.target.value)}
                 disabled={isSubmitting}
-                className="w-full h-[36px] px-2 rounded-[6px] border border-[#a47352]/50 text-[#a47352] text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#a47352] font-semibold cursor-pointer disabled:opacity-60"
+                className="w-full h-[36px] px-2 rounded-[6px] border border-[#1A335A] text-[#000000] text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#1A335A] font-semibold cursor-pointer disabled:opacity-60"
               >
                 <option value="">Umum (Tanpa Motif)</option>
                 {motifOptions.map((mot) => (
-                  // PERBAIKAN 5: Set value option menggunakan key string eksplisit
                   <option key={mot.id} value={String(mot.id)}>
                     {mot.nama}
                   </option>
@@ -215,31 +226,49 @@ export default function HargaEditModal({ isOpen, onClose, onSuccess, hargaData, 
 
           {/* Input Nominal Harga Per Meter */}
           <div className="space-y-1.5">
-            <label className="block text-[15px] font-medium text-[#a47352] tracking-[0.18px] mb-1">Harga Per Meter Baru</label>
+            <label className="block text-xs font-bold text-[#000000] uppercase tracking-wider mb-1">Harga Per Meter Baru</label>
             <div className="relative flex items-center">
-              <span className="absolute text-sm font-medium text-[#a47352]/70 left-3">Rp</span>
+              <span className="absolute text-sm font-bold text-gray-500 left-3">Rp</span>
               <input
                 type="number"
                 value={hargaPerMeter}
                 onChange={(e) => setHargaPerMeter(e.target.value)}
                 disabled={isSubmitting}
-                autoFocus
-                className="w-full h-[46px] pl-9 pr-3 rounded-[10px] border border-[#a47352] text-[#a47352] text-sm focus:outline-none focus:ring-1 focus:ring-[#a47352] transition-all font-semibold disabled:opacity-60"
-                style={{ backgroundColor: 'rgba(227, 194, 172, 0.35)' }}
+                className="w-full h-[46px] pl-9 pr-3 rounded-[10px] border border-[#1A335A] text-[#000000] text-sm focus:outline-none focus:ring-1 focus:ring-[#1A335A] transition-all font-semibold disabled:opacity-60"
+                style={{ backgroundColor: '#5AE3ED1C' }}
                 required
               />
             </div>
-            <div className="text-[12px] text-[#a47352]/70 font-medium pl-0.5 pt-0.5">
+            <div className="text-[12px] text-gray-500 font-medium pl-0.5 pt-0.5">
               Harga Sebelumnya: Rp {hargaAsli ? parseFloat(hargaAsli).toLocaleString('id-ID') : '0'},00
             </div>
           </div>
 
           {errorMessage && <p className="text-xs text-red-500 mt-2 font-medium">{errorMessage}</p>}
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#a47352]/20 mt-5">
-            <button type="button" onClick={handleClose} disabled={isSubmitting} className="min-w-[89px] h-[33px] px-4 rounded-[10px] border border-[#a47352] text-[#a47352] hover:bg-[#a47352]/5 text-sm font-medium transition-colors">Batal</button>
-            <button type="submit" disabled={isSubmitting || !hargaPerMeter || !adaPerubahan} className="min-w-[89px] h-[33px] px-4 rounded-[10px] bg-[#a47352] hover:bg-[#8c5f3f] text-white text-sm font-medium flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-              {isSubmitting ? <><Loader2 className="animate-spin" size={14} /><span>Update...</span></> : 'Simpan'}
+          {/* Footer Actions */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#1A335A]/10 mt-5">
+            <button 
+              type="button" 
+              onClick={handleClose} 
+              disabled={isSubmitting} 
+              className="min-w-[89px] h-[33px] px-4 rounded-md border border-[#1A335A] text-[#1A335A] hover:bg-[#1A335A]/5 text-xs font-bold transition-colors disabled:opacity-50"
+            >
+              Batal
+            </button>
+            <button 
+              type="submit" 
+              disabled={isSubmitting || !hargaPerMeter || !adaPerubahan} 
+              className="min-w-[89px] h-[33px] px-4 rounded-md bg-[#1A335A] hover:bg-[#122440] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="animate-spin" size={14} />
+                  <span>Update...</span>
+                </>
+              ) : (
+                'Simpan'
+              )}
             </button>
           </div>
         </form>

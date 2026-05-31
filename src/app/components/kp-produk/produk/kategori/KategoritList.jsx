@@ -8,11 +8,42 @@ import Swal from 'sweetalert2'
 const KategoriModal = dynamic(() => import('../kategori/KategoriModal'), { ssr: false })
 const KategoriEditModal = dynamic(() => import('../kategori/KategoriEditModal'), { ssr: false })
 
-// Style backdrop konsisten dengan Figma: cokelat semi-transparan + blur
+// Style backdrop disesuaikan: Navy semi-transparan (#1A335A7A) + blur
 const BACKDROP_STYLE = {
-  backgroundColor: 'rgba(174, 131, 78, 0.53)',
+  backgroundColor: '#1A335A7A',
   backdropFilter: 'blur(2px)',
   WebkitBackdropFilter: 'blur(2px)',
+}
+
+// KELOMPOK SKELETON LOADER (Disinkronkan dengan tema Navy, meniru struktur baris tabel)
+function KategoriSkeleton({ rows = 4 }) {
+  return (
+    <>
+      {[...Array(rows)].map((_, i) => (
+        <tr key={i} className="border-b border-[#1A335A]/10 animate-pulse">
+          {/* No. */}
+          <td className="px-6 py-4 text-center">
+            <div className="w-5 h-4 mx-auto rounded bg-[#1A335A]/10" />
+          </td>
+          {/* Nama Kategori */}
+          <td className="px-6 py-4">
+            <div className="w-40 h-4 rounded bg-[#1A335A]/10" />
+          </td>
+          {/* Tanggal Dibuat */}
+          <td className="px-6 py-4 text-center">
+            <div className="w-24 h-4 mx-auto rounded bg-[#1A335A]/10" />
+          </td>
+          {/* Aksi */}
+          <td className="px-6 py-4">
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-10 h-10 rounded-[8px] bg-[#1A335A]/10" />
+              <div className="w-10 h-10 rounded-[8px] bg-[#1A335A]/10" />
+            </div>
+          </td>
+        </tr>
+      ))}
+    </>
+  )
 }
 
 export default function KategoriList() {
@@ -29,7 +60,7 @@ export default function KategoriList() {
   const [categoryToDelete, setCategoryToDelete] = useState(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // State untuk Modal Success setelah hapus (menggantikan Swal success)
+  // State untuk Modal Success setelah hapus
   const [isDeleteSuccessOpen, setIsDeleteSuccessOpen] = useState(false)
 
   // Ambil data utama dari API backend
@@ -91,7 +122,7 @@ export default function KategoriList() {
       setIsDeleteModalOpen(false)
       setCategoryToDelete(null)
 
-      // 3. Tampilkan custom success modal sesuai Figma (auto-close 1.6s)
+      // 3. Tampilkan custom success modal (auto-close 1.6s)
       setIsDeleteSuccessOpen(true)
       setTimeout(() => setIsDeleteSuccessOpen(false), 1600)
 
@@ -101,7 +132,7 @@ export default function KategoriList() {
         title: 'Gagal Hapus',
         text: err.message,
         icon: 'error',
-        confirmButtonColor: '#a47352'
+        confirmButtonColor: '#1A335A'
       })
     } finally {
       setIsDeleting(false)
@@ -109,14 +140,14 @@ export default function KategoriList() {
   }
 
   return (
-    <div className="bg-white rounded-[10px] border border-[#a47352]/30 min-h-[500px] flex flex-col justify-between overflow-hidden relative">
+    <div className="bg-white rounded-[10px] border border-[#1A335A]/20 min-h-[500px] flex flex-col justify-between overflow-hidden relative">
       <div>
         {/* ── Header Tabel ── */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-[#a47352]/20">
-          <h3 className="text-lg font-semibold text-[#a47352]">Daftar Kategori Produk</h3>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[#1A335A]/10">
+          <h3 className="text-lg font-bold text-[#1A335A]">Daftar Kategori Produk</h3>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-[#a47352] hover:bg-[#8c5f3f] text-white px-4 py-2.5 rounded-[10px] text-sm font-semibold transition-all shadow-sm"
+            className="flex items-center gap-2 bg-[#1A335A] hover:bg-[#122440] text-white px-4 py-2.5 rounded-[10px] text-sm font-semibold transition-all shadow-sm"
           >
             <Plus size={16} />
             <span>Tambah Kategori</span>
@@ -126,7 +157,7 @@ export default function KategoriList() {
         {/* ── Tabel Utama ── */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left border-collapse">
-            <thead className="bg-[#a47352] text-white font-medium">
+            <thead className="bg-[#1A335A] text-white font-medium">
               <tr>
                 <th className="w-20 px-6 py-4 text-center">No.</th>
                 <th className="px-6 py-4">Nama Kategori</th>
@@ -134,16 +165,9 @@ export default function KategoriList() {
                 <th className="w-32 px-6 py-4 text-center">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#a47352]/15">
+            <tbody className="divide-y divide-[#1A335A]/10">
               {isLoading ? (
-                <tr>
-                  <td colSpan="4" className="px-6 py-10 text-center text-gray-400">
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="animate-spin text-[#a47352]" size={20} />
-                      <span>Memuat data kategori...</span>
-                    </div>
-                  </td>
-                </tr>
+                <KategoriSkeleton rows={4} />
               ) : error ? (
                 <tr>
                   <td colSpan="4" className="px-6 py-10 font-medium text-center text-red-500">
@@ -158,9 +182,9 @@ export default function KategoriList() {
                 </tr>
               ) : (
                 categories.map((kategori, index) => (
-                  <tr key={kategori.id} className="transition-colors hover:bg-[#a47352]/5 border-b border-b-[#a47352]/10">
+                  <tr key={kategori.id} className="transition-colors hover:bg-[#1A335A]/5 border-b border-b-[#1A335A]/10">
                     <td className="px-6 py-2 text-center text-gray-500">{index + 1}.</td>
-                    <td className="px-6 py-2 font-semibold text-[#a47352]">{kategori.nama}</td>
+                    <td className="px-6 py-2 font-bold text-[#000000]">{kategori.nama}</td>
                     <td className="px-6 py-2 text-center text-gray-500">
                       {kategori.created_at ? new Date(kategori.created_at).toLocaleDateString('id-ID', {
                         day: 'numeric',
@@ -170,12 +194,12 @@ export default function KategoriList() {
                     </td>
                     <td className="px-6 py-0.5">
                       <div className="flex items-center justify-center gap-2 p-1">
-                        {/* Tombol Edit */}
+                        {/* Tombol Edit (#486A9F) */}
                         <button
                           onClick={() => handleEditClick(kategori)}
                           className="flex flex-col items-center justify-center gap-0.5 
                                     aspect-square w-10 sm:w-[40px] md:w-[40px]
-                                    bg-[#F0A864] hover:bg-[#F0A864]/85 text-white 
+                                    bg-[#486A9F] hover:bg-[#486A9F]/85 text-white 
                                     rounded-[8px] transition-all duration-200 shadow-sm"
                           title="Edit"
                         >
@@ -183,7 +207,7 @@ export default function KategoriList() {
                           <span className="text-[10px] sm:text-[10px] font-semibold leading-none">Edit</span>
                         </button>
 
-                        {/* Tombol Hapus */}
+                        {/* Tombol Hapus (#FF695E) */}
                         <button
                           onClick={() => openDeleteModal(kategori.id, kategori.nama)}
                           className="flex flex-col items-center justify-center gap-0.5 
@@ -207,20 +231,20 @@ export default function KategoriList() {
 
       {/* Baris kosong penyeimbang estetika halaman */}
       {!isLoading && categories.length < 4 && (
-        <div className="flex-1 bg-white divide-y divide-[#a47352]/10">
+        <div className="flex-1 bg-white divide-y divide-[#1A335A]/5">
           {[...Array(4 - categories.length)].map((_, i) => (
-            <div key={i} className="w-full h-[60px] border-b border-[#a47352]/5"></div>
+            <div key={i} className="w-full h-[60px] border-b border-[#1A335A]/5"></div>
           ))}
         </div>
       )}
 
-      {/* ── MODAL KONFIRMASI HAPUS — sesuai Figma node 1310-13272 ── */}
+      {/* ── MODAL KONFIRMASI HAPUS ── */}
       {isDeleteModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={BACKDROP_STYLE}
         >
-          <div className="bg-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] w-[372px] relative overflow-hidden">
+          <div className="bg-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] w-[372px] relative overflow-hidden animate-in fade-in zoom-in-95 duration-150">
 
             {/* Tombol X */}
             <button
@@ -229,7 +253,7 @@ export default function KategoriList() {
                 setCategoryToDelete(null)
               }}
               disabled={isDeleting}
-              className="absolute top-3.5 right-3.5 text-[#a47352] hover:text-[#8c5f3f] transition-colors disabled:opacity-50"
+              className="absolute top-4 right-4 text-[#1A335A] hover:opacity-80 transition-opacity disabled:opacity-50"
             >
               <X size={18} strokeWidth={2.5} />
             </button>
@@ -237,12 +261,12 @@ export default function KategoriList() {
             {/* Konten */}
             <div className="flex flex-col items-center pt-10 pb-7 px-6">
               {/* Ikon Trash */}
-              <div className="text-[#a47352] mb-4">
+              <div className="text-[#1A335A] mb-4">
                 <Trash size={40} strokeWidth={1.8} />
               </div>
 
               {/* Teks Konfirmasi */}
-              <p className="text-[#a47352] text-[15px] font-semibold text-center leading-snug mb-7">
+              <p className="text-[#000000] text-[15px] font-bold text-center leading-snug mb-7">
                 Apakah Anda Yakin Ingin<br />Menghapus Kategori ini
               </p>
 
@@ -254,14 +278,14 @@ export default function KategoriList() {
                     setIsDeleteModalOpen(false)
                     setCategoryToDelete(null)
                   }}
-                  className="flex-1 h-[47px] rounded-[10px] bg-[#a47352] hover:bg-[#8c5f3f] text-white font-semibold text-base transition-colors disabled:opacity-50"
+                  className="flex-1 h-[47px] rounded-[10px] bg-[#1A335A] hover:bg-[#122440] text-white font-bold text-base transition-colors disabled:opacity-50"
                 >
                   Batal
                 </button>
                 <button
                   disabled={isDeleting}
                   onClick={handleConfirmDelete}
-                  className="flex-1 h-[47px] rounded-[10px] bg-[#a47352] hover:bg-[#8c5f3f] text-white font-semibold text-base transition-colors disabled:opacity-50 flex items-center justify-center"
+                  className="flex-1 h-[47px] rounded-[10px] bg-[#1A335A] hover:bg-[#122440] text-white font-bold text-base transition-colors disabled:opacity-50 flex items-center justify-center"
                 >
                   {isDeleting ? (
                     <Loader2 size={18} className="text-white animate-spin" />
@@ -276,23 +300,23 @@ export default function KategoriList() {
         </div>
       )}
 
-      {/* ── MODAL SUCCESS setelah Hapus — pola Figma node 1310-12284 ── */}
+      {/* ── MODAL SUCCESS setelah Hapus ── */}
       {isDeleteSuccessOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={BACKDROP_STYLE}
         >
-          <div className="bg-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] w-[372px] relative">
+          <div className="bg-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] w-[372px] relative animate-in fade-in zoom-in-95 duration-150">
             <button
               onClick={() => setIsDeleteSuccessOpen(false)}
-              className="absolute top-3.5 right-3.5 text-[#a47352] hover:text-[#8c5f3f] transition-colors"
+              className="absolute top-4 right-4 text-[#1A335A] hover:opacity-80 transition-opacity"
             >
               <X size={18} strokeWidth={2.5} />
             </button>
 
             <div className="flex flex-col items-center justify-center py-12 px-6">
-              <ThumbsUp size={56} className="text-[#a47352] mb-5" strokeWidth={1.5} />
-              <p className="text-[#a47352] text-[18px] font-medium tracking-[0.18px] text-center">
+              <ThumbsUp size={56} className="text-[#1A335A] mb-5" strokeWidth={1.5} />
+              <p className="text-[#000000] text-[18px] font-bold text-center">
                 Kategori Berhasil Dihapus
               </p>
             </div>
