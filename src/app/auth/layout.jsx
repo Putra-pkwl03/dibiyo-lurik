@@ -1,7 +1,8 @@
 export default function AuthLayout({ children }) {
   return (
-    /* Kita tambahkan py-12 (padding vertikal) agar ada space kosong di atas & bawah card */
-    <div className="min-h-screen bg-[#fcf9f5] flex items-center justify-center py-12 px-4 overflow-y-auto">
+    // Menggunakan w-screen h-screen m-0 p-0 dan overflow-hidden 
+    // agar layout bersih tanpa margin, padding, atau scrollbar sekunder di luar form.
+    <div className="w-screen h-screen p-0 m-0 overflow-hidden bg-white">
       {children}
     </div>
   )

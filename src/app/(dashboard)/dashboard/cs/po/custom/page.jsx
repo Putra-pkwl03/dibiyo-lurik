@@ -14,7 +14,7 @@ export default function PreOrderCustomPage() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch('/api/pre-order-custom') // Sesuaikan endpoint API Anda
+      const res = await fetch('/api/pre-order-custom') 
       const json = await res.json()
       setData(Array.isArray(json.data) ? json.data : [])
     } catch (err) {

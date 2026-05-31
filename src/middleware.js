@@ -1,93 +1,10 @@
-// import { NextResponse } from 'next/server'
-
-// export function middleware(request) { // Wajib bernama middleware
-//   const { pathname } = request.nextUrl
-//   if (pathname.startsWith('/api/')) {
-//     return NextResponse.next()
-//   }
-  
-//   // LOGGING: Memantau semua cookie yang masuk
-//   const allCookies = request.cookies.getAll()
-//   // console.log('--- Middleware Request ---')
-//   // console.log('Path:', pathname)
-//   // console.log('All Cookies:', allCookies.map(c => c.name))
-  
-//   const hasToken = request.cookies.has('sb-access-token')
-//   const userRole = request.cookies.get('user-role')?.value?.toLowerCase()
-  
-//   // console.log('Has Token:', hasToken)
-//   // console.log('User Role:', userRole)
-
-//   const isAuthPage = pathname === '/auth/login' || pathname.startsWith('/auth/')
-//   const isDashboardPage = pathname === '/dashboard' || pathname.startsWith('/dashboard/') || pathname.startsWith('/kepala-produksi')
-
-//   // KONDISI 1: User sudah login tapi mencoba kembali ke form login
-//   if (hasToken && isAuthPage) {
-//     // // console.log('Redirecting: Already logged in, going to dashboard')
-//     return NextResponse.redirect(new URL('/dashboard', request.url))
-//   }
-
-//   // KONDISI 2: User belum login tapi memaksa masuk ke area internal
-//   if (!hasToken && isDashboardPage) {
-//     // // console.log('Redirecting: No token, going to login')
-//     return NextResponse.redirect(new URL('/auth/login', request.url))
-//   }
-
-//   // KONDISI KETAT 3: Role-Based Access Control
-//   if (hasToken) {
-//     if (userRole === 'customer_service') {
-//       if (pathname.startsWith('/dashboard/kepala-produksi') || pathname.startsWith('/dashboard/owner')) {
-//         // // console.log('Redirecting: CS unauthorized access')
-//         return NextResponse.redirect(new URL('/dashboard', request.url))
-//       }
-//     }
-
-//     if (userRole === 'kepala-produksi') {
-//       if (pathname.startsWith('/dashboard/cs') || pathname.startsWith('/dashboard/owner')) {
-//         // // console.log('Redirecting: KP unauthorized access')
-//         return NextResponse.redirect(new URL('/dashboard', request.url))
-//       }
-//     }
-
-//     if (userRole === 'owner') {
-//       if (pathname.startsWith('/dashboard/cs') || pathname.startsWith('/dashboard/kepala-produksi')) {
-//         // // console.log('Redirecting: Owner unauthorized access')
-//         return NextResponse.redirect(new URL('/dashboard', request.url))
-//       }
-//     }
-//   }
-
-//   // KONDISI 4: Penanganan halaman root murni (/)
-//   if (pathname === '/') {
-//     if (hasToken) {
-//       return NextResponse.redirect(new URL('/dashboard', request.url))
-//     } else {
-//       return NextResponse.redirect(new URL('/auth/login', request.url))
-//     }
-//   }
-
-//   return NextResponse.next()
-// }
-
-// export const config = {
-//   matcher: [
-//     '/',
-//     '/auth/login',
-//     '/auth/:path*',
-//     '/dashboard',
-//     '/dashboard/:path*',
-//     '/api/:path*',
-//   ],
-// }
-
-
-
 import { NextResponse } from 'next/server'
+import supabasePublic from '@/lib/supabase-public' // Pastikan ini bisa diakses di middleware
 
-export function middleware(request) {
+export async function middleware(request) {
   const { pathname } = request.nextUrl
+  const response = NextResponse.next()
 
-  // 1. Amankan API & Aset Statis / Internal Next.js agar tidak sengaja ter-redirect
   if (
     pathname.startsWith('/api/') || 
     pathname.startsWith('/_next/') || 
@@ -96,36 +13,81 @@ export function middleware(request) {
     return NextResponse.next()
   }
   
-  const hasToken = request.cookies.has('sb-access-token')
+  let hasToken = request.cookies.has('sb-access-token')
+  const refreshToken = request.cookies.get('sb-refresh-token')?.value
   const userRole = request.cookies.get('user-role')?.value?.toLowerCase()
 
   const isAuthPage = pathname.startsWith('/auth')
   const isDashboardPage = pathname.startsWith('/dashboard') || pathname.startsWith('/kepala-produksi')
 
-  // KONDISI 1: User sudah login tapi memaksa ke halaman login/register -> Lempar ke dashboard
+  // --- LOGIKA ROLLING SESSION & AUTO REFRESH ---
+  if (hasToken) {
+    // Jika masih bergerak di sistem, perpanjang umur cookie access token ke 5 menit lagi
+    const currentAccessToken = request.cookies.get('sb-access-token').value
+    response.cookies.set('sb-access-token', currentAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 300, // Reset kembali ke 5 menit
+    })
+  } else if (!hasToken && refreshToken) {
+    try {
+      // Jika access token habis tapi masih aktif bergerak, perbarui sesi pakai refresh token
+      const { data, error } = await supabasePublic.auth.setSession({
+        access_token: '',
+        refresh_token: refreshToken
+      })
+
+      if (!error && data.session) {
+        hasToken = true
+        response.cookies.set('sb-access-token', data.session.access_token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 300,
+        })
+        response.cookies.set('sb-refresh-token', data.session.refresh_token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 60 * 60 * 24 * 7,
+        })
+      }
+    } catch (e) {
+      console.error("Gagal auto-refresh token di middleware:", e)
+    }
+  }
+
+  // KONDISI 1: User sudah login tapi memaksa ke halaman login -> Lempar ke dashboard
   if (hasToken && isAuthPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // KONDISI 2: User BELUM login tapi memaksa masuk ke area dashboard -> Lempar ke login
+  // KONDISI 2: User BELUM login tapi memaksa masuk ke dashboard -> Lempar ke login
   if (!hasToken && isDashboardPage) {
-    return NextResponse.redirect(new URL('/auth/login', request.url))
+    const loginRedirect = NextResponse.redirect(new URL('/auth/login', request.url))
+    // Hapus sisa cookie lama jika ada kebocoran
+    loginRedirect.cookies.delete('sb-access-token')
+    loginRedirect.cookies.delete('sb-refresh-token')
+    loginRedirect.cookies.delete('user-role')
+    return loginRedirect
   }
 
-  // KONDISI 3: Role-Based Access Control (Hanya jika user memiliki token)
+  // KONDISI 3: Role-Based Access Control
   if (hasToken) {
     if (userRole === 'customer_service') {
       if (pathname.startsWith('/dashboard/kepala-produksi') || pathname.startsWith('/dashboard/owner')) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
     }
-
-    if (userRole === 'kepala-produksi') {
+    if (userRole === 'kepala-produksi' || userRole === 'kepala_produksi') {
       if (pathname.startsWith('/dashboard/cs') || pathname.startsWith('/dashboard/owner')) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
     }
-
     if (userRole === 'owner') {
       if (pathname.startsWith('/dashboard/cs') || pathname.startsWith('/dashboard/kepala-produksi')) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
@@ -142,10 +104,9 @@ export function middleware(request) {
     }
   }
 
-  return NextResponse.next()
+  return response
 }
 
-// Matcher dikencangkan agar mencakup seluruh rute krusial secara konsisten
 export const config = {
   matcher: [
     '/',

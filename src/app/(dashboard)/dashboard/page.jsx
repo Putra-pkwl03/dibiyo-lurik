@@ -76,20 +76,22 @@ export default function DashboardPage() {
   ]
 
   return (
-    <div className="mx-auto space-y-6"> 
-      <header className="mb-4">
-        <h2 className="text-3xl font-semibold text-[#A47352] pb-3 border-b border-[#A47352]/30 tracking-wide">
+    <div className="w-full mx-auto space-y-6"> 
+      
+      <header className="mb-2">
+        <h2 className="text-lg sm:text-[26px] font-medium text-black pb-2 sm:pb-3 border-b border-[#A47352]/30 tracking-wide">
           Dashboard
         </h2>
       </header>
 
       {/* 1. BAGIAN STAT CARDS (SUMMARY) */}
       {loadingMain ? (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 animate-pulse">
+        // Menyeimbangkan tata letak grid skeleton loading: 1 kolom (Mobile), 2 kolom (Tablet), 4 kolom (Desktop)
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-4 animate-pulse">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="flex flex-col justify-between h-28 p-5 bg-[#F4EAE1]/40 border rounded-xl border-[#DDB892]/30">
+            <div key={i} className="flex flex-col justify-between h-24 sm:h-28 p-4 sm:p-5 bg-[#F4EAE1]/40 border rounded-xl border-[#DDB892]/30">
               <div className="w-2/3 h-4 bg-gray-200 rounded"></div>
-              <div className="w-1/3 h-8 mt-2 bg-gray-200 rounded"></div>
+              <div className="w-1/3 mt-2 bg-gray-200 rounded h-7 sm:h-8"></div>
             </div>
           ))}
         </div>
@@ -99,23 +101,23 @@ export default function DashboardPage() {
 
       {/* 2. BAGIAN GRAFIK PENDAPATAN */}
       {loadingMain ? (
-        <div className="flex flex-col justify-between p-6 bg-[#F4EAE1]/40 border h-80 animate-pulse rounded-2xl border-[#DDB892]/30">
+        <div className="flex flex-col justify-between p-4 sm:p-6 bg-[#F4EAE1]/40 border h-64 sm:h-80 animate-pulse rounded-2xl border-[#DDB892]/30">
           <div className="w-1/4 h-5 bg-gray-200 rounded"></div>
-          <div className="w-full mt-4 bg-gray-200 rounded h-44"></div>
+          <div className="w-full mt-4 bg-gray-200 rounded h-36 sm:h-44"></div>
         </div>
       ) : (
         mainData?.isOwner && (
           <div className="space-y-3">
-            <span className="text-[#A47352] font-semibold text-lg underline underline-offset-4 decoration-1 inline-block pl-1">
+            <span className="inline-block pl-1 text-base font-semibold text-black sm:text-lg">
               Grafik Pendapatan
             </span>
             {loadingRevenue ? (
-              <div className="flex flex-col justify-between p-6 bg-[#F4EAE1]/40 border h-80 animate-pulse rounded-2xl border-[#DDB892]/30">
+              <div className="flex flex-col justify-between p-4 sm:p-6 bg-[#F4EAE1]/40 border h-64 sm:h-80 animate-pulse rounded-2xl border-[#DDB892]/30">
                 <div className="w-1/4 h-5 bg-gray-200 rounded"></div>
-                <div className="w-full mt-4 bg-gray-200 rounded h-44"></div>
+                <div className="w-full mt-4 bg-gray-200 rounded h-36 sm:h-44"></div>
               </div>
             ) : (
-              <div className="bg-[#F4EAE1]/30 border border-[#DDB892]/40 rounded-2xl p-1 shadow-sm">
+              <div className="bg-white border border-[#F4EAE1]/40 rounded-2xl p-2 sm:p-4 shadow-sm w-full overflow-hidden">
                 <RevenueChart dataArray={revenue} />
               </div>
             )}
@@ -124,35 +126,34 @@ export default function DashboardPage() {
       )}
 
       {/* 3. TABEL DATA UTAMA */}
-      <div className="space-y-8">
-        {/* TABEL A: Produk Terlaris */}
+      <div className="grid grid-cols-1 gap-6 space-y-2 xl:grid-cols-1 xl:gap-8 xl:space-y-0">
+
         {loadingMain ? (
-          <div className="p-6 space-y-4 bg-[#F4EAE1]/20 border animate-pulse rounded-2xl border-[#DDB892]/30">
+          <div className="p-4 sm:p-6 space-y-4 bg-[#F4EAE1]/20 border animate-pulse rounded-2xl border-[#DDB892]/30">
             <div className="w-1/5 h-5 bg-gray-200 rounded"></div>
             <div className="mt-4 space-y-2">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="w-full h-12 bg-gray-200 rounded"></div>
+                <div key={i} className="w-full h-10 bg-gray-200 rounded sm:h-12"></div>
               ))}
             </div>
           </div>
         ) : (
-          <div className="bg-[#F4EAE1]/20 border border-[#DDB892]/30 rounded-2xl p-1 shadow-sm transition-all duration-300">
+          <div className="bg-white border border-[#DDB892]/30 rounded-2xl  shadow-sm transition-all duration-300 w-full overflow-hidden">
             <LatestProductsTable products={mainData?.produkTerlaris || []} />
           </div>
         )}
-        
-        {/* TABEL B: Pre-Order Terbaru */}
+
         {loadingPO ? (
-          <div className="p-6 space-y-4 bg-[#F4EAE1]/20 border animate-pulse rounded-2xl border-[#DDB892]/30">
+          <div className="p-4 sm:p-6 space-y-4 bg-[#F4EAE1]/20 border animate-pulse rounded-2xl border-[#DDB892]/30">
             <div className="w-1/5 h-5 bg-gray-200 rounded"></div>
             <div className="mt-4 space-y-2">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="w-full h-12 bg-gray-200 rounded"></div>
+                <div key={i} className="w-full h-10 bg-gray-200 rounded sm:h-12"></div>
               ))}
             </div>
           </div>
         ) : (
-          <div className="bg-[#F4EAE1]/20 border border-[#DDB892]/30 rounded-2xl p-1 shadow-sm transition-all duration-300">
+          <div className="bg-white border border-[#DDB892]/30 rounded-2xl  shadow-sm transition-all duration-300 w-full overflow-hidden">
             <LatestPreOrdersTable preOrders={preOrders} />
           </div>
         )}

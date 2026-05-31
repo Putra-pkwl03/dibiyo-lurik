@@ -31,7 +31,7 @@ export default function RevenueChart({ dataArray = [] }) {
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="p-2 text-xs text-white border rounded shadow-md bg-stone-800 border-stone-700">
+        <div className="p-2 text-xs text-white bg-white border rounded shadow-md border-stone-700">
           <p className="font-semibold">{payload[0].payload.name}</p>
           <p className="text-stone-300 mt-0.5">
             Rp {payload[0].value.toLocaleString('id-ID')}
@@ -43,7 +43,7 @@ export default function RevenueChart({ dataArray = [] }) {
   }
 
   return (
-    <div className="bg-[#F4EAE1]/40 p-6 rounded-2xl border border-[#DDB892]/40 shadow-sm w-full">
+    <div className="bg-white p-6 rounded-2xl border border-[#F4EAE1]/40 shadow-sm w-full">
       <div className="w-full h-80 text-[10px]">
         {/* Responsive Container */}
         <ResponsiveContainer width="100%" height="100%">
@@ -57,25 +57,25 @@ export default function RevenueChart({ dataArray = [] }) {
             {/* Sumbu X */}
             <XAxis 
               dataKey="name" 
-              tick={{ fill: '#A47352', fontSize: 11, fontWeight: 500 }}
-              axisLine={{ stroke: '#A47352', strokeOpacity: 0.3 }}
+              tick={{ fill: '#000000', fontSize: 11, fontWeight: 500 }}
+              axisLine={{ stroke: '#FCDB78', strokeOpacity: 0.3 }}
               tickLine={false}
             />
             
             {/* Sumbu Y */}
             <YAxis 
               tickFormatter={formatYAxis}
-              tick={{ fill: '#A47352', fontSize: 10 }}
+              tick={{ fill: '#000000', fontSize: 10 }}
               axisLine={false}
               tickLine={false}
             />
 
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#A47352', fillOpacity: 0.05 }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#FCDB78', fillOpacity: 0.05 }} />
             
-            {/* Batang Utama Diagram menggunakan warna #A47352 */}
+            {/* Batang Utama Diagram menggunakan warna #FCDB78 */}
             <Bar 
               dataKey="amount" 
-              fill="#A47352" 
+              fill="#FCDB78" 
               radius={[2, 2, 0, 0]} 
               maxBarSize={32}     
             />

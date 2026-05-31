@@ -41,26 +41,24 @@ export async function POST(request) {
       )
     }
 
-    // --- SET COOKIE SECARA AMAN DI SISI SERVER (Next.js 16 menggunakan await cookies()) ---
-    const cookieStore = await cookies()
-    
-    // Simpan access token (Amankan dari serangan XSS scripts)
-    cookieStore.set('sb-access-token', authData.session.access_token, {
-      httpOnly: true, 
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: authData.session.expires_in, 
-    })
+// --- DI DALAM API LOGIN (Ubah bagian setting cookie access token) ---
+const cookieStore = await cookies()
 
-    // Simpan refresh token untuk menjaga sesi tetap aktif jangka panjang
-    cookieStore.set('sb-refresh-token', authData.session.refresh_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7, // Berlaku 7 Hari
-    })
+cookieStore.set('sb-access-token', authData.session.access_token, {
+  httpOnly: true, 
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/',
+  maxAge: 600, // <--- UBAH JADI 5 MENIT (300 detik)
+})
+
+cookieStore.set('sb-refresh-token', authData.session.refresh_token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/',
+  maxAge: 60 * 60 * 24 * 7, // Tetap 7 hari untuk refresh token
+})
 
     // Simpan role user untuk pengecekan cepat di middleware/layout client
     cookieStore.set('user-role', profile.role, {
