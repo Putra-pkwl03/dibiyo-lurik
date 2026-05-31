@@ -374,8 +374,8 @@ export default function ModalEditProduk({
                       {gulungans.map((g, idx) => (
                         <div key={g.id || idx} className="grid grid-cols-[30px_1fr_1fr_1fr_1.2fr_auto] gap-3 items-end px-4 py-3.5 bg-white hover:bg-[#F5EBE1]/10 transition-colors">
                           
-                          {/* Nomor Urut */}
-                          <span className="text-[#a47352]/80 font-bold text-xs pb-2.5 text-center">#{idx + 1}</span>
+                          {/* Nomor Urut (Tanpa #) */}
+                          <span className="text-[#a47352]/80 font-bold text-xs pb-2.5 text-center">{idx + 1}</span>
                           
                           {/* Upstream Input Lebar Dropdown */}
                           <div>

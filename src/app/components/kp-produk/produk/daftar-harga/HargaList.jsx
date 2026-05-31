@@ -147,6 +147,11 @@ export default function HargaList() {
         onSuccess={fetchData}
         hargaData={selectedHarga}
         swal={Swal}
+        // SOLUSI: Mengoper state motifs ke properti motifOptions modal
+        motifOptions={motifs.map(m => ({
+          id: m.id ?? m.id_motif,     // toleransi jika field DB bernama id_motif
+          nama: m.nama ?? m.nama_motif // toleransi jika field DB bernama nama_motif
+        }))}
       />
 
       {/* ── NOTIFIKASI KUSTOM SUKSES HAPUS INDUK ── */}

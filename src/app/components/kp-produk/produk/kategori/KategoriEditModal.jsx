@@ -153,7 +153,16 @@ export default function KategoriEditModal({ isOpen, onClose, onSuccess, category
           <input
             type="text"
             value={namaKategori}
-            onChange={(e) => setNamaKategori(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              // Logika: pecah per kata, huruf pertama kapital, sisanya kecil, lalu gabungkan kembali
+              const formatted = val
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+              
+              setNamaKategori(formatted);
+            }}
             disabled={isSubmitting}
             maxLength={255}
             autoFocus

@@ -1,4 +1,3 @@
-// /src/app/components/kp-produk/produk/stok-produk/ProdukFormHelper.jsx
 import React from 'react'
 import { Trash2 } from 'lucide-react'
 
@@ -28,7 +27,7 @@ export function SelectInput({ value, onChange, options, placeholder, disabled, c
       value={value}
       onChange={onChange}
       disabled={disabled}
-      className="w-full h-[40px] px-3 pr-10 rounded-[10px] border border-[#a47352] text-[#a47352]/80 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-[#a47352] transition-all disabled:opacity-50 appearance-none bg-no-repeat duration-200"
+      className="w-full h-[40px] px-3 pr-10 rounded-[10px] border border-[#a47352] text-[#a47352] text-sm font-medium focus:outline-none focus:ring-1 focus:ring-[#a47352] transition-all disabled:opacity-50 appearance-none bg-no-repeat duration-200 cursor-pointer"
       style={{
         backgroundColor: customBg || 'rgba(227, 194, 172, 0.35)',
         backgroundImage: ARROW_UP_SVG,
@@ -43,9 +42,11 @@ export function SelectInput({ value, onChange, options, placeholder, disabled, c
         e.target.style.backgroundImage = ARROW_UP_SVG
       }}
     >
-      {placeholder && <option value="">{placeholder}</option>}
+      {placeholder && <option value="" className="text-[#a47352]/50">{placeholder}</option>}
       {options.map(opt => (
-        <option key={opt.value} value={opt.value}>{opt.label}</option>
+        <option key={opt.value} value={opt.value} className="text-[#8C5F3F] bg-white">
+          {opt.label}
+        </option>
       ))}
     </select>
   )
@@ -54,30 +55,31 @@ export function SelectInput({ value, onChange, options, placeholder, disabled, c
 export function Info({ label, value }) {
   return (
     <div className="min-w-0">
-      <p className="text-[#e3c2ac] text-[10px] leading-tight">{label}</p>
-      <p className="text-[#a47352] text-[12px] font-semibold leading-tight truncate">{value}</p>
+      <p className="text-[#cda483] text-[11px] font-medium tracking-wide leading-tight mb-0.5">{label}</p>
+      <p className="text-[#8C5F3F] text-[13px] font-bold leading-tight truncate">{value}</p>
     </div>
   )
 }
 
-export function GulunganRow({ index, gulungan, rakName, onRemove, disabled }) {
+export function GulunganRow({ gulungan, rakName, onRemove, disabled }) {
   return (
-    <div className="grid grid-cols-[40px_1fr_auto] gap-3 items-center px-3 py-2.5 bg-white hover:bg-[#a47352]/5 transition-colors">
-      <span className="text-[#a47352] font-semibold text-sm text-center">#{index + 1}</span>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+    <div className="grid grid-cols-[1fr_auto] gap-3 items-center px-4 py-3 bg-white border-b border-stone-100 hover:bg-[#a47352]/5 transition-colors duration-150">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-2 text-xs">
         <Info label="Lebar" value={`${gulungan.lebar} cm`} />
         <Info label="Panjang" value={`${gulungan.panjang_total} m`} />
         <Info label="Harga/m" value={`Rp ${Number(gulungan.harga_per_meter).toLocaleString('id-ID')}`} />
-        <Info label="Rak" value={rakName} />
+        <Info label="Rak" value={rakName || '-'} />
       </div>
-      <button
-        type="button"
-        onClick={onRemove}
-        disabled={disabled}
-        className="p-1.5 rounded-md bg-[#ff695e] hover:bg-[#ff695e]/85 text-white transition-colors disabled:opacity-50"
-      >
-        <Trash2 size={14} />
-      </button>
+      <div className="flex items-center pl-1">
+        <button
+          type="button"
+          onClick={onRemove}
+          disabled={disabled}
+          className="p-2 rounded-[8px] bg-[#ff695e] hover:bg-[#e0584d] text-white transition-colors disabled:opacity-50 shadow-xs active:scale-95 duration-150 flex items-center justify-center"
+        >
+          <Trash2 size={14} strokeWidth={2.5} />
+        </button>
+      </div>
     </div>
   )
 }

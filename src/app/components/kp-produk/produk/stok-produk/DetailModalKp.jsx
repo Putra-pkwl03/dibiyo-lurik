@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Loader2, X, Plus, Trash2 } from 'lucide-react'
+import { Loader2, X, Trash2 } from 'lucide-react'
 import Swal from 'sweetalert2'
 
-export default function DetailModalKp({ isOpen, onClose, productId, raks = [], prices = [] }) {
+export default function DetailModalKp({ isOpen, onClose, productId, raks = [] }) {
   const [mounted, setMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [produk, setProduk] = useState(null)
@@ -13,38 +13,15 @@ export default function DetailModalKp({ isOpen, onClose, productId, raks = [], p
   // State Input Form
   const [tempLebar, setTempLebar] = useState('110')
   const [tempPanjang, setTempPanjang] = useState('')
-  const [tempRakId, setTempRakId] = useState('') // Rak baru
+  const [tempRakId, setTempRakId] = useState('') 
   const [tempHarga, setTempHarga] = useState(0)
   
   const [isProcessing, setIsProcessing] = useState(false)
+  const [daftarHarga, setDaftarHarga] = useState([]) 
 
   useEffect(() => { setMounted(true) }, [])
 
-  useEffect(() => {
-    if (isOpen && productId) fetchDetail()
-  }, [isOpen, productId])
-
-  // Logika Auto-Fill Harga
-  // Mencocokkan: jenis_pewarna, lebar, dan motif_id
-  useEffect(() => {
-    if (!produk || !tempLebar) return
-    
-    const lebarInt = parseInt(tempLebar)
-    const pewarnaLower = (produk?.jenis_pewarna || '').toLowerCase()
-    const motifId = produk?.motif?.id
-
-    const matchedPrice = prices.find(p => {
-      const isMatchPewarna = p.jenis_pewarna?.toLowerCase() === pewarnaLower
-      const isMatchLebar = p.lebar === lebarInt
-      // Harga cocok jika motif sama ATAU harga default (motif_id null)
-      const isMatchMotif = (p.motif?.id === motifId || p.motif_id === null)
-      
-      return isMatchPewarna && isMatchLebar && isMatchMotif
-    })
-
-    setTempHarga(matchedPrice?.harga_per_meter || 0)
-  }, [produk, tempLebar, prices])
-
+  // 1. Fetch Detail Produk dari API
   const fetchDetail = async () => {
     setIsLoading(true)
     try {
@@ -52,7 +29,6 @@ export default function DetailModalKp({ isOpen, onClose, productId, raks = [], p
       const result = await res.json()
       if (!res.ok) throw new Error(result.message)
       setProduk(result.data)
-      // Reset input setelah fetch
       setTempPanjang('')
       setTempRakId('')
     } catch (err) {
@@ -61,6 +37,58 @@ export default function DetailModalKp({ isOpen, onClose, productId, raks = [], p
       setIsLoading(false)
     }
   }
+
+  // 2. Fetch Master Daftar Harga dari API
+  const fetchDaftarHarga = async () => {
+    try {
+      const res = await fetch('/api/daftar-harga')
+      const result = await res.json()
+      if (res.ok) {
+        setDaftarHarga(result.data || [])
+      }
+    } catch (err) {
+      console.error("Gagal memuat daftar harga dari API:", err)
+    }
+  }
+  
+  // Trigger Fetch data ketika modal terbuka
+  useEffect(() => {
+    if (isOpen) {
+      if (productId) fetchDetail()
+      fetchDaftarHarga() 
+    }
+  }, [isOpen, productId])
+  
+  // 3. Logika Auto-Fill Harga Berdasarkan Lebar & Karakteristik Kain
+  useEffect(() => {
+    if (!produk || !tempLebar || daftarHarga.length === 0) return
+    
+    const lebarInt = parseInt(tempLebar)
+    const pewarnaLower = (produk?.jenis_pewarna || '').toLowerCase()
+    const motifId = produk?.motif?.id
+
+    // KANDIDAT 1: Cari yang COCOK SPESIFIK (Pewarna + Lebar + Motif ID sama)
+    let matchedPrice = daftarHarga.find(p => {
+      const isMatchPewarna = p.jenis_pewarna?.toLowerCase() === pewarnaLower
+      const isMatchLebar = p.lebar === lebarInt
+      const isMatchMotifSpesifik = p.motif?.id === motifId
+
+      return isMatchPewarna && isMatchLebar && isMatchMotifSpesifik
+    })
+      
+    // KANDIDAT 2: Jika harga khusus motif tidak ada, gunakan harga DEFAULT (Motif null)
+    if (!matchedPrice) {
+      matchedPrice = daftarHarga.find(p => {
+        const isMatchPewarna = p.jenis_pewarna?.toLowerCase() === pewarnaLower
+        const isMatchLebar = p.lebar === lebarInt
+        const isMatchMotifDefault = !p.motif 
+
+        return isMatchPewarna && isMatchLebar && isMatchMotifDefault
+      })
+    }
+
+    setTempHarga(matchedPrice?.harga_per_meter || 0)
+  }, [produk, tempLebar, daftarHarga])
 
   const handleSimpanGulungan = async () => {
     if (!tempPanjang || !tempRakId || tempHarga <= 0) {
@@ -75,7 +103,7 @@ export default function DetailModalKp({ isOpen, onClose, productId, raks = [], p
         lebar: parseInt(tempLebar),
         panjang_total: parseFloat(tempPanjang),
         harga_per_meter: tempHarga,
-        rak_id: tempRakId // Rak yang dipilih dari dropdown
+        rak_id: tempRakId 
       }]))
 
       const res = await fetch(`/api/produk/${productId}`, { method: 'PATCH', body: formData })
@@ -136,9 +164,42 @@ export default function DetailModalKp({ isOpen, onClose, productId, raks = [], p
           </div>
         ) : (
           <div className="flex-1 pr-1 space-y-5 overflow-y-auto custom-scrollbar">
-            <div className="bg-[#E3C2AC]/20 p-5 rounded-[14px] border border-[#A47352]/10">
-              <h1 className="text-2xl font-bold text-[#A47352]">{produk?.kode_produk}</h1>
-              <p className="text-[#A47352]/80 font-medium text-sm">{produk?.kategori.nama} | {produk?.motif.nama}</p>
+            
+            {/* Tampilan Gambar Produk */}
+            {produk?.gambar_url && (
+              <div className="w-full overflow-hidden rounded-[16px] border border-[#A47352]/20 bg-[#FAF5F0] flex items-center justify-center max-h-[260px] shadow-sm animate-in fade-in duration-200">
+                <img 
+                  src={produk.gambar_url} 
+                  alt={`Gambar ${produk?.kode_produk}`} 
+                  className="w-full h-full object-cover rounded-[16px]"
+                  onError={(e) => {
+                    e.target.src = 'https://placehold.co/600x300?text=Gambar+Produk+Tidak+Ditemukan';
+                  }}
+                />
+              </div>
+            )}
+              
+            {/* Informasi Teks Biasa (Sesuai Request) */}
+            <div className="space-y-4 text-[#A47352] py-2">
+              <div className="text-base">
+                <span className="font-medium">Kode Produk : </span>
+                <span className="font-bold tracking-wide text-lg">{produk?.kode_produk}</span>
+              </div>
+
+              <div className="flex flex-wrap gap-12 text-sm pt-2">
+                <div>
+                  <span className="block text-xs font-bold text-[#A47352]/60 uppercase mb-1">Kategori</span>
+                  <span className="font-semibold capitalize text-base">{produk?.kategori?.nama || '-'}</span>
+                </div>
+                <div>
+                  <span className="block text-xs font-bold text-[#A47352]/60 uppercase mb-1">Motif</span>
+                  <span className="font-semibold capitalize text-base">{produk?.motif?.nama || '-'}</span>
+                </div>
+                <div>
+                  <span className="block text-xs font-bold text-[#A47352]/60 uppercase mb-1">Jenis Pewarna</span>
+                  <span className="font-semibold lowercase text-base">{produk?.jenis_pewarna || '-'}</span>
+                </div>
+              </div>
             </div>
 
             {/* Form Tambah Gulungan */}
@@ -193,7 +254,11 @@ export default function DetailModalKp({ isOpen, onClose, productId, raks = [], p
                       <td className="p-3 text-[#A47352]">{g.panjang_total} m</td>
                       <td className="p-3 text-[#A47352]">{g.rak?.nama || '-'}</td>
                       <td className="p-3 text-[#A47352]">Rp {Number(g.harga_per_meter).toLocaleString()}</td>
-                      <td className="p-3"><button onClick={() => handleDeleteGulungan(g.id)} className="text-red-500"><Trash2 size={16}/></button></td>
+                      <td className="p-3">
+                        <button onClick={() => handleDeleteGulungan(g.id)} className="text-red-500 hover:text-red-700 transition-colors">
+                          <Trash2 size={16}/>
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

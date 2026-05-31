@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import supabaseAdmin from '@/lib/supabase-admin'
 
 // =====================================================
-// PATCH: Update Nominal Harga Per Meter & Lebar Kain
+// PATCH: Update Nominal Harga, Lebar, Pewarna & Motif
 // =====================================================
 export async function PATCH(request, { params }) {
   try {
@@ -14,6 +14,8 @@ export async function PATCH(request, { params }) {
     const body = await request.json()
     const harga = parseFloat(body.harga_per_meter)
     const lebarBaru = parseInt(body.lebar)
+    const jenisPewarnaBaru = body.jenis_pewarna // Ambil data pewarna dari FE
+    const motifIdBaru = body.motif_id           // Ambil data motif dari FE
 
     // Validasi Harga
     if (body.harga_per_meter === undefined || isNaN(harga) || harga < 0) {
@@ -25,7 +27,12 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ message: 'Lebar kain harus 70 atau 110 cm' }, { status: 400 })
     }
 
-    // 1. Ambil data saat ini untuk mengecek apakah lebar memang berubah
+    // Validasi Jenis Pewarna
+    if (jenisPewarnaBaru && !['alami', 'sintetis'].includes(jenisPewarnaBaru)) {
+      return NextResponse.json({ message: 'Jenis pewarna tidak valid' }, { status: 400 })
+    }
+
+    // 1. Ambil data saat ini untuk mendeteksi perubahan kombinasi aturan
     const { data: currentData, error: currentError } = await supabaseAdmin
       .from('daftar_harga')
       .select('jenis_pewarna, motif_id, lebar')
@@ -36,35 +43,42 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ message: 'Data harga tidak ditemukan' }, { status: 404 })
     }
 
-    // 2. Jika lebar diubah, cek dulu apakah kombinasi baru ini sudah dimiliki data/baris lain
-    if (currentData.lebar !== lebarBaru) {
+    // 2. Cek apakah kombinasi aturan yang baru ini sudah ada di data/baris lain (Cek Duplikat)
+    const isKombinasiBerubah = 
+      currentData.lebar !== lebarBaru ||
+      currentData.jenis_pewarna !== jenisPewarnaBaru ||
+      currentData.motif_id !== motifIdBaru
+
+    if (isKombinasiBerubah) {
       let queryCek = supabaseAdmin
         .from('daftar_harga')
         .select('id')
-        .eq('jenis_pewarna', currentData.jenis_pewarna)
+        .eq('jenis_pewarna', jenisPewarnaBaru)
         .eq('lebar', lebarBaru)
-        .neq('id', id) // Jangan cek data diri sendiri
+        .neq('id', id) // Jangan cek diri sendiri
 
-      if (currentData.motif_id === null) {
+      if (motifIdBaru === null || motifIdBaru === "") {
         queryCek = queryCek.is('motif_id', null)
       } else {
-        queryCek = queryCek.eq('motif_id', currentData.motif_id)
+        queryCek = queryCek.eq('motif_id', motifIdBaru)
       }
 
       const { data: duplikat } = await queryCek.maybeSingle()
       if (duplikat) {
         return NextResponse.json({ 
-          message: 'Gagal update! Kombinasi aturan harga dengan lebar tersebut sudah ada di tabel.' 
+          message: 'Gagal update! Kombinasi aturan harga dengan spesifikasi tersebut sudah ada di tabel.' 
         }, { status: 409 })
       }
     }
 
-    // 3. Proses Update Data Aman
+    // 3. Proses Update Data Secara Aman ke Semua Kolom yang Diubah
     const { data, error } = await supabaseAdmin
       .from('daftar_harga')
       .update({ 
         harga_per_meter: harga,
         lebar: lebarBaru,
+        jenis_pewarna: jenisPewarnaBaru,
+        motif_id: motifIdBaru === "" ? null : motifIdBaru,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
@@ -73,7 +87,7 @@ export async function PATCH(request, { params }) {
 
     if (error) throw error
 
-    return NextResponse.json({ data, message: 'Harga dan lebar berhasil diperbarui' }, { status: 200 })
+    return NextResponse.json({ data, message: 'Aturan harga berhasil diperbarui secara lengkap' }, { status: 200 })
 
   } catch (err) {
     return NextResponse.json({ message: 'Internal Server Error: ' + err.message }, { status: 500 })

@@ -105,14 +105,13 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ message: 'Produk tidak ditemukan' }, { status: 404 })
     }
 
-    // ── 💡 VALIDASI PATCH BACKEND ATURAN KHUSUS (BLOK LURIK + ALAMI) ──
+    // ── 💡 VALIDASI PATCH BACKEND (BLOK LURIK + ALAMI) ──
     const finalMotifId = updateData.motif_id ?? currentProduk.motif_id
     const finalJenisPewarna = updateData.jenis_pewarna ?? currentProduk.jenis_pewarna
 
     const { data: motData } = await supabaseAdmin.from('motif').select('nama').eq('id', finalMotifId).single()
     
     if (motData?.nama?.toLowerCase() === 'blok lurik' && finalJenisPewarna?.toLowerCase() === 'alami') {
-      // 1. Cek dari array gulungan baru/update yang dikirim oleh frontend
       if (gulunganData && gulunganData.length > 0) {
         const hasInvalidWidth = gulunganData.some(g => parseInt(g.lebar) !== 110);
         if (hasInvalidWidth) {
@@ -121,7 +120,6 @@ export async function PATCH(request, { params }) {
           }, { status: 400 })
         }
       } else {
-        // 2. Jika frontend tidak mengirim data gulungan baru, cek data gulungan eksis di database
         const { data: dbGulungans } = await supabaseAdmin.from('gulungan').select('lebar').eq('produk_id', id)
         const hasInvalidWidthInDb = dbGulungans?.some(g => parseInt(g.lebar) !== 110);
         if (hasInvalidWidthInDb) {
@@ -132,21 +130,31 @@ export async function PATCH(request, { params }) {
       }
     }
 
-    if (updateData.kategori_id || updateData.motif_id || gulunganData.length > 0) {
+    // ── 💡 GENERATE KODE PRODUK BARU (Format: LP-M27052026XX) ──
+    if (updateData.kategori_id || updateData.motif_id) {
       const finalKategoriId = updateData.kategori_id ?? currentProduk.kategori_id
-      const currentRakId = gulunganData.length > 0 ? gulunganData[0].rak_id : null
 
-      const [resKategori, resMotif, resRak] = await Promise.all([
+      const [resKategori, resMotif] = await Promise.all([
         supabaseAdmin.from('kategori').select('nama').eq('id', finalKategoriId).single(),
-        supabaseAdmin.from('motif').select('nama').eq('id', finalMotifId).single(),
-        currentRakId ? supabaseAdmin.from('rak').select('nama').eq('id', currentRakId).single() : { data: { nama: 'NON' } }
+        supabaseAdmin.from('motif').select('nama').eq('id', finalMotifId).single()
       ])
 
-      const KatCode = resKategori.data?.nama ? resKategori.data.nama.substring(0, 3).toUpperCase() : 'KAT'
-      const MotCode = resMotif.data?.nama ? resMotif.data.nama.substring(0, 3).toUpperCase() : 'MOT'
-      const RakCode = resRak.data?.nama ? resRak.data.nama.toUpperCase().replace(/\s+/g, '') : 'NON'
+      // 1. Inisial Motif (Lurik Pelangi -> LP)
+      const motifName = resMotif.data?.nama || "M"
+      const motifInitials = motifName.split(' ').map(w => w[0]).join('').toUpperCase()
 
-      updateData.kode_produk = `${KatCode}-${MotCode}-${RakCode}`
+      // 2. Inisial Kategori (Modern -> M)
+      const catName = resKategori.data?.nama || "K"
+      const catInitial = catName.charAt(0).toUpperCase()
+
+      // 3. Tanggal (DDMMYYYY)
+      const now = new Date()
+      const dateStr = `${String(now.getDate()).padStart(2, '0')}${String(now.getMonth() + 1).padStart(2, '0')}${now.getFullYear()}`
+
+      // 4. Random 2 digit
+      const randomStr = Math.random().toString(36).substring(2, 4).toUpperCase()
+
+      updateData.kode_produk = `${motifInitials}-${catInitial}${dateStr}${randomStr}`
     }
 
     if (imageFile && imageFile instanceof File) {

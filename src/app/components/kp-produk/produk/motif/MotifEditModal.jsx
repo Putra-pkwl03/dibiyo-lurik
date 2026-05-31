@@ -166,7 +166,16 @@ export default function MotifEditModal({ isOpen, onClose, onSuccess, motifData }
           <input
             type="text"
             value={namaMotif}
-            onChange={(e) => setNamaMotif(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              // Logika: pecah per kata, huruf pertama kapital, sisanya kecil, lalu gabungkan kembali
+              const formatted = val
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+              
+              setNamaMotif(formatted);
+            }}
             disabled={isSubmitting}
             maxLength={255}
             autoFocus

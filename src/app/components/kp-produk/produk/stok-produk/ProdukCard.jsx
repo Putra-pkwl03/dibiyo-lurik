@@ -19,17 +19,18 @@ export default function ProdukCard({ produk, onRefresh, onEditClick, onDetailCli
   const kodeProduk   = produk?.kode_produk   || '-'
   const kategoriNama = produk?.kategori?.nama || '-'
   const motifNama    = produk?.motif?.nama    || '-'
-  const jenisPewarna = produk?.jenis_pewarna  || '-'
   const stok         = produk?.stok ?? 0
   const terjual      = produk?.terjual ?? 0
   const gambarUrl    = produk?.gambar_url
   const status       = (produk?.status || 'ready').toLowerCase()
 
+  // Mapping status baru ke Tersedia / Habis tanpa merusak logika data backend
+  const normalizedStatus = (status === 'ready' || status === 'tersedia') ? 'tersedia' : 'habis'
+
   const statusStyle = {
-    ready: { bg: '#76cbf9', label: 'Ready' },
-    sold:  { bg: '#ff695e', label: 'Sold' },
-    habis: { bg: '#ff695e', label: 'Sold' },
-  }[status] || { bg: '#A3704C', label: status.charAt(0).toUpperCase() + status.slice(1) }
+    tersedia: { bg: '#76cbf9', label: 'Tersedia' },
+    habis:    { bg: '#ff695e', label: 'Habis' },
+  }[normalizedStatus] || { bg: '#A3704C', label: status.charAt(0).toUpperCase() + status.slice(1) }
 
   const handleConfirmDelete = async () => {
     setIsDeleting(true)
@@ -80,16 +81,26 @@ export default function ProdukCard({ produk, onRefresh, onEditClick, onDetailCli
           </div>
         </div>
 
-        {/* Bagian Grid Informasi Konten Utama Sesuai Mockup 3 Kolom */}
+        {/* Bagian Informasi Konten Utama Sesuai Mockup Susunan Vertikal 3 Kolom */}
         <div className="flex-1 px-4 pt-4 pb-3 text-xs">
           <div className="grid grid-cols-3 gap-x-2 gap-y-3.5">
-            <InfoBlock label="Kode Produksi" value={kodeProduk} />
-            <InfoBlock label="Kategori" value={kategoriNama} />
-            <InfoBlock label="Motif" value={motifNama} />
+            {/* Kolom 1 */}
+            <div className="space-y-3.5">
+              <InfoBlock label="Kode Produksi" value={kodeProduk} />
+              <InfoBlock label="Stok" value={stok === 0 ? '0' : `${stok} gulungan`} />
+            </div>
 
-            <InfoBlock label="Stok" value={`${stok} gulungan`} />
-            <InfoBlock label="Jumlah Terjual" value={`${terjual} gulungan`} />
-            <InfoBlock label="Jenis Pewarna" value={jenisPewarna} />
+            {/* Kolom 2 */}
+            <div className="space-y-3.5">
+              <InfoBlock label="Kategori" value={kategoriNama} />
+              <InfoBlock label="Jumlah Terjual" value={`${terjual} gulungan`} />
+            </div>
+
+            {/* Kolom 3 */}
+            <div className="space-y-3.5">
+              <InfoBlock label="Motif" value={motifNama} />
+              {/* Baris kedua kolom 3 dikosongkan agar presisi dengan mockup figma */}
+            </div>
           </div>
         </div>
 
@@ -164,6 +175,7 @@ export default function ProdukCard({ produk, onRefresh, onEditClick, onDetailCli
         </div>
       )}
 
+      {/* Toast Sukses */}
       {showSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={BACKDROP_STYLE}>
           <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-[360px] py-12 px-6 flex flex-col items-center animate-in fade-in zoom-in-95 duration-150">

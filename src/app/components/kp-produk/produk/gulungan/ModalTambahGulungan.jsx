@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { X, Loader2, ChevronDown } from "lucide-react";
 import Swal from "sweetalert2";
 
-export default function PopupTambahGulungan({ isOpen, onClose, onSuccess, currentProduct, raks = [] }) {
+export default function PopupTambahGulungan({ isOpen, onClose, onSuccess, currentProduct }) {
   // Amankan data jika sewaktu-waktu parent mengirimkan dalam bentuk array [ objek ]
   const produkAktif = Array.isArray(currentProduct) ? currentProduct[0] : currentProduct;
 
@@ -18,8 +18,8 @@ export default function PopupTambahGulungan({ isOpen, onClose, onSuccess, curren
 
   // State data master dari database (Backend)
   const [listRak, setListRak] = useState([]);
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isLoadingMaster, setIsLoadingMaster] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingMaster, setIsLoadingMaster] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -182,7 +182,7 @@ export default function PopupTambahGulungan({ isOpen, onClose, onSuccess, curren
             </div>
           </div>
 
-          {/* Field 2: Lebar Gulungan (DIKEMBALIKAN KE SELECT DROPDOWN PILL STYLE) */}
+          {/* Field 2: Lebar Gulungan */}
           <div className="space-y-1.5">
             <label className="block text-[13px] font-medium text-[#a47352]">Lebar Gulungan</label>
             <div className="relative">
@@ -232,7 +232,7 @@ export default function PopupTambahGulungan({ isOpen, onClose, onSuccess, curren
             </div>
           </div>
 
-          {/* Field 5: Harga Per Meter (MUTLAK OTOMATIS & READ ONLY - DROPDOWN MAKSUD GUNAKAN DIHAPUS) */}
+          {/* Field 5: Harga Per Meter (MUTLAK OTOMATIS & READ ONLY) */}
           <div className="space-y-1.5">
             <label className="block text-[13px] font-medium text-[#a47352]">Harga Permeter (Otomatis)</label>
             <div className="relative">

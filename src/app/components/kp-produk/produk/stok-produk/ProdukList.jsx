@@ -1,3 +1,4 @@
+// D:\dibiyo-lurik\src\app\components\kp-produk\produk\stok-produk\ProdukList.jsx
 'use client'
 
 import React, { useState, useEffect } from 'react'
@@ -10,7 +11,7 @@ import { useRouter } from 'next/navigation'
 import ProdukCard from './ProdukCard'
 import ProdukFilter from './ProdukFilter'
 import ModalTambahProduk from './ModalTambahProduk'
-import DetailModalKp from './DetailModalKp' // Import Modal Detail
+import DetailModalKp from './DetailModalKp'
 
 const ModalEditProduk = dynamic(() => import('./ModalEditProduk'), { ssr: false })
 
@@ -26,7 +27,7 @@ export default function ProdukList() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false) // State untuk modal detail
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [selectedProductId, setSelectedProductId] = useState(null)
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -68,6 +69,13 @@ export default function ProdukList() {
     initLoadData()
   }, [])
 
+  const normalizeStatus = (statusStr) => {
+    const s = statusStr?.toLowerCase()
+    if (s === 'ready' || s === 'tersedia') return 'tersedia'
+    if (s === 'sold' || s === 'habis') return 'habis'
+    return s
+  }
+
   const filteredProduks = produks.filter((produk) => {
     const query = searchQuery.toLowerCase()
     const matchSearch = query === '' || 
@@ -76,7 +84,7 @@ export default function ProdukList() {
 
     const matchKategori = filters.kategori_id === '' || produk.kategori?.id === filters.kategori_id
     const matchPewarna = filters.jenis_pewarna === '' || produk.jenis_pewarna === filters.jenis_pewarna
-    const matchStatus = filters.status === '' || produk.status?.toLowerCase() === filters.status.toLowerCase()
+    const matchStatus = filters.status === '' || normalizeStatus(produk.status) === normalizeStatus(filters.status)
 
     return matchSearch && matchKategori && matchPewarna && matchStatus
   })
@@ -87,11 +95,12 @@ export default function ProdukList() {
     <div className="space-y-6">
       {/* Toolbar */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        {/* Search Input Box */}
         <div className="relative flex-1 lg:max-w-[calc(60%-12px)]">
           <Search className="absolute text-[#a47352] left-4 top-1/2 -translate-y-1/2" size={20} />
           <input
             type="text"
-            placeholder="Cari motif atau kode produk..."
+            placeholder="nama motif/kode produk"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-12 pr-4 h-[56px] rounded-[10px] border border-[#a47352] text-[#a47352] focus:outline-none focus:ring-1 focus:ring-[#a47352]"
@@ -99,31 +108,36 @@ export default function ProdukList() {
           />
         </div>
 
-        <div className="flex items-stretch gap-3">
+        {/* Action Buttons */}
+        <div className="relative w-fit">
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={`flex items-center justify-center gap-2 w-[120px] h-[56px] rounded-[10px] border ${hasActiveFilter ? 'bg-[#a47352] text-white' : 'border-[#a47352] text-[#a47352]'}`}
+            className={`flex items-center justify-center gap-2 w-[120px] h-[56px] rounded-[10px] border transition-colors ${
+              hasActiveFilter ? 'bg-[#a47352] text-white' : 'border-[#a47352] text-[#a47352]'
+            }`}
           >
             <SlidersHorizontal size={20} /> Filter
           </button>
-          
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center justify-center gap-2 h-[56px] bg-[#a47352] text-white px-6 rounded-[10px] font-medium"
-          >
-            <Plus size={20} /> Tambah Produk
-          </button>
-        </div>
-      </div>
 
-      {isFilterOpen && (
-        <ProdukFilter
-          categories={categories}
-          currentFilters={filters}
-          setFilters={setFilters}
-          onClose={() => setIsFilterOpen(false)}
-        />
-      )}
+          {/* Render Dropdown Tepat Di Bawah Tombol */}
+          {isFilterOpen && (
+            <ProdukFilter
+              categories={categories}
+              currentFilters={filters}
+              setFilters={setFilters}
+              onClose={() => setIsFilterOpen(false)}
+            />
+          )}
+        </div>
+        
+        {/* Tombol Tambah Produk */}
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="flex items-center justify-center gap-2 h-[56px] bg-[#a47352] text-white px-6 rounded-[10px] font-medium transition-transform active:scale-[0.98]"
+        >
+          <Plus size={20} /> Tambah Produk
+        </button>
+      </div> {/* Tag ini menutup Toolbar dengan benar */}
 
       {/* Grid Produk */}
       {isLoading ? (
@@ -160,14 +174,13 @@ export default function ProdukList() {
               produk={produk}
               onRefresh={initLoadData}
               onEditClick={(id) => { setSelectedProductId(id); setIsEditModalOpen(true); }}
-              // Mengubah onDetailClick untuk membuka modal
               onDetailClick={(id) => { setSelectedProductId(id); setIsDetailModalOpen(true); }}
             />
           ))}
         </div>
       )}
 
-      {/* Modal Tambah, Edit, dan Detail */}
+      {/* Modal Tambah Produk */}
       <ModalTambahProduk
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
@@ -178,6 +191,7 @@ export default function ProdukList() {
         prices={prices}
       />
 
+      {/* Modal Edit Produk */}
       {isEditModalOpen && selectedProductId && (
         <ModalEditProduk
           isOpen={isEditModalOpen}
@@ -191,7 +205,7 @@ export default function ProdukList() {
         />
       )}
 
-      {/* Render Modal Detail */}
+      {/* Modal Detail Produk */}
       <DetailModalKp
         isOpen={isDetailModalOpen}
         productId={selectedProductId}

@@ -66,18 +66,30 @@ export async function POST(request) {
       }
     }
 
+// ── 💡 GENERATE KODE PRODUK (Format: LP-M27052026XX) ──
     const { data: catData } = await supabaseAdmin.from('kategori').select('nama').eq('id', kategori_id).single()
-    const firstGulunganRakId = gulungans.length > 0 ? gulungans[0].rak_id : null;
     
-    let rakName = "X"
-    if (firstGulunganRakId) {
-      const { data: rakData } = await supabaseAdmin.from('rak').select('nama').eq('id', firstGulunganRakId).single()
-      if (rakData) rakName = rakData.nama
-    }
+    // 1. Ambil Inisial Motif (Contoh: "Lurik Pelangi" -> "LP")
+    const motifInitials = (motData?.nama || "M")
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase();
 
-    const now = new Date()
-    const kodeGenerated = `${rakName}-${(motData?.nama || "M").toLowerCase()}${String(now.getDate()).padStart(2, '0')}${String(now.getMonth() + 1).padStart(2, '0')}${now.getFullYear()}${(catData?.nama || "K").charAt(0).toUpperCase()}${String(now.getSeconds()).padStart(2, '0')}`
+    // 2. Ambil Inisial Kategori (Contoh: "Modern" -> "M")
+    const catInitial = (catData?.nama || "K").charAt(0).toUpperCase();
 
+    // 3. Format Tanggal (DDMMYYYY)
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}${String(now.getMonth() + 1).padStart(2, '0')}${now.getFullYear()}`;
+
+    // 4. Generate 2 karakter random
+    const randomStr = Math.random().toString(36).substring(2, 4).toUpperCase();
+
+    // 5. Gabungkan menjadi format: LP-M27052026XX
+    const kodeGenerated = `${motifInitials}-${catInitial}${dateStr}${randomStr}`;
+
+    // ── UPLOAD GAMBAR ──
     let finalGambarUrl = null
     if (imageFile && imageFile.size > 0) {
       const filePath = `produk/${Date.now()}-${Math.random().toString(36).substring(7)}.${imageFile.name.split('.').pop()}`
