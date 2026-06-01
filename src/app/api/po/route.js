@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabase-admin';
-import nodemailer from 'nodemailer'; // <-- 1. IMPORT NODEMAILER
+import nodemailer from 'nodemailer';
+import { realtime } from '@/lib/realtime'; 
 
 // =====================================================
 // KONFIGURASI TRANSPORTER NODEMAILER (SMTP)
@@ -45,19 +46,18 @@ export async function GET(request) {
   return NextResponse.json({ data: dataWithCount });
 }
 
-// =====================================================
-// PATCH - Update Status Produksi & Kirim Email jika Selesai
-// =====================================================
+
+
 export async function PATCH(request) {
   try {
     const body = await request.json();
-    const { id, tipe, status } = body;
+    const { id, tipe, status } = body; // tipe: 'custom' atau 'reguler'
 
     if (!id || !status) {
       return NextResponse.json({ error: 'Missing ID or Status' }, { status: 400 });
     }
 
-    // Tentukan tabel target pembaruan status
+    const kodePrefix = tipe === 'custom' ? 'POC' : 'POR';
     const table = tipe === 'custom' ? 'pre_order_custom' : 'pre_order_reguler';
 
     // Update kolom status saja berdasarkan id pesanan
@@ -65,11 +65,34 @@ export async function PATCH(request) {
       .from(table)
       .update({ status: status })
       .eq('id', id)
-      .select();
+      .select()
+      .single(); 
 
     if (error) {
       console.error("Supabase Patch Error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // =====================================================
+    // LOGIKA NOTIFIKASI REAL-TIME KE CS (JIKA SELESAI DIPROSES)
+    // =====================================================
+    if (status === 'selesai_diproses') {
+      try {
+        console.log(`🚀 [REALTIME-PATCH] Memancarkan sinyal selesai ke Customer Service...`);
+        
+        await realtime.emit("notification.completed", {
+          id_order: id.toString(),
+          tipe: tipe.toLowerCase(), // 🔥 Diubah jadi 'custom' atau 'reguler' agar sinkron dengan subId sidebar
+          kode_display: `${kodePrefix}-${id}`, // Untuk keperluan teks alert
+          nama_customer: data?.nama_customer || 'Pelanggan',
+          pesan: `Pesanan ${tipe === 'custom' ? 'Custom' : 'Reguler'} #${kodePrefix}-${id} (${data?.nama_customer || 'Tanpa Nama'}) telah SELESAI DIPROSES!`,
+          waktu: new Date().toISOString(),
+        });
+        
+        console.log("✅ [REALTIME-PATCH] Sinyal selesai sukses dipancarkan!");
+      } catch (realtimeErr) {
+        console.error("⚠️ [REALTIME-PATCH-ERROR] Gagal memancarkan sinyal ke CS:", realtimeErr);
+      }
     }
 
     // =====================================================
@@ -79,7 +102,6 @@ export async function PATCH(request) {
       try {
         console.log(`📧 [EMAIL-PATCH] Mendeteksi PO Custom #${id} Selesai. Menarik data lengkap untuk email...`);
 
-        // Tarik data detail PO dari database karena body request dari frontend tidak membawa nama customer
         const { data: detailPO, error: detailError } = await supabaseAdmin
           .from('pre_order_custom')
           .select(`
@@ -95,7 +117,6 @@ export async function PATCH(request) {
 
         if (detailError || !detailPO) throw new Error("Gagal mengambil detail order untuk data email");
 
-        // Susun daftar item html
         const itemRowsHtml = (detailPO.item_pre_order_custom || []).map((item, index) => `
           <tr>
             <td style="padding: 8px; border: 1px solid #DDB892; text-align: center;">${index + 1}</td>

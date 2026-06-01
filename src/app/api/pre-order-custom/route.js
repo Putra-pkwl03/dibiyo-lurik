@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabase-admin';
 import nodemailer from 'nodemailer'; 
+import { realtime } from '@/lib/realtime';
 
 // =====================================================
 // KONFIGURASI TRANSPORTER NODEMAILER (SMTP)
@@ -169,6 +170,25 @@ export async function POST(request) {
     }
 
     console.log("🎉 [DEBUG PO CUSTOM] DATABASE INSERT SUCCESS. ID:", poCustom.id);
+
+
+    try {
+      console.log("🚀 [REALTIME] Mengirim sinyal notifikasi ke Kepala Produksi...");
+
+      await realtime.emit("notification.created", {
+        id_order: poCustom.id.toString(),
+        tipe: "POC", // Pre-Order Custom
+        nama_customer: poCustom.nama_customer,
+        pesan: `Ada pesanan Custom baru dari ${poCustom.nama_customer} (Estimasi: ${poCustom.tanggal_selesai || '-'})`,
+        waktu: new Date().toISOString(),
+      });
+
+      console.log("✅ [REALTIME] Sinyal notifikasi berhasil dipancarkan!");
+    } catch (realtimeErr) {
+      // Kita bungkus try-catch terpisah agar jika Upstash ada kendala, 
+      // transaksi utama CS di aplikasi TIDAK IKUT GAGAL/ERROR.
+      console.error("⚠️ [REALTIME-ERROR] Gagal memancarkan notifikasi:", realtimeErr);
+    }
 
     // =====================================================
     // 2. TAHAP OTOMATIS KIRIM EMAIL KE KEPALA PRODUKSI

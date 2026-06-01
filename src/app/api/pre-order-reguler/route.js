@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabase-admin';
+import { realtime } from '@/lib/realtime';
 
 // =====================================================
 // HELPER LOKAL (Pengganti @/lib/preorder-helper)
@@ -13,10 +14,10 @@ function localCalculateItemSubtotal(panjang, jumlah, hargaPerMeter) {
 // 2. TENTUKAN HARGA BERDASARKAN JENIS PEWARNA, MOTIF_ID, DAN LEBAR
 async function localLookupHargaPerMeter(jenisPewarna, motifId, lebar) {
   const { data: hargaData, error } = await supabaseAdmin
-    .from('daftar_harga') // <-- UBAH DARI 'master_harga_reguler' MENJADI 'daftar_harga'
+    .from('daftar_harga') 
     .select('harga_per_meter')
     .eq('jenis_pewarna', jenisPewarna)
-    .eq('motif_id', motifId) // <-- SEKARANG FILTER BERDASARKAN MOTIF_ID JUGA
+    .eq('motif_id', motifId) 
     .eq('lebar', Number(lebar))
     .maybeSingle();
 
@@ -29,16 +30,13 @@ async function localLookupHargaPerMeter(jenisPewarna, motifId, lebar) {
 
 // 3. Menghitung ulang total harga header berdasarkan semua item_pre_order_reguler
 async function localRecalculateTotalPOR(poId) {
-  // Ambil semua item terkait
   const { data: items } = await supabaseAdmin
     .from('item_pre_order_reguler')
     .select('subtotal')
     .eq('pre_order_reguler_id', poId);
 
-  // Hitung total item
   const sumItems = (items || []).reduce((acc, curr) => acc + Number(curr.subtotal || 0), 0);
 
-  // Ambil data diskon dari header
   const { data: header } = await supabaseAdmin
     .from('pre_order_reguler')
     .select('diskon')
@@ -46,17 +44,14 @@ async function localRecalculateTotalPOR(poId) {
     .single();
 
   const diskon = header ? Number(header.diskon || 0) : 0;
-  
-  // Jika diskon berupa persen (misal 10%), rumusnya: sumItems - (sumItems * (diskon / 100))
-  // Jika diskon Anda berupa nominal rupiah langsung, gunakan: sumItems - diskon
   const totalHarga = Math.max(0, sumItems - (sumItems * (diskon / 100)));
 
-  // Update kembali header-nya
   await supabaseAdmin
     .from('pre_order_reguler')
     .update({ total_harga: totalHarga })
     .eq('id', poId);
 }
+
 // =====================================================
 // GET - list PO reguler (Fleksibel untuk Antrean & Riwayat)
 // =====================================================
@@ -67,8 +62,6 @@ export async function GET(request) {
   const offset = (page - 1) * limit;
   const filterStatus = searchParams.get('status');
   const filterPembayaran = searchParams.get('status_pembayaran');
-  
-  // Ambil parameter status_penerimaan dari query string, default-nya 'belum_diambil'
   const filterPenerimaan = searchParams.get('status_penerimaan') || 'belum_diambil';
 
   let query = supabaseAdmin
@@ -119,7 +112,7 @@ export async function GET(request) {
 }
 
 // =====================================================
-// POST - create PO reguler (Tanpa Auth)
+// POST - create PO reguler (Dengan Notifikasi Realtime)
 // =====================================================
 export async function POST(request) {
   try {
@@ -162,7 +155,6 @@ export async function POST(request) {
 
       if (!produk) throw new Error(`Produk tidak ditemukan: ${item.produk_id}`);
 
-      // Menggunakan helper lokal
       const hargaPerMeter = await localLookupHargaPerMeter(produk.jenis_pewarna, produk.motif_id, item.lebar);
       
       if (hargaPerMeter === 0) throw new Error(`Harga untuk ${produk.jenis_pewarna} ${item.lebar}cm belum diset`);
@@ -174,7 +166,7 @@ export async function POST(request) {
         panjang: Number(item.panjang),
         jumlah: Number(item.jumlah),
         harga_per_meter: hargaPerMeter,
-        subtotal: localCalculateItemSubtotal(item.panjang, item.jumlah, hargaPerMeter), // Menggunakan helper lokal
+        subtotal: localCalculateItemSubtotal(item.panjang, item.jumlah, hargaPerMeter),
       });
     }
 
@@ -193,13 +185,32 @@ export async function POST(request) {
       .eq('id', poHeader.id)
       .single();
 
+    // =====================================================
+    // TRIGGER UPSTASH REALTIME NOTIFICATION FOR KP
+    // =====================================================
+    try {
+      console.log("🚀 [REALTIME] Mengirim sinyal notifikasi ke Kepala Produksi...");
+
+      await realtime.emit("notification.created", {
+        id_order: String(poComplete?.id),
+        tipe: "POR", // Tetap POR agar di sidebar dibaca sebagai reguler
+        nama_customer: poComplete?.nama_customer || 'Pelanggan',
+        pesan: `Pesanan Pre Order Reguler baru atas nama ${poComplete?.nama_customer || 'Pelanggan'} telah dibuat.`,
+        waktu: new Date().toISOString()
+      });
+
+      console.log("✅ [REALTIME] Sinyal notifikasi berhasil dipancarkan!");
+    } catch (realtimeErr) {
+      console.error("⚠️ [REALTIME-ERROR] Gagal memancarkan notifikasi:", realtimeErr);
+    }
+    // =====================================================
+
     return NextResponse.json({ data: poComplete }, { status: 201 });
 
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
-
 
 // =====================================================
 // PATCH - Konfirmasi Penerimaan Barang oleh Customer
@@ -213,7 +224,6 @@ export async function PATCH(request) {
       return NextResponse.json({ error: 'ID Pesanan wajib disertakan' }, { status: 400 });
     }
 
-    // Update status penerimaan menjadi 'sudah_diambil'
     const { data, error } = await supabaseAdmin
       .from('pre_order_reguler')
       .update({ 

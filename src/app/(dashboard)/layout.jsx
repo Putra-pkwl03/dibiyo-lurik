@@ -4,6 +4,10 @@ import React, { Suspense, useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar' 
 import { useRouter } from 'next/navigation'
 import NProgress from 'nprogress'
+// =====================================================
+// IMPORT REALTIME PROVIDER DARI UPSTASH
+// =====================================================
+import { RealtimeProvider } from '@upstash/realtime/client'
 
 export default function DashboardLayout({ children }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -21,7 +25,7 @@ export default function DashboardLayout({ children }) {
   // --- DETEKSI IDLE ---
   useEffect(() => {
     let idleTimer;
-    const IDLE_TIMEOUT = 10 * 60 * 1000; // 10 Menit
+    const IDLE_TIMEOUT = 30 * 60 * 1000; // 10 Menit
     let lastActivity = Date.now();
 
     const triggerLogout = async () => {
@@ -40,7 +44,6 @@ export default function DashboardLayout({ children }) {
     }
 
     const resetIdleTimer = () => {
-      // Jeda 1 detik untuk optimasi performa DOM event listener
       if (Date.now() - lastActivity < 1000) return;
       lastActivity = Date.now();
 
@@ -54,7 +57,6 @@ export default function DashboardLayout({ children }) {
       window.addEventListener(event, resetIdleTimer, { passive: true })
     })
 
-    // Inisialisasi timer pertama saat halaman dimuat
     idleTimer = setTimeout(triggerLogout, IDLE_TIMEOUT);
 
     return () => {
@@ -66,15 +68,20 @@ export default function DashboardLayout({ children }) {
   }, [router])
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
-      {/* Ubah warna fallback pulse ke Navy #1A335A sesuai tema baru */}
-      <Suspense fallback={<div className="w-64 bg-[#1A335A] min-h-screen animate-pulse" />}>
-        <Sidebar />
-      </Suspense>
+    // =====================================================
+    // BUNGKUS SELURUH DASHBOARD DENGAN REALTIME PROVIDER
+    // point ke arah endpoint API realtime yang sudah dibuat
+    // =====================================================
+    <RealtimeProvider url="/api/realtime">
+      <div className="flex min-h-screen bg-slate-100">
+        <Suspense fallback={<div className="w-64 bg-[#1A335A] min-h-screen animate-pulse" />}>
+          <Sidebar />
+        </Suspense>
 
-      <main className={`flex-1 min-h-screen p-6 transition-all duration-300 ${isSidebarCollapsed ? 'ml-20' : 'ml-64'}`}>
-        {children}
-      </main>
-    </div>
+        <main className={`flex-1 min-h-screen p-6 transition-all duration-300 ${isSidebarCollapsed ? 'ml-20' : 'ml-64'}`}>
+          {children}
+        </main>
+      </div>
+    </RealtimeProvider>
   )
 }

@@ -5,12 +5,13 @@ export const dynamic = 'force-dynamic';
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useRealtime } from '@upstash/realtime/client'
 import { 
   LayoutDashboard, Package, ShoppingCart, 
   Database, FileText, User, LogOut, ChevronDown, ClipboardList,
   X 
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import Swal from 'sweetalert2';
 import NProgress from 'nprogress';
 import LogoutModal from '@/app/components/LogoutModal';
@@ -26,16 +27,135 @@ const getCookie = (name) => {
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
   
   const [openSubMenu, setOpenSubMenu] = useState('')
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const searchParams = useSearchParams()
-  const [role, setRole] = useState('cs')
+  
+  const [role, setRole] = useState(null)
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   
   const [cartCount, setCartCount] = useState(0)
   const [animateBadge, setAnimateBadge] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
+
+  const [poRegulerCount, setPoRegulerCount] = useState(0)
+  const [poCustomCount, setPoCustomCount] = useState(0)
+  const [animatePoBadge, setAnimatePoBadge] = useState(false)
+
+  const totalPoNotificationCount = poRegulerCount + poCustomCount;
+
+  useEffect(() => {
+    const userRole = getCookie('user-role')
+    if (userRole) {
+      setRole(userRole.toLowerCase())
+    }
+    const event = new CustomEvent("sidebarToggle", { detail: { isCollapsed: false } });
+    window.dispatchEvent(event);
+  }, [])
+
+useRealtime({
+    event: '*', 
+    history: false,
+    enabled: !!role, 
+    onData(payload) {
+      const eventName = payload.event; 
+      const data = payload.data;
+
+      if (!data) return;
+
+      const rawType = (data.tipe || data.type || '').toLowerCase();
+      const isCustomOrder = rawType.includes('custom') || rawType.includes('poc');
+
+      if (role === 'kepala_produksi' && eventName === 'notification.created') {
+        if (isCustomOrder) {
+          setPoCustomCount((prev) => prev + 1);
+        } else {
+          setPoRegulerCount((prev) => prev + 1);
+        }
+        setAnimatePoBadge(true);
+
+        try {
+          const audio = new Audio('https://signals.nextjs.org/signals.mp3');
+          audio.volume = 0.4;
+          audio.play().catch(() => {});
+        } catch (e) {}
+
+        Swal.fire({
+          title: isCustomOrder ? 'Pesanan Custom Baru!' : 'Pesanan Reguler Baru!',
+          text: data.pesan,
+          icon: 'info',
+          position: 'top-end',
+          showConfirmButton: true,
+          confirmButtonText: 'Lihat Antrean',
+          confirmButtonColor: '#1A335A',
+          showCancelButton: true,
+          cancelButtonText: 'Tutup',
+          timer: 12000,
+          timerProgressBar: true,
+        }).then((result) => {
+          if (result.isConfirmed) {
+            router.push(`/dashboard/kp/po?tipe=${isCustomOrder ? 'custom' : 'reguler'}`);
+            router.refresh();
+          }
+        });
+      }
+
+      if ((role === 'cs' || role === 'customer_service') && eventName === 'notification.completed') {
+        if (isCustomOrder) {
+          setPoCustomCount((prev) => prev + 1);
+        } else {
+          setPoRegulerCount((prev) => prev + 1);
+        }
+        setAnimatePoBadge(true);
+
+        try {
+          const audio = new Audio('https://signals.nextjs.org/signals.mp3');
+          audio.volume = 0.4;
+          audio.play().catch(() => {});
+        } catch (e) {}
+
+        Swal.fire({
+          title: `Produksi Selesai!`,
+          text: data.pesan,
+          icon: 'success',
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 12000, 
+          timerProgressBar: true,
+        });
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (!role) return;
+
+    if (role === 'kepala_produksi' && pathname.includes('/po')) {
+      const currentTipe = searchParams.get('tipe');
+      if (currentTipe === 'reguler') {
+        setPoRegulerCount(0);
+      } else if (currentTipe === 'custom') {
+        setPoCustomCount(0);
+      }
+    }
+    
+    if ((role === 'cs' || role === 'customer_service') && pathname.includes('/cs/po/')) {
+      if (pathname.endsWith('/reguler')) {
+        setPoRegulerCount(0);
+      } else if (pathname.endsWith('/custom')) {
+        setPoCustomCount(0);
+      }
+    }
+  }, [pathname, searchParams, role])
+
+  useEffect(() => {
+    if (animatePoBadge) {
+      const timer = setTimeout(() => setAnimatePoBadge(false), 300)
+      return () => clearTimeout(timer)
+    }
+  }, [animatePoBadge])
 
   useEffect(() => {
     const handleUpdateCartCount = (e) => {
@@ -56,9 +176,7 @@ export default function Sidebar() {
         if (res.ok && result.data) {
           setCartCount(result.data.length)
         }
-      } catch (err) {
-        console.error("Gagal mengambil data awal keranjang di sidebar:", err)
-      }
+      } catch (err) {}
     }
 
     if (role === 'cs' || role === 'customer_service') {
@@ -73,16 +191,6 @@ export default function Sidebar() {
     }
   }, [animateBadge]);
 
-  useEffect(() => {
-    const userRole = getCookie('user-role')
-    if (userRole) {
-      setRole(userRole.toLowerCase())
-    }
-    const event = new CustomEvent("sidebarToggle", { detail: { isCollapsed: false } });
-    window.dispatchEvent(event);
-  }, [])
-
-  // Auto-expand sub-menu berdasarkan URL aktif saat halaman pertama kali dimuat
   useEffect(() => {
     if (pathname.startsWith('/dashboard/kp/md') || pathname.startsWith('/dashboard/kp/md/produk')) {
       setOpenSubMenu('Master Data')
@@ -105,25 +213,9 @@ export default function Sidebar() {
   }
 
   const masterMenuItems = [
-    { 
-      name: 'Dashboard', 
-      icon: <LayoutDashboard size={20} />, 
-      path: '/dashboard',
-      roles: ['kepala_produksi', 'cs', 'customer_service', 'owner'] 
-    },
-    { 
-      name: 'Order', 
-      icon: <FileText size={20} />, 
-      path: '/dashboard/cs/order', 
-      roles: ['cs', 'customer_service'] 
-    },
-    { 
-      name: 'Keranjang', 
-      icon: <ShoppingCart size={20} />, 
-      path: '/dashboard/cs/keranjang',
-      roles: ['cs', 'customer_service'],
-      hasBadge: true
-    },
+    { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/dashboard', roles: ['kepala_produksi', 'cs', 'customer_service', 'owner'] },
+    { name: 'Order', icon: <FileText size={20} />, path: '/dashboard/cs/order', roles: ['cs', 'customer_service'] },
+    { name: 'Keranjang', icon: <ShoppingCart size={20} />, path: '/dashboard/cs/keranjang', roles: ['cs', 'customer_service'], hasBadge: true },
     { 
       name: 'Master Data', 
       icon: <Package size={20} />, 
@@ -136,11 +228,7 @@ export default function Sidebar() {
         { name: 'Gulungan', path: '/dashboard/kp/md/gulungan' }
       ]
     },
-    {
-      name: 'Produk', path: '/dashboard/kp/md/produk', 
-      icon: <Package size={20} />, 
-      roles: ['kepala_produksi']
-    },
+    { name: 'Produk', path: '/dashboard/kp/md/produk', icon: <Package size={20} />, roles: ['kepala_produksi'] },
     { 
       name: 'Rekap Stok Gulungan', 
       icon: <Database size={20} />, 
@@ -150,11 +238,7 @@ export default function Sidebar() {
         { name: 'Lebar 110', path: '/dashboard/kp/rsg/lebar110' }
       ] 
     },
-    {
-      name: 'Produk', path: '/dashboard/owner/md/produk', 
-      icon: <Package size={20} />, 
-      roles: ['owner']
-    },
+    { name: 'Produk', path: '/dashboard/owner/md/produk', icon: <Package size={20} />, roles: ['owner'] },
     { 
       name: 'Rekap Stok Gulungan', 
       icon: <Database size={20} />, 
@@ -165,13 +249,13 @@ export default function Sidebar() {
       ] 
     },
     { 
-      id: 'po-cs',
+      id: 'po-cs', 
       name: 'Pre Order', 
       icon: <ShoppingCart size={20} />, 
       roles: ['cs', 'customer_service'],
       subMenu: [
-        { name: 'Pre Order Reguler', path: '/dashboard/cs/po/reguler' }, 
-        { name: 'Pre Order Custom', path: '/dashboard/cs/po/custom' }      
+        { name: 'Pre Order Reguler', path: '/dashboard/cs/po/reguler', subId: 'reguler' }, 
+        { name: 'Pre Order Custom', path: '/dashboard/cs/po/custom', subId: 'custom' }      
       ]
     },
     { 
@@ -180,8 +264,8 @@ export default function Sidebar() {
       icon: <ShoppingCart size={20} />, 
       roles: ['kepala_produksi'],
       subMenu: [
-        { name: 'Pre Order Reguler', path: '/dashboard/kp/po?tipe=reguler' }, 
-        { name: 'Pre Order Custom', path: '/dashboard/kp/po?tipe=custom' }
+        { name: 'Pre Order Reguler', path: '/dashboard/kp/po?tipe=reguler', subId: 'reguler' }, 
+        { name: 'Pre Order Custom', path: '/dashboard/kp/po?tipe=custom', subId: 'custom' }
       ]
     },
     { 
@@ -222,7 +306,7 @@ export default function Sidebar() {
     },
   ]
 
-  const filteredMenuItems = masterMenuItems.filter(item => item.roles.includes(role))
+  const filteredMenuItems = role ? masterMenuItems.filter(item => item.roles.includes(role)) : [];
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -287,7 +371,6 @@ export default function Sidebar() {
           const hasSubMenu = !!item.subMenu && item.subMenu.length > 0;
           const menuKey = `${item.name}-${index}-${role}`;
           
-          // Deteksi apakah salah satu anak (sub-menu) sedang aktif secara presisi
           const isChildActive = hasSubMenu && item.subMenu.some(sub => {
             if (!sub.path) return false;
             const [pathOnly, queryString] = sub.path.split('?');
@@ -303,8 +386,11 @@ export default function Sidebar() {
 
           const isMainActive = !hasSubMenu && pathname === item.path;
 
-          // JIKA MENU MEMILIKI SUBMENU
           if (hasSubMenu) {
+            const isPoMenu = item.id === 'po-kp' || item.id === 'po-cs';
+            // Sembunyikan badge menu utama jika sub menu sedang dibuka
+            const showMainMenuBadge = isPoMenu && totalPoNotificationCount > 0 && openSubMenu !== item.name;
+
             return (
               <div key={menuKey} className="space-y-1">
                 <button
@@ -321,26 +407,42 @@ export default function Sidebar() {
                   }`}
                   title={isCollapsed ? item.name : undefined}
                 >
-                  {/* Indikator garis vertikal emas tipis di kiri */}
                   {isChildActive && (
                     <span className="absolute -left-3 top-0 w-1.5 h-full bg-[#F2B600] rounded-r-lg shadow-md z-50" />
                   )}
 
                   <div className="flex items-center gap-3">
-                    <div className="shrink-0">{item.icon}</div>
+                    <div className="relative shrink-0">
+                      {item.icon}
+                      {/* Titik merah kecil saat sidebar collapsed hanya muncul jika sub menu tidak dibuka */}
+                      {showMainMenuBadge && isCollapsed && (
+                        <span className="absolute -top-1.5 -right-1.5 bg-red-500 h-2.5 w-2.5 rounded-full ring-2 ring-[#1A335A]" />
+                      )}
+                    </div>
                     {!isCollapsed && <span className="text-sm whitespace-nowrap">{item.name}</span>}
                   </div>
+
                   {!isCollapsed && (
-                    <ChevronDown 
-                      size={16} 
-                      className={`transition-transform duration-200 text-white/70 ${
-                        openSubMenu === item.name ? 'rotate-180' : ''
-                      }`} 
-                    />
+                    <div className="flex items-center gap-2">
+                      {showMainMenuBadge && (
+                        <motion.span
+                          animate={animatePoBadge ? { scale: [1, 1.4, 1] } : { scale: 1 }}
+                          className="bg-red-500 text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full shadow-sm"
+                        >
+                          {totalPoNotificationCount}
+                        </motion.span>
+                      )}
+                      
+                      <ChevronDown 
+                        size={16} 
+                        className={`transition-transform duration-200 text-white/70 ${
+                          openSubMenu === item.name ? 'rotate-180' : ''
+                        }`} 
+                      />
+                    </div>
                   )}
                 </button>
                 
-                {/* SubMenu Container */}
                 {!isCollapsed && openSubMenu === item.name && (
                   <div className="mt-1 ml-6 space-y-1 transition-all border-l border-white/20">
                     {item.subMenu.map((sub) => {
@@ -355,11 +457,15 @@ export default function Sidebar() {
                         isSubActive = isSamePath && [...targetParams.entries()].every(([key, value]) => currentParams.get(key) === value);
                       }
 
+                      const currentSubBadgeCount = 
+                        isPoMenu && sub.subId === 'reguler' ? poRegulerCount :
+                        isPoMenu && sub.subId === 'custom' ? poCustomCount : 0;
+
                       return (
                         <Link
                           key={`${item.name}-${sub.name}`}
                           href={sub.path}
-                          className={`flex items-center ml-3 p-2.5 text-sm rounded-lg transition-all duration-150 relative ${
+                          className={`flex items-center justify-between ml-3 p-2.5 text-sm rounded-lg transition-all duration-150 relative ${
                             isSubActive 
                               ? 'bg-[#F2B600] text-white font-medium shadow-sm' 
                               : 'text-white/70 hover:text-white hover:bg-[#F2B600]/5'
@@ -369,6 +475,13 @@ export default function Sidebar() {
                             <span className="absolute top-0 z-50 w-1 h-full bg-[#F2B600] rounded-r-lg shadow-md -left-9" />
                           )}
                           <span>{sub.name}</span>
+
+                          {/* Angka di sub-menu tetap muncul sebelum sub-menu yang bersangkutan diklik/aktif */}
+                          {currentSubBadgeCount > 0 && !isSubActive && (
+                            <span className="bg-red-500 text-[9px] font-bold text-white px-1.5 py-0.5 rounded-full shadow-sm mr-1">
+                              {currentSubBadgeCount}
+                            </span>
+                          )}
                         </Link>
                       )
                     })}
@@ -378,7 +491,6 @@ export default function Sidebar() {
             )
           }
           
-          // JIKA MENU STANDAR (Dashboard, Order, dll)
           return (
             <div key={menuKey} className="space-y-1">
               <Link

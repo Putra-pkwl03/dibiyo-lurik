@@ -129,7 +129,7 @@ export default function PembayaranPO() {
             <button 
               type="button"
               onClick={() => router.back()} 
-              className="flex items-center gap-1.5 bg-[#1A335A] text-white text-xs px-4 py-1.5 rounded-full font-medium transition-all hover:bg-[#25477e]"
+              className="flex items-center gap-1.5 bg-[#1A335A] text-white text-sm px-4 py-1.5 rounded-full font-medium transition-all hover:bg-[#25477e]"
             >
               <CornerDownLeft size={14} strokeWidth={2.5} />
               <span>kembali</span>

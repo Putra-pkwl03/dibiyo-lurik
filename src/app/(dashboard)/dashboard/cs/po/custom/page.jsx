@@ -47,30 +47,44 @@ export default function PreOrderCustomPage() {
   const [statusPembayaran, setStatusPembayaran] = useState('')
 
   useEffect(() => {
-    fetchData(true) // Set true agar skeleton muncul saat pertama kali load halaman
+    fetchData(true) 
   }, [])
 
-  // Tambahkan parameter isInitial untuk mengontrol kapan skeleton harus muncul
-  const fetchData = async (isInitial = false) => {
-    if (isInitial) setLoading(true)
-    try {
-      const res = await fetch('/api/pre-order-custom') 
-      const json = await res.json()
-      setData(Array.isArray(json.data) ? json.data : [])
-    } catch (err) {
-      console.error(err)
-      setData([])
-    } finally {
-      if (isInitial) setLoading(false)
+ const fetchData = async (isInitial = false) => {
+  if (isInitial) setLoading(true)
+  try {
+    const res = await fetch('/api/pre-order-custom') 
+    const json = await res.json()
+    
+    // ========================================================
+    // LOG UNTUK PASKA-DEBUGGING MULTI-ITEM
+    // ========================================================
+    console.group("🔍 [DEBUG] FETCH PRE-ORDER CUSTOM");
+    console.log("Raw JSON Response:", json);
+    if (json.data && json.data.length > 0) {
+      console.log("Contoh Struktur Item Pertama:", json.data[0]);
+      console.log("Apakah ada array produk di dalam item[0]?:", {
+        detail_produk: json.data[0].detail_produk,
+        items: json.data[0].items
+      });
+    } else {
+      console.warn("Response sukses tapi 'json.data' kosong atau tidak ditemukan.");
     }
-  }
+    console.groupEnd();
+    // ========================================================
 
-  // Fungsi Optimistic Update: Hapus instan dari layar, lalu sync API di background
+    setData(Array.isArray(json.data) ? json.data : [])
+  } catch (err) {
+    console.error("❌ [FETCH-ERROR] Gagal mengambil data PO Custom:", err)
+    setData([])
+  } finally {
+    if (isInitial) setLoading(false)
+  }
+}
+
   const handleConfirmReceiptSuccess = (confirmedId) => {
-    // 1. Langsung buang item dari state data agar hilang dari UI tanpa nunggu fetch API
     setData((prevData) => prevData.filter((item) => item.id !== confirmedId))
     
-    // 2. Ambil data terbaru dari server di background (tanpa mengubah state loading menjadi true)
     fetchData(false)
   }
 
