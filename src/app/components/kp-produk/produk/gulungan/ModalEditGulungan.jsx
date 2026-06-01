@@ -10,7 +10,7 @@ export default function ModalEditGulungan({ isOpen, onClose, onSuccess, currentP
   const produkAktif = Array.isArray(currentProduct) ? currentProduct[0] : currentProduct;
   const gulunganAktif = currentGulungan || null;
 
-  // State Input reaktif sesuai field figma mockup
+  // State Input reaktif yang sekarang keduanya menggunakan Dropdown Select
   const [jenisPewarna, setJenisPewarna] = useState("Sintetis");
   const [lebar, setLebar] = useState("110");
   const [panjangTotal, setPanjangTotal] = useState("");
@@ -23,6 +23,7 @@ export default function ModalEditGulungan({ isOpen, onClose, onSuccess, currentP
   const [isLoadingMaster, setIsLoadingMaster] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // Memicu penarikan ulang harga otomatis setiap kali kombinasi dropdown lebar atau jenis pewarna berubah
   useEffect(() => {
     setMounted(true);
     if (isOpen) {
@@ -72,12 +73,14 @@ export default function ModalEditGulungan({ isOpen, onClose, onSuccess, currentP
           const targetLebar = parseInt(lebar) || 110;
           const targetMotifId = produkAktif.motif_id || produkAktif.motif?.id;
 
+          // Jalur 1: Cari harga berdasarkan Pewarna + Lebar + Spesifik Motif
           let matchedPrice = rawHarga.find(p => 
             p.jenis_pewarna?.toLowerCase() === targetPewarna && 
             parseInt(p.lebar) === targetLebar && 
             p.motif?.id === targetMotifId
           );
 
+          // Jalur 2: Fallback jika motif id tidak ditemukan, cari harga general (motif global/null)
           if (!matchedPrice) {
             matchedPrice = rawHarga.find(p => 
               p.jenis_pewarna?.toLowerCase() === targetPewarna && 
@@ -88,8 +91,8 @@ export default function ModalEditGulungan({ isOpen, onClose, onSuccess, currentP
 
           if (matchedPrice) {
             setHargaPerMeter(matchedPrice.harga_per_meter.toString());
-          } else if (!gulunganAktif) {
-            setHargaPerMeter("");
+          } else {
+            setHargaPerMeter(""); // Kosongkan jika kombinasi di daftar harga master tidak terdaftar
           }
         }
       }
@@ -119,6 +122,7 @@ export default function ModalEditGulungan({ isOpen, onClose, onSuccess, currentP
           lebar: parseInt(lebar),
           panjang_total: parseFloat(panjangTotal),
           harga_per_meter: parseInt(hargaPerMeter),
+          // Jika backend Anda nanti butuh menampung perubahan jenis_pewarna produk, bisa disalurkan ke API produk secara terpisah.
         }),
       });
 
@@ -143,7 +147,7 @@ export default function ModalEditGulungan({ isOpen, onClose, onSuccess, currentP
   };
 
   return createPortal(
-    <div className="fixed inset-0 w-screen h-screen z-[9999] flex items-center justify-center bg-[#AE834E87] backdrop-blur-[4px] p-4 cursor-default animate-in fade-in duration-100">
+    <div className="fixed inset-0 w-screen h-screen z-[9999] flex items-center justify-center bg-[#1A335A50] backdrop-blur-[4px] p-4 cursor-default animate-in fade-in duration-100">
       <div 
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-[440px] bg-white shadow-2xl rounded-[24px] z-10 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150 p-6"
@@ -154,31 +158,31 @@ export default function ModalEditGulungan({ isOpen, onClose, onSuccess, currentP
           type="button"
           onClick={onClose}
           disabled={isSubmitting}
-          className="absolute top-5 right-5 z-20 p-1 text-[#A3704C] hover:text-[#8c5f3f] transition-colors rounded-full bg-white/80"
+          className="absolute top-5 right-5 z-20 p-1 text-[#1A335A] hover:text-[#11223C] transition-colors rounded-full bg-white/80"
         >
           <X size={22} strokeWidth={2.5} />
         </button>
 
         {/* Header Modal */}
         <div className="mb-4 pr-6">
-          <h3 className="text-[20px] font-bold text-[#A3704C] tracking-tight">Edit Gulungan</h3>
+          <h3 className="text-[20px] font-bold text-[#1A335A] tracking-tight">Edit Gulungan</h3>
         </div>
 
-        {/* Container Form Ber-Scrollbar Tipis Selaras Desain */}
+        {/* Container Form */}
         <form 
           onSubmit={handleFormSubmit} 
-          className="space-y-4 text-xs text-[#5C4033] flex-1 overflow-y-auto pr-2 pb-2
+          className="space-y-4 text-xs text-gray-700 flex-1 overflow-y-auto pr-2 pb-2
             [&::-webkit-scrollbar]:w-[5px]
             [&::-webkit-scrollbar-track]:bg-transparent 
-            [&::-webkit-scrollbar-thumb]:bg-[#A3704C]/35 
+            [&::-webkit-scrollbar-thumb]:bg-[#1A335A]/25 
             [&::-webkit-scrollbar-thumb]:rounded-full 
-            hover:[&::-webkit-scrollbar-thumb]:bg-[#A3704C]/60 
+            hover:[&::-webkit-scrollbar-thumb]:bg-[#1A335A]/50 
             [scrollbar-width:thin] 
-            [scrollbar-color:rgba(163,112,76,0.35)_transparent]"
+            [scrollbar-color:rgba(26,51,90,0.25)_transparent]"
         >
           
           {/* Gambar Banner Utama */}
-          <div className="w-full aspect-[16/8] rounded-[14px] overflow-hidden border border-[#D1C3B7]/40 bg-[#F2EAE4] relative shadow-sm flex items-center justify-center">
+          <div className="w-full aspect-[16/8] rounded-[14px] overflow-hidden border border-[#1A335A1F] bg-[#1A335A14] relative shadow-sm flex items-center justify-center">
             <img
               src={produkAktif?.gambar_url || "https://placehold.co/600x300?text=Gambar+Tidak+Ditemukan"}
               alt="Preview Motif Kain"
@@ -186,32 +190,43 @@ export default function ModalEditGulungan({ isOpen, onClose, onSuccess, currentP
             />
           </div>
 
-          {/* Field 1: Jenis Pewarna */}
+          {/* Field 1: Jenis Pewarna (Ubah mjd Dropdown Select) */}
           <div className="space-y-1.5">
-            <label className="block text-[13px] font-bold text-[#A3704C]">Jenis Pewarna</label>
-            <div className="w-full px-4 py-2.5 bg-[#F5EBE1] border border-[#D4C5B9] rounded-[10px] text-[#A3704C]/70 font-bold capitalize flex justify-between items-center select-none cursor-not-allowed">
-              <span>Pewarna {produkAktif?.jenis_pewarna || "Sintetis"}</span>
-              <ChevronDown size={16} className="text-[#A3704C] opacity-40" />
+            <label className="block text-[13px] font-bold text-[#1A335A]">Jenis Pewarna</label>
+            <div className="relative">
+              <select
+                value={jenisPewarna}
+                onChange={(e) => setJenisPewarna(e.target.value)}
+                disabled={isSubmitting}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-[#1A335A1F] rounded-[10px] outline-none text-gray-900 font-bold focus:border-[#1A335A] cursor-pointer appearance-none transition-colors"
+              >
+                <option value="Alami">Alami</option>
+                <option value="Sintetis">Sintetis</option>
+              </select>
+              <ChevronDown size={16} className="absolute text-[#1A335A] -translate-y-1/2 pointer-events-none right-4 top-1/2 opacity-70" />
             </div>
           </div>
 
-          {/* Field 2: Lebar Gulungan */}
+          {/* Field 2: Lebar Gulungan (Ubah mjd Dropdown Select 110 & 70) */}
           <div className="space-y-1.5">
-            <label className="block text-[13px] font-bold text-[#A3704C]">Lebar Gulungan</label>
-            <input
-              type="number"
-              required
-              placeholder="Masukkan Lebar (cm)"
-              value={lebar}
-              onChange={(e) => setLebar(e.target.value)}
-              disabled={isSubmitting}
-              className="w-full px-4 py-2.5 bg-[#F5EBE1] border border-[#D4C5B9] rounded-[10px] outline-none text-[#A3704C] font-bold placeholder-[#A3704C]/40 focus:border-[#A3704C] transition-colors"
-            />
+            <label className="block text-[13px] font-bold text-[#1A335A]">Lebar Gulungan</label>
+            <div className="relative">
+              <select
+                value={lebar}
+                onChange={(e) => setLebar(e.target.value)}
+                disabled={isSubmitting}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-[#1A335A1F] rounded-[10px] outline-none text-gray-900 font-bold focus:border-[#1A335A] cursor-pointer appearance-none transition-colors"
+              >
+                <option value="110">110 cm</option>
+                <option value="70">70 cm</option>
+              </select>
+              <ChevronDown size={16} className="absolute text-[#1A335A] -translate-y-1/2 pointer-events-none right-4 top-1/2 opacity-70" />
+            </div>
           </div>
 
           {/* Field 3: Panjang Gulungan */}
           <div className="space-y-1.5">
-            <label className="block text-[13px] font-bold text-[#A3704C]">Panjang Gulungan</label>
+            <label className="block text-[13px] font-bold text-[#1A335A]">Panjang Gulungan</label>
             <input
               type="number"
               step="0.1"
@@ -220,40 +235,42 @@ export default function ModalEditGulungan({ isOpen, onClose, onSuccess, currentP
               value={panjangTotal}
               onChange={(e) => setPanjangTotal(e.target.value)}
               disabled={isSubmitting}
-              className="w-full px-4 py-2.5 bg-[#F5EBE1] border border-[#D4C5B9] rounded-[10px] outline-none text-[#A3704C] font-bold placeholder-[#A3704C]/40 focus:border-[#A3704C] transition-colors"
+              className="w-full px-4 py-2.5 bg-gray-50 border border-[#1A335A1F] rounded-[10px] outline-none text-gray-900 font-bold placeholder-gray-400 focus:border-[#1A335A] transition-colors"
             />
           </div>
 
           {/* Field 4: Lokasi Rak */}
           <div className="space-y-1.5">
-            <label className="block text-[13px] font-bold text-[#A3704C]">Rak</label>
+            <label className="block text-[13px] font-bold text-[#1A335A]">Rak</label>
             <div className="relative">
               <select
                 value={rakId}
                 onChange={(e) => setRakId(e.target.value)}
                 disabled={isSubmitting}
-                className="w-full px-4 py-2.5 bg-[#F5EBE1] border border-[#D4C5B9] rounded-[10px] outline-none text-[#A3704C] font-bold focus:border-[#A3704C] cursor-pointer appearance-none transition-colors"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-[#1A335A1F] rounded-[10px] outline-none text-gray-900 font-bold focus:border-[#1A335A] cursor-pointer appearance-none transition-colors"
               >
                 <option value="">Pilih Rak</option>
                 {listRak.map((r) => (
                   <option key={r.id} value={r.id}>Rak {r.nama}</option>
                 ))}
               </select>
-              <ChevronDown size={16} className="absolute text-[#A3704C] -translate-y-1/2 pointer-events-none right-4 top-1/2 opacity-70" />
+              <ChevronDown size={16} className="absolute text-[#1A335A] -translate-y-1/2 pointer-events-none right-4 top-1/2 opacity-70" />
             </div>
           </div>
 
           {/* Field 5: Harga Per Meter */}
           <div className="space-y-1.5">
-            <label className="block text-[13px] font-bold text-[#A3704C]">Harga Permeter</label>
+            <label className="block text-[13px] font-bold text-[#1A335A]">Harga Permeter</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-[#A3704C]/60">Rp</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">Rp</span>
               <input
                 type="text"
                 readOnly
                 placeholder="Rp"
-                value={isLoadingMaster ? "Memuat..." : hargaPerMeter ? Number(hargaPerMeter).toLocaleString("id-ID") : ""}
-                className="w-full pl-10 pr-4 py-2.5 bg-[#F5EBE1] border border-[#D4C5B9] rounded-[10px] outline-none text-[#A3704C] font-bold cursor-not-allowed select-none bg-opacity-80"
+                value={isLoadingMaster ? "Memuat..." : hargaPerMeter ? Number(hargaPerMeter).toLocaleString("id-ID") : "Kombinasi harga tidak ditemukan"}
+                className={`w-full pl-10 pr-4 py-2.5 bg-[#1A335A14] border border-[#1A335A1F] rounded-[10px] outline-none font-bold cursor-not-allowed select-none ${
+                  hargaPerMeter ? "text-[#1A335A]" : "text-red-500 text-[11px] italic"
+                }`}
               />
             </div>
           </div>
@@ -264,14 +281,14 @@ export default function ModalEditGulungan({ isOpen, onClose, onSuccess, currentP
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-6 py-2.5 border border-[#A3704C] text-[#A3704C] bg-white rounded-[10px] text-xs font-bold hover:bg-[#F5EBE1]/40 transition-colors"
+              className="px-6 py-2.5 border border-[#1A335A] text-[#1A335A] bg-white rounded-[10px] text-xs font-bold hover:bg-[#1A335A0D] transition-colors"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !panjangTotal || !lebar || !hargaPerMeter}
-              className="bg-[#A3704C] hover:bg-[#8c5f3f] text-white px-6 py-2.5 rounded-[10px] text-xs font-bold flex items-center gap-2 transition-all shadow-md active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="bg-[#1A335A] hover:bg-[#11223C] text-white px-6 py-2.5 rounded-[10px] text-xs font-bold flex items-center gap-2 transition-all shadow-md active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {isSubmitting ? <Loader2 className="animate-spin" size={14} /> : "Simpan"}
             </button>

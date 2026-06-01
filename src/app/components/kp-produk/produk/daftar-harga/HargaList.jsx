@@ -14,8 +14,9 @@ import HargaModalDelete from './HargaModalDelete'
 // Lazy load modal edit
 const HargaEditModal = dynamic(() => import('./HargaEditModal'), { ssr: false })
 
+// Style backdrop disesuaikan: Navy semi-transparan (#1A335A7A) + blur
 const BACKDROP_STYLE = {
-  backgroundColor: 'rgba(174, 131, 78, 0.53)',
+  backgroundColor: '#1A335A7A',
   backdropFilter: 'blur(2px)',
   WebkitBackdropFilter: 'blur(2px)',
 }
@@ -34,7 +35,7 @@ export default function HargaList() {
   const [hargaToDelete, setHargaToDelete] = useState(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // State Kontrol Modal Sukses Hapus Global (Pola Sinkron Figma)
+  // State Kontrol Modal Sukses Hapus Global
   const [isDeleteSuccessOpen, setIsDeleteSuccessOpen] = useState(false)
 
   const fetchData = async () => {
@@ -69,7 +70,7 @@ export default function HargaList() {
     fetchData()
   }, [])
 
-  // Handler Hapus Data — Diambil alih penuh oleh Induk (Murni seperti Edit/Add)
+  // Handler Hapus Data
   const handleConfirmDelete = async () => {
     if (!hargaToDelete) return
     setIsDeleting(true)
@@ -102,7 +103,7 @@ export default function HargaList() {
         title: 'Gagal Hapus ❌',
         text: err.message,
         icon: 'error',
-        confirmButtonColor: '#a47352'
+        confirmButtonColor: '#1A335A' // Tombol Swal diubah ke warna Navy utama
       })
     } finally {
       setIsDeleting(false)
@@ -147,27 +148,27 @@ export default function HargaList() {
         onSuccess={fetchData}
         hargaData={selectedHarga}
         swal={Swal}
-        // SOLUSI: Mengoper state motifs ke properti motifOptions modal
         motifOptions={motifs.map(m => ({
-          id: m.id ?? m.id_motif,     // toleransi jika field DB bernama id_motif
-          nama: m.nama ?? m.nama_motif // toleransi jika field DB bernama nama_motif
+          id: m.id ?? m.id_motif, 
+          nama: m.nama ?? m.nama_motif 
         }))}
       />
 
-      {/* ── NOTIFIKASI KUSTOM SUKSES HAPUS INDUK ── */}
+      {/* ── NOTIFIKASI KUSTOM SUKSES HAPUS INDUK — Tema Baru ── */}
       {isDeleteSuccessOpen && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={BACKDROP_STYLE}>
           <div className="bg-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] w-[372px] relative overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <button
+              type="button"
               onClick={() => setIsDeleteSuccessOpen(false)}
-              className="absolute top-3.5 right-3.5 text-[#a47352] hover:text-[#8c5f3f] transition-colors"
+              className="absolute top-4 right-4 text-[#1A335A] hover:opacity-80 transition-opacity"
             >
               <X size={18} strokeWidth={2.5} />
             </button>
 
             <div className="flex flex-col items-center justify-center py-12 px-6">
-              <ThumbsUp size={56} className="text-[#a47352] mb-5" strokeWidth={1.5} />
-              <p className="text-[#a47352] text-[18px] font-medium tracking-[0.18px] text-center leading-snug">
+              <ThumbsUp size={56} className="text-[#1A335A] mb-5" strokeWidth={1.5} />
+              <p className="text-[#000000] text-[18px] font-bold text-center leading-snug">
                 Daftar Harga Berhasil di<br />Hapus
               </p>
             </div>

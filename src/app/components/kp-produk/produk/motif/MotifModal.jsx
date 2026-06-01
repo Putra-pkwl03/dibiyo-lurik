@@ -4,15 +4,15 @@ import React, { useState } from 'react'
 import { X, Loader2, ThumbsUp } from 'lucide-react'
 import Swal from 'sweetalert2'
 
-// Style backdrop konsisten dengan Figma
+// Style backdrop disesuaikan: Navy semi-transparan (#1A335A7A) + blur
 const BACKDROP_STYLE = {
-  backgroundColor: 'rgba(174, 131, 78, 0.53)',
+  backgroundColor: '#1A335A7A',
   backdropFilter: 'blur(2px)',
   WebkitBackdropFilter: 'blur(2px)',
 }
 
 export default function MotifModal({ isOpen, onClose, onSuccess }) {
-  const [nama, setNama] = useState('') // Nama state yang benar
+  const [nama, setNama] = useState('') // Menjaga state 'nama' asli
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [showSuccess, setShowSuccess] = useState(false)
@@ -60,11 +60,13 @@ export default function MotifModal({ isOpen, onClose, onSuccess }) {
     } catch (err) {
       setErrorMessage(err.message)
       setIsSubmitting(false)
+      
+      // Fallback error menggunakan tema Navy primer
       Swal.fire({
         title: 'Gagal Menyimpan',
         text: err.message,
         icon: 'error',
-        confirmButtonColor: '#a47352'
+        confirmButtonColor: '#1A335A'
       })
     }
   }
@@ -76,17 +78,22 @@ export default function MotifModal({ isOpen, onClose, onSuccess }) {
     onClose()
   }
 
+  // ── SUCCESS STATE — Tema Baru ──
   if (showSuccess) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={BACKDROP_STYLE}>
-        <div className="bg-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] w-[372px] relative">
-          <button onClick={() => { setShowSuccess(false); onClose(); if (onSuccess) onSuccess() }} className="absolute top-3.5 right-3.5 text-[#a47352] hover:text-[#8c5f3f] transition-colors">
+        <div className="bg-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] w-[372px] relative animate-in fade-in zoom-in-95 duration-150">
+          <button 
+            type="button"
+            onClick={() => { setShowSuccess(false); onClose(); if (onSuccess) onSuccess() }} 
+            className="absolute top-4 right-4 text-[#1A335A] hover:opacity-80 transition-opacity"
+          >
             <X size={18} strokeWidth={2.5} />
           </button>
           <div className="flex flex-col items-center justify-center py-12 px-6">
-            <ThumbsUp size={56} className="text-[#a47352] mb-5" strokeWidth={1.5} />
-            <p className="text-[#a47352] text-[18px] font-medium tracking-[0.18px] text-center">
-              Motif Berhasil di Tambah
+            <ThumbsUp size={56} className="text-[#1A335A] mb-5" strokeWidth={1.5} />
+            <p className="text-[#000000] text-[18px] font-bold text-center">
+              Motif Berhasil Ditambah
             </p>
           </div>
         </div>
@@ -94,53 +101,65 @@ export default function MotifModal({ isOpen, onClose, onSuccess }) {
     )
   }
 
+  // ── FORM STATE — Mockup Tambah Motif ──
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={BACKDROP_STYLE}>
-      <div className="bg-white rounded-[20px] shadow-[2px_4px_4px_0px_rgba(0,0,0,0.25)] w-[372px] relative">
-        <div className="flex items-center justify-between px-5 pt-4 pb-3">
-          <h4 className="text-[#a47352] text-[22px] font-medium tracking-[-0.24px]">
+      <div className="bg-white rounded-[20px] shadow-[2px_4px_4px_0px_rgba(0,0,0,0.25)] w-[372px] relative animate-in fade-in zoom-in-95 duration-150">
+        
+        {/* Header: Title + Close X */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <h4 className="text-[#000000] text-[20px] font-bold tracking-tight">
             Tambah Motif
           </h4>
-          <button onClick={handleClose} disabled={isSubmitting} className="text-[#a47352] hover:text-[#8c5f3f] transition-colors disabled:opacity-50">
+          <button 
+            type="button"
+            onClick={handleClose} 
+            disabled={isSubmitting} 
+            className="text-[#1A335A] hover:opacity-80 transition-opacity disabled:opacity-50"
+          >
             <X size={20} strokeWidth={2.5} />
           </button>
         </div>
 
-        <div className="border-t border-[#a47352]/40 mx-5" />
+        {/* Divider tipis warna Navy */}
+        <div className="border-t border-[#1A335A]/10 mx-5" />
 
+        {/* Form */}
         <form onSubmit={handleSubmit} className="px-5 pt-4 pb-5">
-          <label className="block text-[15px] font-medium text-[#a47352] tracking-[0.18px] mb-2">
+          <label className="block text-xs font-bold text-[#000000] uppercase tracking-wider mb-2">
             Nama Motif
           </label>
 
           <input
             type="text"
-            value={nama} // Menggunakan state 'nama'
+            value={nama}
             onChange={(e) => {
               const val = e.target.value;
               const formatted = val
                 .split(' ')
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
                 .join(' ');
-              setNama(formatted); // Menggunakan setNama
+              setNama(formatted);
             }}
             disabled={isSubmitting}
             maxLength={255}
             autoFocus
-            className="w-full h-[46px] px-3 rounded-[10px] border border-[#a47352] text-[#a47352] text-sm focus:outline-none focus:ring-1 focus:ring-[#a47352] transition-all disabled:opacity-60"
-            style={{ backgroundColor: 'rgba(227, 194, 172, 0.35)' }}
+            className="w-full h-[46px] px-3 rounded-[10px] border border-[#1A335A] text-[#000000] text-sm font-medium focus:outline-none focus:ring-1 focus:ring-[#1A335A] transition-all disabled:opacity-60"
+            style={{ backgroundColor: '#5AE3ED1C' }} // Latar belakang kolom cyan tipis
             required
           />
 
+          {/* Error inline (kalau ada) */}
           {errorMessage && (
             <p className="text-xs text-red-500 mt-2 font-medium">{errorMessage}</p>
           )}
 
+          {/* Tombol Simpan (Kanan Bawah) */}
           <div className="flex justify-end mt-6">
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="min-w-[89px] h-[33px] px-3 rounded-[10px] bg-[#a47352] hover:bg-[#8c5f3f] text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-70"
+              disabled={isSubmitting || !nama.trim()}
+              className="min-w-[89px] h-[33px] px-3 rounded-md bg-[#1A335A] hover:bg-[#122440] text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-[0.98] disabled:opacity-70"
             >
               {isSubmitting ? (
                 <>

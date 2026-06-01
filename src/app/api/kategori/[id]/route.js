@@ -60,29 +60,38 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ message: 'ID kategori wajib diisi' }, { status: 400 })
     }
 
-    // Cek manual apakah kategori ini masih dipakai oleh tabel produk (Foreign Key Check)
-    const { data: countData, error: countError } = await supabaseAdmin
+    // 1. PERBAIKAN: Ambil properti 'count' langsung dari Supabase
+    const { count, error: countError } = await supabaseAdmin
       .from('produk')
-      .select('id', { count: 'exact', head: true })
-      .eq('kategori_id', id)
+      .select('*', { count: 'exact', head: true })
+      .eq('kategori_id', id) // <-- Pastikan nama kolom di DB kamu memang 'kategori_id'
 
     if (countError) throw countError
 
-    // Jika ada produk yang menggunakan kategori ini, batalkan penghapusan
-    if (countData && countData.length > 0) {
+    // 2. PERBAIKAN: Cek berdasarkan nilai count angka
+    if (count && count > 0) {
       return NextResponse.json(
         { message: 'Gagal menghapus: Kategori ini masih digunakan oleh data produk.' },
-        { status: 409 }
+        { status: 409 } // Conflict
       )
     }
 
-    // Eksekusi hapus data jika aman
+    // Eksekusi hapus data jika lolos validasi awal
     const { error } = await supabaseAdmin
       .from('kategori')
       .delete()
       .eq('id', id)
 
-    if (error) throw error
+    if (error) {
+      // 3. TAMBAHAN: Jaga-jaga jika lolos cek manual tapi database tetap menolak (Foreign Key Error Code: 23503)
+      if (error.code === '23503') {
+        return NextResponse.json(
+          { message: 'Gagal menghapus: Kategori ini masih terikat dengan relasi data produk lain di database.' },
+          { status: 409 }
+        )
+      }
+      throw error
+    }
 
     return NextResponse.json({ message: 'Kategori berhasil dihapus' }, { status: 200 })
 
