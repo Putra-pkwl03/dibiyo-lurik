@@ -5,12 +5,11 @@ import { X, User, Box, CreditCard, Calendar, Upload, Plus, Trash2, Minus, Chevro
 import Swal from "sweetalert2";
 import { supabase } from "@/lib/supabaseClient";
 
-// Import react-datepicker dan styles-nya
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 // =====================================================
-// KONSTANTA STYLE
+// KONSTANTA STYLE & HELPER
 // =====================================================
 const LABEL = "block text-black font-medium mb-1";
 const INPUT_CYAN = "w-full border border-[#1A335A] bg-[#5AE3ED1C] rounded-lg p-2 focus:outline-none";
@@ -39,14 +38,12 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
   const [items, setItems] = useState([]);
   const [pembayaran, setPembayaran] = useState({ status_pembayaran: "dp", total_dp: 0, metode_pembayaran: "cash", diskon: 0 });
   const [produksi, setProduksi] = useState({ tanggal_selesai: "", status: "dalam_proses", catatan: "" });
-  const [hargaLamaDariDb, setHargaLamaDariDb] = useState(0);
 
-  // --- STATE TRACKING UNTUK AUTOFILL ---
-  const [lastTotalHarga, setLastTotalHarga] = useState(0);
-  const [lastStatus, setLastStatus] = useState("");
-  const [lastHasNewItems, setLastHasNewItems] = useState(false);
+  // Snapshot angka asli dari DB (read-only, tidak pernah diubah effect)
+  const [hargaLamaDariDb, setHargaLamaDariDb] = useState(0); // total_harga lama
+  const [dpLamaDariDb, setDpLamaDariDb] = useState(0);       // total_dp lama
 
-  // --- HOOK 11: Ambil master harga ---
+  // --- Ambil master harga ---
   useEffect(() => {
     if (isOpen) {
       fetch("/api/daftar-harga")
@@ -56,7 +53,7 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
     }
   }, [isOpen]);
 
-  // --- HOOK 12: Set data awal saat modal dibuka ---
+  // --- Set data awal saat modal dibuka (sekali, dari prop) ---
   useEffect(() => {
     if (!isOpen || !item) return;
 
@@ -91,19 +88,20 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
     });
 
     setHargaLamaDariDb(Number(item.total_harga || 0));
+    setDpLamaDariDb(Number(item.total_dp || 0));
 
     setProduksi({
       tanggal_selesai: item.tanggal_selesai || "",
       status: item.status || "dalam_proses",
       catatan: item.catatan || "",
     });
-
-    setLastTotalHarga(0);
-    setLastStatus("");
-    setLastHasNewItems(false);
   }, [isOpen, item]);
 
-  // --- KALKULASI DERIVED VALUES ---
+  if (!isOpen) return null;
+
+  // =====================================================
+  // NILAI TURUNAN (derived) — satu sumber kebenaran, tanpa effect
+  // =====================================================
   const hitungSubtotalItem = (it) =>
     Number(it.harga_per_meter || 0) * Number(it.panjang || 0) * Number(it.qty || 1);
 
@@ -116,75 +114,44 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
   const isOriginallyLunas = item?.status_pembayaran?.toLowerCase() === "lunas";
   const isOriginallyDp = item?.status_pembayaran?.toLowerCase() === "dp";
   const hasNewItems = items.some((i) => !i.isFromDb);
-  const isDpLocked = isOriginallyDp && !hasNewItems;
+
+  // Kunci tampilan ringkas hanya saat transaksi LUNAS yang belum disentuh (tanpa item baru)
   const showSimpleLunasView = isOriginallyLunas && !hasNewItems;
-  
-  // Kekurangan dihitung dinamis dari total akhir dikurangi nominal yang sudah masuk/tercatat
-  const kekurangan = Math.max(0, totalHargaAkhir - pembayaran.total_dp);
-  const nominalPelunasanBaru = Math.max(0, totalHargaAkhir - hargaLamaDariDb);
+  // Transaksi DP murni tanpa item baru: DP lama tidak boleh diutak-atik
+  const isDpLocked = isOriginallyDp && !hasNewItems;
 
-  const isDpInvalid =
-    pembayaran.status_pembayaran === "dp" &&
-    (pembayaran.total_dp < minDpRequired || pembayaran.total_dp > totalHargaAkhir);
+  // Uang yang SUDAH masuk sebelumnya (read-only dari DB)
+  const dibayarSebelumnya = isOriginallyLunas ? hargaLamaDariDb : dpLamaDariDb;
+  // "Kekurangan karena item tambahan" = jumlah subtotal item baru saja
+  const tagihanItemBaru = items
+    .filter((i) => !i.isFromDb)
+    .reduce((acc, curr) => acc + hitungSubtotalItem(curr), 0);
 
-  // --- HOOK 13: LOGIKA UTAMA RE-CALCULATE, AUTOFILL & RESET ---
-  useEffect(() => {
-    if (!isOpen) return;
+  // total_dp final yang akan ditampilkan & disimpan
+  //  - Lunas  -> bayar penuh
+  //  - DP + ada item baru -> dibayar lama + item baru (item baru langsung dibayar)
+  //  - DP tanpa item baru -> nilai DP lama (terkunci)
+  const dpFinal = isLunas
+    ? totalHargaAkhir
+    : hasNewItems
+      ? dibayarSebelumnya + tagihanItemBaru
+      : pembayaran.total_dp;
 
-    // KONDISI 1: JIKA ASLINYA LUNAS + USER MENAMBAHKAN ITEM BARU
-    if (isOriginallyLunas && hasNewItems && !lastHasNewItems) {
-      setPembayaran({
-        status_pembayaran: "dp", 
-        total_dp: hargaLamaDariDb, 
-        metode_pembayaran: item?.metode_pembayaran?.toLowerCase() || "cash",
-        diskon: 0, 
-      });
-      setLastHasNewItems(true);
-      setLastStatus("dp");
-      setLastTotalHarga(totalHargaAkhir);
-      return;
-    }
+  const sisaTagihan = Math.max(0, totalHargaAkhir - dpFinal);
+  const isDpInvalid = pembayaran.status_pembayaran === "dp" && (dpFinal < minDpRequired || dpFinal > totalHargaAkhir);
 
-    // KONDISI 2: JIKA USER MENGUBAH STATUS PEMBAYARAN MANUALLY ATAU KONDISI BAYAR BERUBAH
-    if (pembayaran.status_pembayaran !== lastStatus && lastStatus !== "") {
-      const nextStatus = pembayaran.status_pembayaran;
-      setPembayaran((prev) => ({
-        ...prev,
-        diskon: 0, 
-        total_dp: nextStatus === "lunas" 
-          ? totalHargaAkhir 
-          : (isOriginallyLunas ? hargaLamaDariDb : Math.ceil(totalHargaAkhir * 0.3)),
-      }));
-      setLastStatus(nextStatus);
-      setLastTotalHarga(totalHargaAkhir);
-      return;
-    }
+  // Input nominal hanya bisa diketik manual pada DP murni yang belum terkunci & tanpa item baru.
+  // (Dalam konteks edit ini praktis selalu terkunci/otomatis — sistem yang menghitung.)
+  const inputTerkunci = isLunas || isDpLocked || hasNewItems;
 
-    // KONDISI 3: JIKA DATA HARGA TOTAL BERUBAH (QTY, PANJANG, DLL)
-    if (totalHargaAkhir !== lastTotalHarga) {
-      setLastTotalHarga(totalHargaAkhir);
-      if (pembayaran.status_pembayaran === "lunas") {
-        setPembayaran((prev) => ({ ...prev, total_dp: totalHargaAkhir }));
-      } else if (pembayaran.status_pembayaran === "dp") {
-        if (isOriginallyDp && !hasNewItems) {
-          // Tetap gunakan nominal awal
-        } else if (isOriginallyLunas && hasNewItems) {
-          // Tetap kunci di angka pembayaran riil pertama dari DB
-        } else {
-          setPembayaran((prev) => ({ ...prev, total_dp: Math.ceil(totalHargaAkhir * 0.3) }));
-        }
-      }
-    }
-  }, [isOpen, totalHargaAkhir, pembayaran.status_pembayaran, hasNewItems, isOriginallyLunas, isOriginallyDp, hargaLamaDariDb, item, lastTotalHarga, lastStatus, lastHasNewItems]);
-
-  if (!isOpen) return null;
-
-  // --- EVENT HANDLERS ---
+  // =====================================================
+  // HANDLERS
+  // =====================================================
   const updateItem = (id, field, value) => {
     setItems((prev) =>
       prev.map((prodItem) => {
         if (prodItem.id !== id) return prodItem;
-        const updated = { ...prev.find((x) => x.id === id), [field]: value };
+        const updated = { ...prodItem, [field]: value };
 
         const match = daftarHarga.find(
           (d) =>
@@ -231,16 +198,15 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
     }
 
     if (pembayaran.status_pembayaran === "dp") {
-      if (pembayaran.total_dp < minDpRequired) {
+      if (dpFinal < minDpRequired) {
         return Swal.fire("Akses Ditolak", `Nominal DP minimal 30%: Rp ${Math.ceil(minDpRequired).toLocaleString("id-ID")}`, "error");
       }
-      if (pembayaran.total_dp > totalHargaAkhir) {
+      if (dpFinal > totalHargaAkhir) {
         return Swal.fire("Kesalahan Input", "Nominal DP tidak boleh melebihi total harga akhir.", "error");
       }
     }
 
     setLoading(true);
-    const finalTotalDp = isLunas ? totalHargaAkhir : pembayaran.total_dp;
 
     try {
       const cleanItems = items.map((i) => ({
@@ -259,8 +225,10 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...customer,
-          ...pembayaran,
-          total_dp: finalTotalDp,
+          status_pembayaran: pembayaran.status_pembayaran,
+          metode_pembayaran: pembayaran.metode_pembayaran,
+          diskon: pembayaran.diskon,
+          total_dp: dpFinal,
           tanggal_selesai: produksi.tanggal_selesai,
           catatan: produksi.catatan,
           total_harga: totalHargaAkhir,
@@ -283,55 +251,20 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
 
   return (
     <div className="fixed inset-0 bg-[#1A335A]/48 backdrop-blur-[2px] flex items-center justify-center z-50 p-4 font-inter">
-      
-      {/* STYLE INJECTION UNTUK SCROLLBAR DAN REACT-DATEPICKER THEME */}
+
       <style dangerouslySetInnerHTML={{ __html: `
-        .custom-scrollbar {
-          scrollbar-width: thin;
-          scrollbar-color: #1A335A transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: #1A335A;
-          border-radius: 10px;
-        }
+        .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #1A335A transparent; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #1A335A; border-radius: 10px; }
         .react-datepicker-wrapper { width: 100% !important; }
-        .react-datepicker {
-          font-family: 'Inter', sans-serif !important;
-          border: 1px solid #1A335A !important;
-          border-radius: 10px !important;
-          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
-          overflow: hidden;
-        }
-        .react-datepicker__header {
-          background-color: #1A335A !important;
-          border-bottom: 1px solid #1A335A !important;
-          padding: 8px 0 !important;
-        }
-        .react-datepicker__current-month, 
-        .react-datepicker__day-name {
-          color: white !important;
-          font-weight: 700 !important;
-        }
+        .react-datepicker { font-family: 'Inter', sans-serif !important; border: 1px solid #1A335A !important; border-radius: 10px !important; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1) !important; overflow: hidden; }
+        .react-datepicker__header { background-color: #1A335A !important; border-bottom: 1px solid #1A335A !important; padding: 8px 0 !important; }
+        .react-datepicker__current-month, .react-datepicker__day-name { color: white !important; font-weight: 700 !important; }
         .react-datepicker__day-name { color: rgba(255,255,255,0.7) !important; }
         .react-datepicker__navigation-icon::before { border-color: white !important; }
-        .react-datepicker__day--selected, 
-        .react-datepicker__day--keyboard-selected {
-          background-color: #f2b600 !important;
-          color: white !important;
-          font-weight: bold !important;
-          border-radius: 6px !important;
-        }
-        .react-datepicker__day:hover {
-          background-color: #5AE3ED30 !important;
-          border-radius: 6px !important;
-        }
+        .react-datepicker__day--selected, .react-datepicker__day--keyboard-selected { background-color: #f2b600 !important; color: white !important; font-weight: bold !important; border-radius: 6px !important; }
+        .react-datepicker__day:hover { background-color: #5AE3ED30 !important; border-radius: 6px !important; }
       `}} />
 
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-y-auto custom-scrollbar">
@@ -389,8 +322,13 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
             </div>
 
             {items.map((prodItem) => (
-              <div key={prodItem.id} className="flex flex-row items-center gap-4 bg-[#5AE3ED1C] border border-dashed border-[#1A335A] rounded-xl p-4 relative group">
-                
+              <div key={prodItem.id} className={`flex flex-row items-center gap-4 border rounded-xl p-4 relative group ${prodItem.isFromDb ? "bg-[#5AE3ED1C] border-dashed border-[#1A335A]" : "bg-emerald-50/60 border-dashed border-emerald-400"}`}>
+
+                {/* Badge item baru */}
+                {!prodItem.isFromDb && (
+                  <span className="absolute -top-2 left-3 bg-emerald-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-full shadow-sm uppercase tracking-wide">Item Baru</span>
+                )}
+
                 {/* Uploader Box */}
                 <div className="w-48 h-20 flex-shrink-0">
                   {prodItem.image ? (
@@ -451,7 +389,7 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
                   </div>
                 </div>
 
-                {/* Validasi Proteksi Hapus */}
+                {/* Proteksi hapus: item lama transaksi lunas tidak boleh dihapus */}
                 {items.length > 1 && (!prodItem.isFromDb || (!isOriginallyLunas && pembayaran.status_pembayaran !== "lunas")) && (
                   <button type="button" onClick={() => setItems((prev) => prev.filter((i) => i.id !== prodItem.id))} className="absolute -top-1.5 -right-1.5 bg-red-100 text-red-600 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm cursor-pointer">
                     <Trash2 size={11} />
@@ -468,13 +406,18 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
               <span>Detail Pembayaran</span>
             </div>
 
-            {isOriginallyLunas && hasNewItems && (
+            {/* WARNING: ada item baru pada transaksi yang sudah berjalan */}
+            {hasNewItems && (isOriginallyLunas || isOriginallyDp) && (
               <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 text-[11px]">
-                <span className="font-bold flex items-center gap-1 text-amber-700">⚠️ Penambahan Item Baru pada Transaksi Lunas</span>
-                <p className="text-amber-900 mt-1">Transaksi lama sudah <strong>LUNAS</strong>. Sistem mengembalikan status ke DP dengan mengunci pembayaran awal (Rp {hargaLamaDariDb.toLocaleString("id-ID")}). Sisa kekurangan untuk item tambahan:</p>
+                <span className="font-bold flex items-center gap-1 text-amber-700">⚠️ Penambahan Item Baru</span>
+                <p className="text-amber-900 mt-1">
+                  {isOriginallyLunas
+                    ? <>Transaksi ini sebelumnya sudah <strong>LUNAS</strong> (Rp {dibayarSebelumnya.toLocaleString("id-ID")}). Pembayaran lama dibiarkan, customer cukup membayar harga item baru berikut:</>
+                    : <>DP yang sudah dibayar (Rp {dibayarSebelumnya.toLocaleString("id-ID")}) dibiarkan. Karena ada item baru, customer membayar tambahan sebesar harga item baru berikut:</>}
+                </p>
                 <div className="mt-2 flex items-baseline justify-between bg-white border border-amber-200 rounded-md px-3 py-2">
-                  <span className="text-[10px] text-gray-500 font-medium">Sisa Kekurangan Baru</span>
-                  <span className="text-sm font-black text-red-600">Rp {kekurangan.toLocaleString("id-ID")}</span>
+                  <span className="text-[10px] text-gray-500 font-medium">Tagihan Item Baru</span>
+                  <span className="text-sm font-black text-emerald-700">Rp {tagihanItemBaru.toLocaleString("id-ID")}</span>
                 </div>
               </div>
             )}
@@ -509,28 +452,21 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
                   <div>
                     <label className="block text-black font-semibold mb-1">Status Pembayaran</label>
                     <div className="grid grid-cols-2 gap-4">
-                      {/* BUTTON DP */}
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         disabled={isDpLocked}
-                        onClick={() => setPembayaran({ ...pembayaran, status_pembayaran: "dp" })} 
+                        onClick={() => setPembayaran({ ...pembayaran, status_pembayaran: "dp" })}
                         className={`py-2 rounded-lg font-bold text-center text-xs border transition-all cursor-pointer ${
-                          pembayaran.status_pembayaran === "dp" 
-                            ? "bg-[#1A335A] text-white border-[#1A335A] shadow-sm" 
-                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                          pembayaran.status_pembayaran === "dp" ? "bg-[#1A335A] text-white border-[#1A335A] shadow-sm" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                         } ${isDpLocked ? "bg-gray-100 text-gray-700 border-gray-300 !cursor-not-allowed shadow-none" : ""}`}
                       >
                         {isDpLocked ? "DP (Sudah Dibayar)" : "DP (Uang Muka)"}
                       </button>
-
-                      {/* BUTTON LUNAS */}
-                      <button 
-                        type="button" 
-                        onClick={() => setPembayaran({ ...pembayaran, status_pembayaran: "lunas" })} 
+                      <button
+                        type="button"
+                        onClick={() => setPembayaran({ ...pembayaran, status_pembayaran: "lunas" })}
                         className={`py-2 rounded-lg font-bold text-center text-xs border transition-all cursor-pointer ${
-                          isLunas 
-                            ? "bg-[#1A335A] text-white border-[#1A335A] shadow-sm" 
-                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                          isLunas ? "bg-[#1A335A] text-white border-[#1A335A] shadow-sm" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                         }`}
                       >
                         Lunas
@@ -540,49 +476,45 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
 
                   <div>
                     <label className="block text-black font-semibold mb-1">
-                      {isLunas ? "Total Akumulasi Dana Setelah Lunas" : "Total Dana yang Telah Diterima"}
+                      {isLunas ? "Total Dana Diterima (Lunas)" : "Total Dana yang Telah Diterima"}
                     </label>
                     <div className={`flex rounded-lg border overflow-hidden px-3 py-2.5 items-center bg-white transition-colors ${isDpInvalid ? "border-red-400" : isLunas ? "border-emerald-300 bg-emerald-50/40" : "border-[#1A335A]"}`}>
                       <span className="text-gray-500 text-xs mr-2 font-medium">Rp</span>
-                      <input 
-                        type="text" 
-                        inputMode="numeric" 
-                        value={formatRibuan(pembayaran.total_dp)} 
-                        disabled={isLunas || isDpLocked || (isOriginallyLunas && hasNewItems)} 
-                        onChange={(e) => setPembayaran({ ...pembayaran, total_dp: parseRibuan(e.target.value) })} 
-                        className={`w-full bg-transparent focus:outline-none text-sm font-bold tracking-wide ${isLunas || (isOriginallyLunas && hasNewItems) ? "text-emerald-700 cursor-not-allowed" : isDpLocked ? "text-gray-500 cursor-not-allowed" : "text-gray-900"}`} 
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        name="nominal-dp-custom"
+                        autoComplete="off"
+                        data-lpignore="true"
+                        value={formatRibuan(dpFinal)}
+                        disabled={inputTerkunci}
+                        onChange={(e) => setPembayaran({ ...pembayaran, total_dp: parseRibuan(e.target.value) })}
+                        className={`nominal-input w-full bg-transparent focus:outline-none text-sm font-bold tracking-wide ${inputTerkunci ? (isLunas ? "text-emerald-700 cursor-not-allowed" : "text-gray-600 cursor-not-allowed") : "text-gray-900"}`}
                       />
                     </div>
-                    
-                    {/* JIKA STATUS DP: TAMPILKAN KEKURANGAN RED BANNER */}
+
+                    {/* Sisa tagihan (status DP) */}
                     {pembayaran.status_pembayaran === "dp" && (
                       <div className="flex justify-between items-center mt-2 bg-red-50 border border-red-200 rounded-lg p-2 text-[10px]">
                         <span className="text-red-700 font-medium">Sisa Tagihan / Kekurangan:</span>
-                        <span className="font-black text-red-600 text-xs">Rp {kekurangan.toLocaleString("id-ID")}</span>
+                        <span className="font-black text-red-600 text-xs">Rp {sisaTagihan.toLocaleString("id-ID")}</span>
                       </div>
                     )}
 
-                    {/* PERBAIKAN INFORMASI KETIKA DIKLIK LUNAS (KONDISI TRANSAKSI LUNAS + ITEM BARU) */}
-                    {pembayaran.status_pembayaran === "lunas" && isOriginallyLunas && hasNewItems && (
-                      <div className="flex justify-between items-center mt-2 bg-emerald-50 border border-emerald-300 rounded-lg p-2 text-[10px] animate-fade-in">
-                        <span className="text-emerald-800 font-bold flex items-center gap-1">💰 Pelunasan Tambahan yang Wajib Dibayar Saat Ini:</span>
-                        <span className="font-black text-emerald-700 text-xs bg-white border border-emerald-300 rounded px-2 py-0.5">
-                          Rp {nominalPelunasanBaru.toLocaleString("id-ID")}
-                        </span>
+                    {/* Info pelunasan tambahan saat pilih Lunas + ada item baru */}
+                    {isLunas && hasNewItems && (
+                      <div className="flex justify-between items-center mt-2 bg-emerald-50 border border-emerald-300 rounded-lg p-2 text-[10px]">
+                        <span className="text-emerald-800 font-bold flex items-center gap-1">💰 Dibayar saat ini (harga item baru):</span>
+                        <span className="font-black text-emerald-700 text-xs bg-white border border-emerald-300 rounded px-2 py-0.5">Rp {tagihanItemBaru.toLocaleString("id-ID")}</span>
                       </div>
                     )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                    {/* FIELD METODE PEMBAYARAN */}
                     <div className="md:col-span-5 relative">
                       <label className="block text-black font-semibold mb-1">Metode Pembayaran</label>
                       <div className="relative">
-                        <select 
-                          value={pembayaran.metode_pembayaran} 
-                          onChange={(e) => setPembayaran({ ...pembayaran, metode_pembayaran: e.target.value })} 
-                          className="w-full border border-[#1A335A] bg-white rounded-lg p-2.5 pr-10 focus:outline-none text-gray-700 appearance-none text-xs cursor-pointer"
-                        >
+                        <select value={pembayaran.metode_pembayaran} onChange={(e) => setPembayaran({ ...pembayaran, metode_pembayaran: e.target.value })} className="w-full border border-[#1A335A] bg-white rounded-lg p-2.5 pr-10 focus:outline-none text-gray-700 appearance-none text-xs cursor-pointer">
                           <option value="cash">Cash</option>
                           <option value="transfer">Transfer</option>
                         </select>
@@ -595,27 +527,29 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
                       <label className="block text-black font-semibold mb-1">Diskon</label>
                       <input type="text" value={pembayaran.diskon ? `${pembayaran.diskon}%` : ""} placeholder="0%" onChange={(e) => setPembayaran({ ...pembayaran, diskon: Number(e.target.value.replace("%", "")) || 0 })} className="w-full border border-[#1A335A] bg-white rounded-lg p-2.5 text-center focus:outline-none font-medium text-xs" />
                     </div>
-                    
-                    {/* FIELD BREAKDOWN TOTAL HARGA BARU */}
+
                     <div className="md:col-span-5">
                       <label className="block text-black font-semibold mb-1">Total Harga</label>
                       <div className="bg-white border border-[#1A335A] rounded-lg p-3 space-y-1.5 text-[11px] shadow-sm">
                         <div className="flex justify-between text-gray-500"><span>Sub Total</span><span className="font-semibold text-gray-700">Rp {subTotal.toLocaleString("id-ID")}</span></div>
                         <div className="flex justify-between text-gray-500"><span>Diskon</span><span className="font-semibold text-gray-700">{pembayaran.diskon || 0}%</span></div>
                         <hr className="border-gray-200" />
-                        <div className="flex justify-between text-gray-900 font-bold pt-0.5"><span>Total Kontrak Baru</span><span>Rp {totalHargaAkhir.toLocaleString("id-ID")}</span></div>
-                        
-                        {/* FITUR TRACKING HISTORI DATA DI KOTAK KANAN */}
-                        {isOriginallyLunas && hasNewItems && (
+                        <div className="flex justify-between text-gray-900 font-bold pt-0.5"><span>Total Kontrak</span><span>Rp {totalHargaAkhir.toLocaleString("id-ID")}</span></div>
+
+                        {hasNewItems && (
                           <>
                             <hr className="border-dashed border-gray-200" />
                             <div className="flex justify-between text-emerald-600 font-medium">
-                              <span>Telah Dibayar (Lunas Lama)</span>
-                              <span>- Rp {hargaLamaDariDb.toLocaleString("id-ID")}</span>
+                              <span>Sudah Dibayar</span>
+                              <span>- Rp {dibayarSebelumnya.toLocaleString("id-ID")}</span>
                             </div>
-                            <div className="flex justify-between text-red-600 font-bold bg-red-50/50 p-1 rounded">
-                              <span>Sisa Selisih Wajib Bayar</span>
-                              <span>Rp {nominalPelunasanBaru.toLocaleString("id-ID")}</span>
+                            <div className="flex justify-between text-emerald-700 font-medium">
+                              <span>Bayar Item Baru</span>
+                              <span>- Rp {tagihanItemBaru.toLocaleString("id-ID")}</span>
+                            </div>
+                            <div className={`flex justify-between font-bold p-1 rounded ${sisaTagihan > 0 ? "text-red-600 bg-red-50/50" : "text-emerald-700 bg-emerald-50/50"}`}>
+                              <span>{sisaTagihan > 0 ? "Sisa Tagihan" : "Lunas"}</span>
+                              <span>Rp {sisaTagihan.toLocaleString("id-ID")}</span>
                             </div>
                           </>
                         )}
@@ -643,8 +577,8 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
                     onChange={(date) => {
                       if (date) {
                         const yyyy = date.getFullYear();
-                        const mm = String(date.getMonth() + 1).padStart(2, '0');
-                        const dd = String(date.getDate()).padStart(2, '0');
+                        const mm = String(date.getMonth() + 1).padStart(2, "0");
+                        const dd = String(date.getDate()).padStart(2, "0");
                         setProduksi({ ...produksi, tanggal_selesai: `${yyyy}-${mm}-${dd}` });
                       } else {
                         setProduksi({ ...produksi, tanggal_selesai: "" });
