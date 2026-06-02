@@ -105,8 +105,13 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
   const hitungSubtotalItem = (it) =>
     Number(it.harga_per_meter || 0) * Number(it.panjang || 0) * Number(it.qty || 1);
 
-  const subTotal = items.reduce((acc, curr) => acc + hitungSubtotalItem(curr), 0);
-  const nilaiDiskon = subTotal * (Number(pembayaran.diskon || 0) / 100);
+  // Pisahkan subtotal barang LAMA dan barang BARU
+  const subTotalLama = items.filter((i) => i.isFromDb).reduce((acc, c) => acc + hitungSubtotalItem(c), 0);
+  const subTotalBaru = items.filter((i) => !i.isFromDb).reduce((acc, c) => acc + hitungSubtotalItem(c), 0);
+  const subTotal = subTotalLama + subTotalBaru;
+
+  // Diskon HANYA berlaku untuk barang lama. Barang baru selalu harga penuh.
+  const nilaiDiskon = subTotalLama * (Number(pembayaran.diskon || 0) / 100);
   const totalHargaAkhir = Math.max(0, subTotal - nilaiDiskon);
   const minDpRequired = totalHargaAkhir * 0.3;
 
@@ -115,6 +120,9 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
   const isOriginallyDp = item?.status_pembayaran?.toLowerCase() === "dp";
   const hasNewItems = items.some((i) => !i.isFromDb);
 
+  // Diskon terkunci begitu transaksi sudah LUNAS (ditetapkan sekali, tidak bisa diubah lagi)
+  const isDiskonLocked = isOriginallyLunas;
+
   // Kunci tampilan ringkas hanya saat transaksi LUNAS yang belum disentuh (tanpa item baru)
   const showSimpleLunasView = isOriginallyLunas && !hasNewItems;
   // Transaksi DP murni tanpa item baru: DP lama tidak boleh diutak-atik
@@ -122,27 +130,42 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
 
   // Uang yang SUDAH masuk sebelumnya (read-only dari DB)
   const dibayarSebelumnya = isOriginallyLunas ? hargaLamaDariDb : dpLamaDariDb;
-  // "Kekurangan karena item tambahan" = jumlah subtotal item baru saja
-  const tagihanItemBaru = items
-    .filter((i) => !i.isFromDb)
-    .reduce((acc, curr) => acc + hitungSubtotalItem(curr), 0);
 
-  // total_dp final yang akan ditampilkan & disimpan
-  //  - Lunas  -> bayar penuh
-  //  - DP + ada item baru -> dibayar lama + item baru (item baru langsung dibayar)
-  //  - DP tanpa item baru -> nilai DP lama (terkunci)
+  // Item baru diperlakukan sebagai "transaksi kecil sendiri": basis = harga item baru (penuh, tanpa diskon)
+  const tagihanItemBaru = subTotalBaru;
+
+  // Aturan DP 30% mengukur dari harga ITEM BARU (stabil), bukan dari total keseluruhan
+  const minDpItemBaru = tagihanItemBaru * 0.3;
+
+  // "Dibayar sekarang" = porsi yang masuk pada aksi ini saja (yang ditampilkan di field)
+  //  - Lunas              -> bayar penuh seluruh tagihan (item lama belum lunas + item baru)
+  //  - DP + ada item baru -> nominal DP untuk item baru (default 30%, bisa diketik 30%..100%)
+  //  - DP tanpa item baru -> DP lama (terkunci, tidak diubah)
+  const bayarSekarang = isLunas
+    ? Math.max(0, totalHargaAkhir - dibayarSebelumnya)
+    : hasNewItems
+      ? (pembayaran.total_dp > 0 ? pembayaran.total_dp : Math.ceil(minDpItemBaru))
+      : pembayaran.total_dp;
+
+  // total_dp KUMULATIF yang disimpan ke DB (akumulasi seluruh kas yang sudah diterima)
   const dpFinal = isLunas
     ? totalHargaAkhir
     : hasNewItems
-      ? dibayarSebelumnya + tagihanItemBaru
+      ? dibayarSebelumnya + bayarSekarang
       : pembayaran.total_dp;
 
   const sisaTagihan = Math.max(0, totalHargaAkhir - dpFinal);
-  const isDpInvalid = pembayaran.status_pembayaran === "dp" && (dpFinal < minDpRequired || dpFinal > totalHargaAkhir);
 
-  // Input nominal hanya bisa diketik manual pada DP murni yang belum terkunci & tanpa item baru.
-  // (Dalam konteks edit ini praktis selalu terkunci/otomatis — sistem yang menghitung.)
-  const inputTerkunci = isLunas || isDpLocked || hasNewItems;
+  // Validasi: saat ada item baru & status DP, nominal sekarang harus 30%..100% harga item baru
+  const isDpInvalid =
+    pembayaran.status_pembayaran === "dp" &&
+    (hasNewItems
+      ? (bayarSekarang < minDpItemBaru || bayarSekarang > tagihanItemBaru)
+      : (dpFinal < minDpRequired || dpFinal > totalHargaAkhir));
+
+  // Field nominal hanya boleh diketik manual saat: ada item baru + status DP (nominal DP item baru).
+  // Selain itu (lunas, atau DP murni tanpa item baru) -> terkunci/otomatis.
+  const inputTerkunci = isLunas || (isDpLocked && !hasNewItems) || (!hasNewItems);
 
   // =====================================================
   // HANDLERS
@@ -198,11 +221,20 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
     }
 
     if (pembayaran.status_pembayaran === "dp") {
-      if (dpFinal < minDpRequired) {
-        return Swal.fire("Akses Ditolak", `Nominal DP minimal 30%: Rp ${Math.ceil(minDpRequired).toLocaleString("id-ID")}`, "error");
-      }
-      if (dpFinal > totalHargaAkhir) {
-        return Swal.fire("Kesalahan Input", "Nominal DP tidak boleh melebihi total harga akhir.", "error");
+      if (hasNewItems) {
+        if (bayarSekarang < minDpItemBaru) {
+          return Swal.fire("Akses Ditolak", `DP item baru minimal 30%: Rp ${Math.ceil(minDpItemBaru).toLocaleString("id-ID")}`, "error");
+        }
+        if (bayarSekarang > tagihanItemBaru) {
+          return Swal.fire("Kesalahan Input", "DP item baru tidak boleh melebihi harga item baru.", "error");
+        }
+      } else {
+        if (dpFinal < minDpRequired) {
+          return Swal.fire("Akses Ditolak", `Nominal DP minimal 30%: Rp ${Math.ceil(minDpRequired).toLocaleString("id-ID")}`, "error");
+        }
+        if (dpFinal > totalHargaAkhir) {
+          return Swal.fire("Kesalahan Input", "Nominal DP tidak boleh melebihi total harga akhir.", "error");
+        }
       }
     }
 
@@ -412,11 +444,11 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
                 <span className="font-bold flex items-center gap-1 text-amber-700">⚠️ Penambahan Item Baru</span>
                 <p className="text-amber-900 mt-1">
                   {isOriginallyLunas
-                    ? <>Transaksi ini sebelumnya sudah <strong>LUNAS</strong> (Rp {dibayarSebelumnya.toLocaleString("id-ID")}). Pembayaran lama dibiarkan, customer cukup membayar harga item baru berikut:</>
-                    : <>DP yang sudah dibayar (Rp {dibayarSebelumnya.toLocaleString("id-ID")}) dibiarkan. Karena ada item baru, customer membayar tambahan sebesar harga item baru berikut:</>}
+                    ? <>Transaksi ini sebelumnya sudah <strong>LUNAS</strong> (Rp {dibayarSebelumnya.toLocaleString("id-ID")}). Item baru diperlakukan sebagai pesanan tersendiri: pilih <strong>Lunas</strong> untuk bayar penuh, atau <strong>DP</strong> minimal 30% dari harga item baru.</>
+                    : <>DP yang sudah dibayar (Rp {dibayarSebelumnya.toLocaleString("id-ID")}) dibiarkan. Item baru diperlakukan tersendiri: pilih <strong>Lunas</strong> untuk bayar penuh, atau <strong>DP</strong> minimal 30% dari harga item baru.</>}
                 </p>
                 <div className="mt-2 flex items-baseline justify-between bg-white border border-amber-200 rounded-md px-3 py-2">
-                  <span className="text-[10px] text-gray-500 font-medium">Tagihan Item Baru</span>
+                  <span className="text-[10px] text-gray-500 font-medium">Harga Item Baru</span>
                   <span className="text-sm font-black text-emerald-700">Rp {tagihanItemBaru.toLocaleString("id-ID")}</span>
                 </div>
               </div>
@@ -476,7 +508,11 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
 
                   <div>
                     <label className="block text-black font-semibold mb-1">
-                      {isLunas ? "Total Dana Diterima (Lunas)" : "Total Dana yang Telah Diterima"}
+                      {isLunas
+                        ? "Dibayar Sekarang (Pelunasan)"
+                        : hasNewItems
+                          ? "Nominal DP Item Baru"
+                          : "Total DP"}
                     </label>
                     <div className={`flex rounded-lg border overflow-hidden px-3 py-2.5 items-center bg-white transition-colors ${isDpInvalid ? "border-red-400" : isLunas ? "border-emerald-300 bg-emerald-50/40" : "border-[#1A335A]"}`}>
                       <span className="text-gray-500 text-xs mr-2 font-medium">Rp</span>
@@ -486,12 +522,19 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
                         name="nominal-dp-custom"
                         autoComplete="off"
                         data-lpignore="true"
-                        value={formatRibuan(dpFinal)}
+                        value={formatRibuan(bayarSekarang)}
                         disabled={inputTerkunci}
                         onChange={(e) => setPembayaran({ ...pembayaran, total_dp: parseRibuan(e.target.value) })}
                         className={`nominal-input w-full bg-transparent focus:outline-none text-sm font-bold tracking-wide ${inputTerkunci ? (isLunas ? "text-emerald-700 cursor-not-allowed" : "text-gray-600 cursor-not-allowed") : "text-gray-900"}`}
                       />
                     </div>
+
+                    {/* Helper aturan DP item baru (30% dari harga item baru) */}
+                    {pembayaran.status_pembayaran === "dp" && hasNewItems && (
+                      <span className={`text-[10px] block mt-1 ${bayarSekarang < minDpItemBaru ? "text-red-500 font-semibold" : "text-gray-400"}`}>
+                        * DP item baru minimal 30% yaitu <strong>Rp {Math.ceil(minDpItemBaru).toLocaleString("id-ID")}</strong>, maksimal <strong>Rp {tagihanItemBaru.toLocaleString("id-ID")}</strong>.
+                      </span>
+                    )}
 
                     {/* Sisa tagihan (status DP) */}
                     {pembayaran.status_pembayaran === "dp" && (
@@ -501,11 +544,11 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
                       </div>
                     )}
 
-                    {/* Info pelunasan tambahan saat pilih Lunas + ada item baru */}
+                    {/* Info pelunasan saat pilih Lunas + ada item baru */}
                     {isLunas && hasNewItems && (
                       <div className="flex justify-between items-center mt-2 bg-emerald-50 border border-emerald-300 rounded-lg p-2 text-[10px]">
-                        <span className="text-emerald-800 font-bold flex items-center gap-1">💰 Dibayar saat ini (harga item baru):</span>
-                        <span className="font-black text-emerald-700 text-xs bg-white border border-emerald-300 rounded px-2 py-0.5">Rp {tagihanItemBaru.toLocaleString("id-ID")}</span>
+                        <span className="text-emerald-800 font-bold flex items-center gap-1">💰 Dibayar saat ini (pelunasan):</span>
+                        <span className="font-black text-emerald-700 text-xs bg-white border border-emerald-300 rounded px-2 py-0.5">Rp {bayarSekarang.toLocaleString("id-ID")}</span>
                       </div>
                     )}
                   </div>
@@ -525,14 +568,31 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
                     </div>
                     <div className="md:col-span-2">
                       <label className="block text-black font-semibold mb-1">Diskon</label>
-                      <input type="text" value={pembayaran.diskon ? `${pembayaran.diskon}%` : ""} placeholder="0%" onChange={(e) => setPembayaran({ ...pembayaran, diskon: Number(e.target.value.replace("%", "")) || 0 })} className="w-full border border-[#1A335A] bg-white rounded-lg p-2.5 text-center focus:outline-none font-medium text-xs" />
+                      <input
+                        type="text"
+                        value={pembayaran.diskon ? `${pembayaran.diskon}%` : ""}
+                        placeholder="0%"
+                        disabled={isDiskonLocked}
+                        onChange={(e) => setPembayaran({ ...pembayaran, diskon: Number(e.target.value.replace("%", "")) || 0 })}
+                        className={`w-full border rounded-lg p-2.5 text-center focus:outline-none font-medium text-xs ${isDiskonLocked ? "border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed" : "border-[#1A335A] bg-white"}`}
+                        title={isDiskonLocked ? "Diskon terkunci karena transaksi sudah lunas" : ""}
+                      />
+                      {isDiskonLocked && (
+                        <span className="text-[9px] text-gray-400 block mt-1 leading-tight">Terkunci (transaksi sudah lunas)</span>
+                      )}
                     </div>
 
                     <div className="md:col-span-5">
                       <label className="block text-black font-semibold mb-1">Total Harga</label>
                       <div className="bg-white border border-[#1A335A] rounded-lg p-3 space-y-1.5 text-[11px] shadow-sm">
                         <div className="flex justify-between text-gray-500"><span>Sub Total</span><span className="font-semibold text-gray-700">Rp {subTotal.toLocaleString("id-ID")}</span></div>
-                        <div className="flex justify-between text-gray-500"><span>Diskon</span><span className="font-semibold text-gray-700">{pembayaran.diskon || 0}%</span></div>
+                        <div className="flex justify-between text-gray-500">
+                          <span>{hasNewItems ? "Diskon (barang lama)" : "Diskon"}</span>
+                          <span className="font-semibold text-gray-700">{pembayaran.diskon || 0}% (- Rp {nilaiDiskon.toLocaleString("id-ID")})</span>
+                        </div>
+                        {hasNewItems && (
+                          <div className="flex justify-between text-gray-500"><span>Item baru (tanpa diskon)</span><span className="font-semibold text-gray-700">Rp {subTotalBaru.toLocaleString("id-ID")}</span></div>
+                        )}
                         <hr className="border-gray-200" />
                         <div className="flex justify-between text-gray-900 font-bold pt-0.5"><span>Total Kontrak</span><span>Rp {totalHargaAkhir.toLocaleString("id-ID")}</span></div>
 
@@ -544,8 +604,8 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
                               <span>- Rp {dibayarSebelumnya.toLocaleString("id-ID")}</span>
                             </div>
                             <div className="flex justify-between text-emerald-700 font-medium">
-                              <span>Bayar Item Baru</span>
-                              <span>- Rp {tagihanItemBaru.toLocaleString("id-ID")}</span>
+                              <span>Bayar Sekarang</span>
+                              <span>- Rp {bayarSekarang.toLocaleString("id-ID")}</span>
                             </div>
                             <div className={`flex justify-between font-bold p-1 rounded ${sisaTagihan > 0 ? "text-red-600 bg-red-50/50" : "text-emerald-700 bg-emerald-50/50"}`}>
                               <span>{sisaTagihan > 0 ? "Sisa Tagihan" : "Lunas"}</span>
