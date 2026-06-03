@@ -38,8 +38,7 @@ export default function PORegulerTable({ data, onConfirmReceipt, onEdit, onDelet
       : 'bg-[#F0A864] text-white';
   };
 
-  const handleConfirmReceipt = (item) => {
-    // Validasi pelunasan sebelum barang diserahkan
+const handleConfirmReceipt = (item) => {
     if (item.status_pembayaran?.toLowerCase() !== 'lunas') {
       return Swal.fire({
         title: 'Gagal Memproses',
@@ -63,18 +62,18 @@ export default function PORegulerTable({ data, onConfirmReceipt, onEdit, onDelet
       allowOutsideClick: () => !Swal.isLoading(),
       preConfirm: async () => {
         try {
-          // PERBAIKAN: Mengarahkan langsung ke dynamic route /api/pre-order-reguler/[id]
-          const res = await fetch(`/api/pre-order-reguler/${item.id}`, {
+          const res = await fetch(`/api/pre-order-reguler`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-              status_pengambilan: 'sudah_diambil' // Hanya mengirim field yang ingin di-patch
+              id: item.id, 
+              status_pengambilan: 'sudah_diambil' 
             })
           });
 
           const json = await res.json();
           if (!res.ok) {
-            throw new Error(json.message || 'Gagal memperbarui status penerimaan.');
+            throw new Error(json.error || json.message || 'Gagal memperbarui status.');
           }
 
           return true; 
@@ -84,6 +83,13 @@ export default function PORegulerTable({ data, onConfirmReceipt, onEdit, onDelet
       }
     }).then((result) => {
       if (result.isConfirmed) {
+        // --- PROSES UPDATE INSTAN DI FRONTEND ---
+        // Kita paksa ubah status item saat ini agar UI langsung mengunci tombol tombol aksi
+        item.status_pengambilan = 'sudah_diambil';
+        
+        // (Opsional) Jika di database/backend Anda menggunakan field 'status_penerimaan'
+        item.status_penerimaan = 'sudah_diambil'; 
+
         Swal.fire({
           title: 'Berhasil!',
           text: 'Status penerimaan barang berhasil diperbarui.',
@@ -91,6 +97,7 @@ export default function PORegulerTable({ data, onConfirmReceipt, onEdit, onDelet
           confirmButtonColor: '#1A335A'
         });
         
+        // Memicu callback fungsi parent untuk memperbarui state utama jika diperlukan
         if (onConfirmReceipt) onConfirmReceipt(item.id);
       }
     });

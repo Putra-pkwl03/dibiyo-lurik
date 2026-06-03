@@ -62,41 +62,47 @@ export default function PreOrderRegulerPage() {
   const itemsPerPage = 10
 
   const fetchData = async (isInitial = false) => {
-  if (isInitial) setLoading(true)
-  try {
-    const res = await fetch(`/api/pre-order-reguler?page=${currentPage}&limit=${itemsPerPage}`)
-    if (!res.ok) throw new Error('Gagal mengambil data')
-    const json = await res.json()
-    
-    // 1. LOG DATA MURNI DARI BACKEND
-    console.log("=== DEBUG PARENT: DATA DARI BACKEND ===", json.data)
+    if (isInitial) setLoading(true)
+    try {
+      const res = await fetch(`/api/pre-order-reguler?page=${currentPage}&limit=${itemsPerPage}`)
+      if (!res.ok) throw new Error('Gagal mengambil data')
+      const json = await res.json()
+      
+      console.log("=== DEBUG PARENT: DATA DARI BACKEND ===", json.data)
 
-    if (json && Array.isArray(json.data)) {
-      setData(json.data)
-      setTotalItems(json.meta?.total || json.data.length || 0)
-    } else {
+      if (json && Array.isArray(json.data)) {
+        setData(json.data)
+        setTotalItems(json.meta?.total || json.data.length || 0)
+      } else {
+        setData([])
+        setTotalItems(0)
+      }
+    } catch (err) {
+      console.error("Error fetchData:", err)
       setData([])
       setTotalItems(0)
+    } finally {
+      if (isInitial) setLoading(false)
     }
-  } catch (err) {
-    console.error("Error fetchData:", err)
-    setData([])
-    setTotalItems(0)
-  } finally {
-    if (isInitial) setLoading(false)
   }
-}
-
 
   // Setiap kali halaman berganti, picu pemanggilan ulang data ke backend
   useEffect(() => {
     fetchData(true)
   }, [currentPage])
 
+  // --- PERBAIKAN DI SINI ---
   const handleConfirmReceiptSuccess = (confirmedId) => {
-
-      console.log("=== DEBUG PARENT: ITEM UNTUK MODAL ===", selectedItem)
-    setData((prevData) => prevData.filter((item) => item.id !== confirmedId))
+    // 1. Update state data lokal secara reaktif agar tombol langsung terkunci (berubah abu-abu)
+    setData((prevData) => 
+      prevData.map((item) => 
+        item.id === confirmedId 
+          ? { ...item, status_pengambilan: 'sudah_diambil', status_penerimaan: 'sudah_diambil' } 
+          : item
+      )
+    )
+    
+    // 2. Sinkronisasi data ulang dengan database di background (tanpa memicu loading spinner)
     fetchData(false)
   }
 
