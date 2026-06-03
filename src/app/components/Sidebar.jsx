@@ -9,7 +9,7 @@ import { useRealtime } from '@upstash/realtime/client'
 import { 
   LayoutDashboard, Package, ShoppingCart, 
   Database, FileText, User, LogOut, ChevronDown, ClipboardList,
-  X 
+  Layers, Clock7, X 
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Swal from 'sweetalert2';
@@ -54,7 +54,7 @@ export default function Sidebar() {
     window.dispatchEvent(event);
   }, [])
 
-useRealtime({
+  useRealtime({
     event: '*', 
     history: false,
     enabled: !!role, 
@@ -81,7 +81,7 @@ useRealtime({
           audio.play().catch(() => {});
         } catch (e) {}
 
-       Swal.fire({
+        Swal.fire({
           title: isCustomOrder ? 'Pesanan Custom Baru!' : 'Pesanan Reguler Baru!',
           text: data.pesan,
           icon: 'info',
@@ -221,7 +221,7 @@ useRealtime({
     { name: 'Keranjang', icon: <ShoppingCart size={20} />, path: '/dashboard/cs/keranjang', roles: ['cs', 'customer_service'], hasBadge: true },
     { 
       name: 'Master Data', 
-      icon: <Package size={20} />, 
+      icon: <Database size={20} />, 
       roles: ['kepala_produksi'], 
       subMenu: [
         { name: 'Kategori', path: '/dashboard/kp/md/kategori' },
@@ -234,7 +234,7 @@ useRealtime({
     { name: 'Produk', path: '/dashboard/kp/md/produk', icon: <Package size={20} />, roles: ['kepala_produksi'] },
     { 
       name: 'Rekap Stok Gulungan', 
-      icon: <Database size={20} />, 
+      icon: <Layers size={20} />, 
       roles: ['kepala_produksi'],
       subMenu: [
         { name: 'Lebar 70', path: '/dashboard/kp/rsg/lebar70' },
@@ -244,7 +244,7 @@ useRealtime({
     { name: 'Produk', path: '/dashboard/owner/md/produk', icon: <Package size={20} />, roles: ['owner'] },
     { 
       name: 'Rekap Stok Gulungan', 
-      icon: <Database size={20} />, 
+      icon: <Layers size={20} />, 
       roles: ['owner'],
       subMenu: [
         { name: 'Lebar 70', path: '/dashboard/owner/rsg/lebar70' },
@@ -254,7 +254,7 @@ useRealtime({
     { 
       id: 'po-cs', 
       name: 'Pre Order', 
-      icon: <ShoppingCart size={20} />, 
+      icon: <Clock7 size={20} />, 
       roles: ['cs', 'customer_service'],
       subMenu: [
         { name: 'Pre Order Reguler', path: '/dashboard/cs/po/reguler', subId: 'reguler' }, 
@@ -264,7 +264,7 @@ useRealtime({
     { 
       id: 'po-kp',
       name: 'Pre Order', 
-      icon: <ShoppingCart size={20} />, 
+      icon: <Clock7 size={20} />, 
       roles: ['kepala_produksi'],
       subMenu: [
         { name: 'Pre Order Reguler', path: '/dashboard/kp/po?tipe=reguler', subId: 'reguler' }, 
@@ -274,7 +274,7 @@ useRealtime({
     { 
       id: 'po-owner',
       name: 'Pre Order', 
-      icon: <ShoppingCart size={20} />, 
+      icon: <Clock7 size={20} />, 
       roles: ['owner'],
       subMenu: [
         { name: 'Pre Order Reguler', path: '/dashboard/owner/po?tipe=reguler' }, 
