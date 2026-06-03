@@ -10,6 +10,9 @@ export default function PORegulerDetailModal({ isOpen, onClose, item }) {
 
   if (!isOpen || !item) return null
 
+  // Cek apakah status pembayaran lunas
+  const isLunas = item.status_pembayaran?.toLowerCase() === 'lunas'
+
   // Helper formatting tanggal lokal (DD/MM/YYYY)
   const formatTanggalLokal = (dateString) => {
     if (!dateString) return '00/00/0000';
@@ -106,8 +109,15 @@ export default function PORegulerDetailModal({ isOpen, onClose, item }) {
         '------------------------------------------------\n',
         boldOn,
         'Detail Pembayaran\n',
-        boldOff,
-        `Nominal DP        : Rp ${item.total_dp?.toLocaleString('id-ID') || '0'}\n`,
+        boldOff
+      );
+
+      // LOGIKA STRUK: Hanya cetak Nominal DP jika belum lunas
+      if (!isLunas) {
+        printData.push(`Nominal DP        : Rp ${item.total_dp?.toLocaleString('id-ID') || '0'}\n`);
+      }
+
+      printData.push(
         `Diskon            : ${item.diskon ? `${item.diskon}%` : '0%'}\n`,
         `Total Akhir       : Rp ${item.total_harga?.toLocaleString('id-ID') || '0'}\n`,
         `Status            : ${item.status_pembayaran?.toUpperCase() || 'DP'}\n`,
@@ -157,7 +167,6 @@ export default function PORegulerDetailModal({ isOpen, onClose, item }) {
       setIsPrinting(false)
     }
   }
-  // ==============================================================================
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1A335A7A] font-inter backdrop-blur-sm">
@@ -214,20 +223,24 @@ export default function PORegulerDetailModal({ isOpen, onClose, item }) {
                   <span>💳</span> Detail Pembayaran
                 </div>
                 
-                <div className="grid grid-cols-3 pt-2 pb-2 mb-3 border-t border-b border-amber-900/30">
+                {/* LOGIKA UI: Grid disesuaikan secara dinamis berdasarkan status bayar */}
+                <div className={`grid ${isLunas ? 'grid-cols-2' : 'grid-cols-3'} pt-2 pb-2 mb-3 border-t border-b border-amber-900/30`}>
                   <div className="pr-3 border-r border-amber-900/30">
                     <p className="text-gray-400 text-[10px]">Status Bayar</p>
                     <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded-md mt-1 text-white ${
-                      item.status_pembayaran?.toLowerCase() === 'lunas' ? 'bg-[#1DB793]' : 'bg-[#F0A864]'
+                      isLunas ? 'bg-[#1DB793]' : 'bg-[#F0A864]'
                     }`}>
                       {item.status_pembayaran?.toUpperCase() || 'DP'}
                     </span>
                   </div>
                   
-                  <div className="px-3 border-r border-amber-900/30">
-                    <p className="text-gray-400 text-[10px]">Nominal DP</p>
-                    <p className="mt-1 font-bold text-gray-800">Rp.{item.total_dp?.toLocaleString('id-ID') || '0'}</p>
-                  </div>
+                  {/* LOGIKA UI: Hanya tampil jika belum lunas */}
+                  {!isLunas && (
+                    <div className="px-3 border-r border-amber-900/30">
+                      <p className="text-gray-400 text-[10px]">Nominal DP</p>
+                      <p className="mt-1 font-bold text-gray-800">Rp.{item.total_dp?.toLocaleString('id-ID') || '0'}</p>
+                    </div>
+                  )}
                   
                   <div className="pl-3">
                     <p className="text-gray-400 text-[10px]">Metode</p>
