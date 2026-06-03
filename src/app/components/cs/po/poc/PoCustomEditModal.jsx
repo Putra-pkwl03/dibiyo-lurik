@@ -1,12 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import { X, User, Box, CreditCard, Calendar, Upload, Plus, Trash2, Minus, ChevronDown } from "lucide-react";
+import { X } from "lucide-react";
 import Swal from "sweetalert2";
 import { supabase } from "@/lib/supabaseClient";
-
-import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+
+// Import Sub-Komponen Modular
+import CustomerSection from "./CustomerSection";
+import ProductSection from "./ProductSection";
+import PaymentSection from "./PaymentSection";
+import ProductionSection from "./ProductionSection";
+import SuccessModal from "./SuccessModal";
 
 // =====================================================
 // KONSTANTA STYLE & HELPER
@@ -32,6 +37,7 @@ const itemKosong = () => ({
 export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) {
   const [daftarHarga, setDaftarHarga] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // --- STATE DATA FORM ---
   const [customer, setCustomer] = useState({ nama_customer: "", kontak_customer: "", alamat_customer: "" });
@@ -39,9 +45,8 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
   const [pembayaran, setPembayaran] = useState({ status_pembayaran: "dp", total_dp: 0, metode_pembayaran: "cash", diskon: 0 });
   const [produksi, setProduksi] = useState({ tanggal_selesai: "", status: "dalam_proses", catatan: "" });
 
-  // Snapshot angka asli dari DB (read-only, tidak pernah diubah effect)
-  const [hargaLamaDariDb, setHargaLamaDariDb] = useState(0); // total_harga lama
-  const [dpLamaDariDb, setDpLamaDariDb] = useState(0);       // total_dp lama
+  const [hargaLamaDariDb, setHargaLamaDariDb] = useState(0); 
+  const [dpLamaDariDb, setDpLamaDariDb] = useState(0);      
 
   // --- Ambil master harga ---
   useEffect(() => {
@@ -53,7 +58,7 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
     }
   }, [isOpen]);
 
-  // --- Set data awal saat modal dibuka (sekali, dari prop) ---
+  // --- Set data awal saat modal dibuka ---
   useEffect(() => {
     if (!isOpen || !item) return;
 
@@ -97,20 +102,16 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
     });
   }, [isOpen, item]);
 
-  if (!isOpen) return null;
-
   // =====================================================
-  // NILAI TURUNAN (derived) — satu sumber kebenaran, tanpa effect
+  // NILAI TURUNAN (derived state)
   // =====================================================
   const hitungSubtotalItem = (it) =>
     Number(it.harga_per_meter || 0) * Number(it.panjang || 0) * Number(it.qty || 1);
 
-  // Pisahkan subtotal barang LAMA dan barang BARU
   const subTotalLama = items.filter((i) => i.isFromDb).reduce((acc, c) => acc + hitungSubtotalItem(c), 0);
   const subTotalBaru = items.filter((i) => !i.isFromDb).reduce((acc, c) => acc + hitungSubtotalItem(c), 0);
   const subTotal = subTotalLama + subTotalBaru;
 
-  // Diskon HANYA berlaku untuk barang lama. Barang baru selalu harga penuh.
   const nilaiDiskon = subTotalLama * (Number(pembayaran.diskon || 0) / 100);
   const totalHargaAkhir = Math.max(0, subTotal - nilaiDiskon);
   const minDpRequired = totalHargaAkhir * 0.3;
@@ -120,34 +121,20 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
   const isOriginallyDp = item?.status_pembayaran?.toLowerCase() === "dp";
   const hasNewItems = items.some((i) => !i.isFromDb);
 
-  // Diskon terkunci begitu transaksi sudah LUNAS (ditetapkan sekali, tidak bisa diubah lagi)
   const isDiskonLocked = isOriginallyLunas;
-
-  // Kunci tampilan ringkas hanya saat transaksi LUNAS yang belum disentuh (tanpa item baru)
   const showSimpleLunasView = isOriginallyLunas && !hasNewItems;
-  // Transaksi DP murni tanpa item baru: DP lama tidak boleh diutak-atik
   const isDpLocked = isOriginallyDp && !hasNewItems;
 
-  // Uang yang SUDAH masuk sebelumnya (read-only dari DB)
   const dibayarSebelumnya = isOriginallyLunas ? hargaLamaDariDb : dpLamaDariDb;
-
-  // Item baru diperlakukan sebagai "transaksi kecil sendiri": basis = harga item baru (penuh, tanpa diskon)
   const tagihanItemBaru = subTotalBaru;
-
-  // Aturan DP 30% mengukur dari harga ITEM BARU (stabil), bukan dari total keseluruhan
   const minDpItemBaru = tagihanItemBaru * 0.3;
 
-  // "Dibayar sekarang" = porsi yang masuk pada aksi ini saja (yang ditampilkan di field)
-  //  - Lunas              -> bayar penuh seluruh tagihan (item lama belum lunas + item baru)
-  //  - DP + ada item baru -> nominal DP untuk item baru (default 30%, bisa diketik 30%..100%)
-  //  - DP tanpa item baru -> DP lama (terkunci, tidak diubah)
   const bayarSekarang = isLunas
     ? Math.max(0, totalHargaAkhir - dibayarSebelumnya)
     : hasNewItems
       ? (pembayaran.total_dp > 0 ? pembayaran.total_dp : Math.ceil(minDpItemBaru))
       : pembayaran.total_dp;
 
-  // total_dp KUMULATIF yang disimpan ke DB (akumulasi seluruh kas yang sudah diterima)
   const dpFinal = isLunas
     ? totalHargaAkhir
     : hasNewItems
@@ -156,15 +143,12 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
 
   const sisaTagihan = Math.max(0, totalHargaAkhir - dpFinal);
 
-  // Validasi: saat ada item baru & status DP, nominal sekarang harus 30%..100% harga item baru
   const isDpInvalid =
     pembayaran.status_pembayaran === "dp" &&
     (hasNewItems
       ? (bayarSekarang < minDpItemBaru || bayarSekarang > tagihanItemBaru)
       : (dpFinal < minDpRequired || dpFinal > totalHargaAkhir));
 
-  // Field nominal hanya boleh diketik manual saat: ada item baru + status DP (nominal DP item baru).
-  // Selain itu (lunas, atau DP murni tanpa item baru) -> terkunci/otomatis.
   const inputTerkunci = isLunas || (isDpLocked && !hasNewItems) || (!hasNewItems);
 
   // =====================================================
@@ -271,9 +255,7 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
       const json = await response.json();
       if (!response.ok) throw new Error(json.message || "Gagal menyimpan perubahan");
 
-      Swal.fire("Berhasil", "Perubahan berhasil disimpan.", "success");
-      onClose();
-      if (onSuccess) onSuccess();
+      setShowSuccess(true);
     } catch (err) {
       Swal.fire("Error", err.message, "error");
     } finally {
@@ -281,9 +263,28 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
     }
   };
 
+  // =====================================================
+  // RENDER ONDITIONAL MANAGEMENT
+  // =====================================================
+  if (!isOpen) return null;
+
+  // Jika sukses, Form utama langsung dilepas/ditutup dan diganti SuccessModal
+  if (showSuccess) {
+    return (
+      <SuccessModal 
+        isOpen={showSuccess} 
+        onClose={() => { 
+          setShowSuccess(false); 
+          onClose(); // Menutup modal utama di komponen parent
+          if (onSuccess) onSuccess(); // Memperbarui data halaman belakang
+        }} 
+      />
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-[#1A335A]/48 backdrop-blur-[2px] flex items-center justify-center z-50 p-4 font-inter">
-
+      {/* Datepicker global CSS template injection */}
       <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #1A335A transparent; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -300,7 +301,6 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
       `}} />
 
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-y-auto custom-scrollbar">
-
         {/* HEADER */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
           <h2 className="text-sm font-bold text-black tracking-wide">Pre-Order Custom</h2>
@@ -310,373 +310,83 @@ export default function PoCustomEditModal({ isOpen, onClose, item, onSuccess }) 
         </div>
 
         <div className="p-6 space-y-6">
-
           {/* SECTION 1: DATA CUSTOMER */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-black border-b pb-1">
-              <User size={14} className="text-[#1A335A]" />
-              <span>Data Customer</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px]">
-              <div>
-                <label className={LABEL}>Nama Customer</label>
-                <input type="text" value={customer.nama_customer} onChange={(e) => setCustomer({ ...customer, nama_customer: e.target.value })} className={INPUT_CYAN} />
-              </div>
-              <div>
-                <label className={LABEL}>No Telepon</label>
-                <input type="text" value={customer.kontak_customer} onChange={(e) => setCustomer({ ...customer, kontak_customer: e.target.value })} className={INPUT_CYAN} />
-              </div>
-              <div>
-                <label className={LABEL}>Tanggal Pre-Order</label>
-                <input type="text" value={item?.created_at ? new Date(item.created_at).toLocaleDateString("id-ID") : ""} disabled className={`${INPUT_CYAN} text-gray-500 cursor-not-allowed`} />
-              </div>
-            </div>
-            <div className="text-[11px]">
-              <label className={LABEL}>Alamat</label>
-              <textarea rows={2} value={customer.alamat_customer} onChange={(e) => setCustomer({ ...customer, alamat_customer: e.target.value })} className={`${INPUT_CYAN} resize-none`} />
-            </div>
-          </div>
+          <CustomerSection 
+            customer={customer} 
+            setCustomer={setCustomer} 
+            createdAt={item?.created_at} 
+            labelStyle={LABEL} 
+            inputStyle={INPUT_CYAN} 
+          />
 
           {/* SECTION 2: DATA PRODUK */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between border-b pb-1">
-              <div className="flex items-center gap-2 text-xs font-bold text-black">
-                <Box size={14} className="text-[#1A335A]" />
-                <span>Data Produk Custom</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setItems((prev) => [...prev, itemKosong()])}
-                className="flex items-center gap-1 text-[10px] bg-[#1A335A] text-white px-3 py-1 rounded hover:bg-[#11223C] transition-all cursor-pointer"
-              >
-                <Plus size={12} /> Tambah Item Baru
-              </button>
-            </div>
-
-            {items.map((prodItem) => (
-              <div key={prodItem.id} className={`flex flex-row items-center gap-4 border rounded-xl p-4 relative group ${prodItem.isFromDb ? "bg-[#5AE3ED1C] border-dashed border-[#1A335A]" : "bg-emerald-50/60 border-dashed border-emerald-400"}`}>
-
-                {/* Badge item baru */}
-                {!prodItem.isFromDb && (
-                  <span className="absolute -top-2 left-3 bg-emerald-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-full shadow-sm uppercase tracking-wide">Item Baru</span>
-                )}
-
-                {/* Uploader Box */}
-                <div className="w-48 h-20 flex-shrink-0">
-                  {prodItem.image ? (
-                    <div className="relative w-full h-full rounded-lg border bg-white flex items-center justify-center overflow-hidden">
-                      <img src={prodItem.image} alt="Custom item" className="object-cover w-full h-full" />
-                      <label className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white cursor-pointer transition-opacity">
-                        <Upload size={14} />
-                        <input type="file" accept="image/*" onChange={(e) => handleImageUpload(prodItem.id, e)} className="hidden" />
-                      </label>
-                    </div>
-                  ) : (
-                    <label className="w-full h-full border border-dashed border-[#1A335A] rounded-lg bg-white flex flex-col items-center justify-center cursor-pointer text-center p-1">
-                      <Upload size={14} className="text-[#1A335A] mb-0.5" />
-                      <span className="text-[#1A335A]/60 text-[8.5px] leading-tight px-1">Klik untuk upload gambar</span>
-                      <input type="file" accept="image/*" onChange={(e) => handleImageUpload(prodItem.id, e)} className="hidden" />
-                    </label>
-                  )}
-                </div>
-
-                {/* Fields */}
-                <div className="flex flex-1 flex-row items-end gap-3 text-[11px]">
-                  <div className="flex-1 min-w-[120px]">
-                    <label className={LABEL}>Lebar Kain</label>
-                    <select value={prodItem.lebar} onChange={(e) => updateItem(prodItem.id, "lebar", e.target.value)} className={`${INPUT_WHITE} cursor-pointer`}>
-                      <option value="">Pilih Lebar</option>
-                      {[...new Set(daftarHarga.map((d) => String(d.lebar)))].map((lbl) => (
-                        <option key={lbl} value={lbl}>Lebar : {lbl} cm</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex items-center border border-[#1A335A] rounded-md bg-white h-8 overflow-hidden flex-shrink-0">
-                    <button type="button" onClick={() => updateItem(prodItem.id, "qty", Math.max(1, prodItem.qty - 1))} className="px-2 text-[#1A335A] hover:bg-gray-100 h-full cursor-pointer"><Minus size={10} strokeWidth={3} /></button>
-                    <span className="px-3 font-bold text-gray-800 text-xs min-w-[20px] text-center">{prodItem.qty}</span>
-                    <button type="button" onClick={() => updateItem(prodItem.id, "qty", prodItem.qty + 1)} className="px-2 text-[#1A335A] hover:bg-gray-100 h-full cursor-pointer"><Plus size={10} strokeWidth={3} /></button>
-                  </div>
-
-                  <div className="flex-1 min-w-[110px]">
-                    <label className={LABEL}>Pilih Pewarna</label>
-                    <select value={prodItem.jenis_pewarna} onChange={(e) => updateItem(prodItem.id, "jenis_pewarna", e.target.value)} className={`${INPUT_WHITE} capitalize cursor-pointer`}>
-                      <option value="">Pilih</option>
-                      {[...new Set(daftarHarga.filter((d) => String(d.lebar) === String(prodItem.lebar)).map((o) => o.jenis_pewarna?.trim().toLowerCase()).filter(Boolean))].map((pw) => (
-                        <option key={pw} value={pw}>{pw}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="w-16 flex-shrink-0">
-                    <label className={`${LABEL} text-center`}>Panjang</label>
-                    <input type="number" min="0" placeholder="Meter" value={prodItem.panjang || ""} onChange={(e) => updateItem(prodItem.id, "panjang", e.target.value)} className={`${INPUT_WHITE} text-center`} />
-                  </div>
-
-                  <div className="w-28 flex-shrink-0">
-                    <label className={`${LABEL} text-center`}>Subtotal Harga</label>
-                    <div className="w-full border border-[#1A335A]/30 bg-white rounded-md p-1.5 text-center font-bold text-gray-800 text-xs shadow-sm">
-                      Rp {hitungSubtotalItem(prodItem).toLocaleString("id-ID")}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Proteksi hapus: item lama transaksi lunas tidak boleh dihapus */}
-                {items.length > 1 && (!prodItem.isFromDb || (!isOriginallyLunas && pembayaran.status_pembayaran !== "lunas")) && (
-                  <button type="button" onClick={() => setItems((prev) => prev.filter((i) => i.id !== prodItem.id))} className="absolute -top-1.5 -right-1.5 bg-red-100 text-red-600 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm cursor-pointer">
-                    <Trash2 size={11} />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
+          <ProductSection 
+            items={items} 
+            setItems={setItems} 
+            daftarHarga={daftarHarga} 
+            updateItem={updateItem} 
+            handleImageUpload={handleImageUpload} 
+            hitungSubtotalItem={hitungSubtotalItem} 
+            itemKosong={itemKosong} 
+            isOriginallyLunas={isOriginallyLunas} 
+            statusPembayaran={pembayaran.status_pembayaran} 
+            labelStyle={LABEL} 
+            inputWhiteStyle={INPUT_WHITE} 
+          />
 
           {/* SECTION 3: DETAIL PEMBAYARAN */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-black border-b pb-1">
-              <CreditCard size={14} className="text-[#1A335A]" />
-              <span>Detail Pembayaran</span>
-            </div>
-
-            {/* WARNING: ada item baru pada transaksi yang sudah berjalan */}
-            {hasNewItems && (isOriginallyLunas || isOriginallyDp) && (
-              <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 text-[11px]">
-                <span className="font-bold flex items-center gap-1 text-amber-700">⚠️ Penambahan Item Baru</span>
-                <p className="text-amber-900 mt-1">
-                  {isOriginallyLunas
-                    ? <>Transaksi ini sebelumnya sudah <strong>LUNAS</strong> (Rp {dibayarSebelumnya.toLocaleString("id-ID")}). Item baru diperlakukan sebagai pesanan tersendiri: pilih <strong>Lunas</strong> untuk bayar penuh, atau <strong>DP</strong> minimal 30% dari harga item baru.</>
-                    : <>DP yang sudah dibayar (Rp {dibayarSebelumnya.toLocaleString("id-ID")}) dibiarkan. Item baru diperlakukan tersendiri: pilih <strong>Lunas</strong> untuk bayar penuh, atau <strong>DP</strong> minimal 30% dari harga item baru.</>}
-                </p>
-                <div className="mt-2 flex items-baseline justify-between bg-white border border-amber-200 rounded-md px-3 py-2">
-                  <span className="text-[10px] text-gray-500 font-medium">Harga Item Baru</span>
-                  <span className="text-sm font-black text-emerald-700">Rp {tagihanItemBaru.toLocaleString("id-ID")}</span>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-[#5AE3ED1C] border border-[#1A335A]/20 rounded-xl p-5 space-y-4 text-[11px]">
-              {showSimpleLunasView ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                  <div className="p-3 bg-white border border-[#1A335A]/20 rounded-lg shadow-sm">
-                    <span className="block text-black font-medium mb-1">Metode Pembayaran</span>
-                    <span className="text-xs font-bold text-gray-800 capitalize">{pembayaran.metode_pembayaran}</span>
-                  </div>
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg shadow-sm space-y-1.5">
-                    <div className="flex justify-between text-gray-500 text-[10px]">
-                      <span>Subtotal: Rp {subTotal.toLocaleString("id-ID")}</span>
-                      <span className="text-emerald-700 font-medium">Diskon: {pembayaran.diskon}%</span>
-                    </div>
-                    <hr className="border-emerald-200" />
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="block text-emerald-600 font-medium text-[9px]">Status</span>
-                        <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">LUNAS</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="block text-gray-400 text-[9px]">Total Nilai Kontrak</span>
-                        <span className="text-xs font-black text-gray-800">Rp {totalHargaAkhir.toLocaleString("id-ID")}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-black font-semibold mb-1">Status Pembayaran</label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <button
-                        type="button"
-                        disabled={isDpLocked}
-                        onClick={() => setPembayaran({ ...pembayaran, status_pembayaran: "dp" })}
-                        className={`py-2 rounded-lg font-bold text-center text-xs border transition-all cursor-pointer ${
-                          pembayaran.status_pembayaran === "dp" ? "bg-[#1A335A] text-white border-[#1A335A] shadow-sm" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                        } ${isDpLocked ? "bg-gray-100 text-gray-700 border-gray-300 !cursor-not-allowed shadow-none" : ""}`}
-                      >
-                        {isDpLocked ? "DP (Sudah Dibayar)" : "DP (Uang Muka)"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPembayaran({ ...pembayaran, status_pembayaran: "lunas" })}
-                        className={`py-2 rounded-lg font-bold text-center text-xs border transition-all cursor-pointer ${
-                          isLunas ? "bg-[#1A335A] text-white border-[#1A335A] shadow-sm" : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                        }`}
-                      >
-                        Lunas
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-black font-semibold mb-1">
-                      {isLunas
-                        ? "Dibayar Sekarang (Pelunasan)"
-                        : hasNewItems
-                          ? "Nominal DP Item Baru"
-                          : "Total DP"}
-                    </label>
-                    <div className={`flex rounded-lg border overflow-hidden px-3 py-2.5 items-center bg-white transition-colors ${isDpInvalid ? "border-red-400" : isLunas ? "border-emerald-300 bg-emerald-50/40" : "border-[#1A335A]"}`}>
-                      <span className="text-gray-500 text-xs mr-2 font-medium">Rp</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        name="nominal-dp-custom"
-                        autoComplete="off"
-                        data-lpignore="true"
-                        value={formatRibuan(bayarSekarang)}
-                        disabled={inputTerkunci}
-                        onChange={(e) => setPembayaran({ ...pembayaran, total_dp: parseRibuan(e.target.value) })}
-                        className={`nominal-input w-full bg-transparent focus:outline-none text-sm font-bold tracking-wide ${inputTerkunci ? (isLunas ? "text-emerald-700 cursor-not-allowed" : "text-gray-600 cursor-not-allowed") : "text-gray-900"}`}
-                      />
-                    </div>
-
-                    {/* Helper aturan DP item baru (30% dari harga item baru) */}
-                    {pembayaran.status_pembayaran === "dp" && hasNewItems && (
-                      <span className={`text-[10px] block mt-1 ${bayarSekarang < minDpItemBaru ? "text-red-500 font-semibold" : "text-gray-400"}`}>
-                        * DP item baru minimal 30% yaitu <strong>Rp {Math.ceil(minDpItemBaru).toLocaleString("id-ID")}</strong>, maksimal <strong>Rp {tagihanItemBaru.toLocaleString("id-ID")}</strong>.
-                      </span>
-                    )}
-
-                    {/* Sisa tagihan (status DP) */}
-                    {pembayaran.status_pembayaran === "dp" && (
-                      <div className="flex justify-between items-center mt-2 bg-red-50 border border-red-200 rounded-lg p-2 text-[10px]">
-                        <span className="text-red-700 font-medium">Sisa Tagihan / Kekurangan:</span>
-                        <span className="font-black text-red-600 text-xs">Rp {sisaTagihan.toLocaleString("id-ID")}</span>
-                      </div>
-                    )}
-
-                    {/* Info pelunasan saat pilih Lunas + ada item baru */}
-                    {isLunas && hasNewItems && (
-                      <div className="flex justify-between items-center mt-2 bg-emerald-50 border border-emerald-300 rounded-lg p-2 text-[10px]">
-                        <span className="text-emerald-800 font-bold flex items-center gap-1">💰 Dibayar saat ini (pelunasan):</span>
-                        <span className="font-black text-emerald-700 text-xs bg-white border border-emerald-300 rounded px-2 py-0.5">Rp {bayarSekarang.toLocaleString("id-ID")}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                    <div className="md:col-span-5 relative">
-                      <label className="block text-black font-semibold mb-1">Metode Pembayaran</label>
-                      <div className="relative">
-                        <select value={pembayaran.metode_pembayaran} onChange={(e) => setPembayaran({ ...pembayaran, metode_pembayaran: e.target.value })} className="w-full border border-[#1A335A] bg-white rounded-lg p-2.5 pr-10 focus:outline-none text-gray-700 appearance-none text-xs cursor-pointer">
-                          <option value="cash">Cash</option>
-                          <option value="transfer">Transfer</option>
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#1A335A]">
-                          <ChevronDown size={14} />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-black font-semibold mb-1">Diskon</label>
-                      <input
-                        type="text"
-                        value={pembayaran.diskon ? `${pembayaran.diskon}%` : ""}
-                        placeholder="0%"
-                        disabled={isDiskonLocked}
-                        onChange={(e) => setPembayaran({ ...pembayaran, diskon: Number(e.target.value.replace("%", "")) || 0 })}
-                        className={`w-full border rounded-lg p-2.5 text-center focus:outline-none font-medium text-xs ${isDiskonLocked ? "border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed" : "border-[#1A335A] bg-white"}`}
-                        title={isDiskonLocked ? "Diskon terkunci karena transaksi sudah lunas" : ""}
-                      />
-                      {isDiskonLocked && (
-                        <span className="text-[9px] text-gray-400 block mt-1 leading-tight">Terkunci (transaksi sudah lunas)</span>
-                      )}
-                    </div>
-
-                    <div className="md:col-span-5">
-                      <label className="block text-black font-semibold mb-1">Total Harga</label>
-                      <div className="bg-white border border-[#1A335A] rounded-lg p-3 space-y-1.5 text-[11px] shadow-sm">
-                        <div className="flex justify-between text-gray-500"><span>Sub Total</span><span className="font-semibold text-gray-700">Rp {subTotal.toLocaleString("id-ID")}</span></div>
-                        <div className="flex justify-between text-gray-500">
-                          <span>{hasNewItems ? "Diskon (barang lama)" : "Diskon"}</span>
-                          <span className="font-semibold text-gray-700">{pembayaran.diskon || 0}% (- Rp {nilaiDiskon.toLocaleString("id-ID")})</span>
-                        </div>
-                        {hasNewItems && (
-                          <div className="flex justify-between text-gray-500"><span>Item baru (tanpa diskon)</span><span className="font-semibold text-gray-700">Rp {subTotalBaru.toLocaleString("id-ID")}</span></div>
-                        )}
-                        <hr className="border-gray-200" />
-                        <div className="flex justify-between text-gray-900 font-bold pt-0.5"><span>Total Kontrak</span><span>Rp {totalHargaAkhir.toLocaleString("id-ID")}</span></div>
-
-                        {hasNewItems && (
-                          <>
-                            <hr className="border-dashed border-gray-200" />
-                            <div className="flex justify-between text-emerald-600 font-medium">
-                              <span>Sudah Dibayar</span>
-                              <span>- Rp {dibayarSebelumnya.toLocaleString("id-ID")}</span>
-                            </div>
-                            <div className="flex justify-between text-emerald-700 font-medium">
-                              <span>Bayar Sekarang</span>
-                              <span>- Rp {bayarSekarang.toLocaleString("id-ID")}</span>
-                            </div>
-                            <div className={`flex justify-between font-bold p-1 rounded ${sisaTagihan > 0 ? "text-red-600 bg-red-50/50" : "text-emerald-700 bg-emerald-50/50"}`}>
-                              <span>{sisaTagihan > 0 ? "Sisa Tagihan" : "Lunas"}</span>
-                              <span>Rp {sisaTagihan.toLocaleString("id-ID")}</span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+          <PaymentSection 
+            pembayaran={pembayaran} 
+            setPembayaran={setPembayaran} 
+            hasNewItems={hasNewItems} 
+            isOriginallyLunas={isOriginallyLunas} 
+            isOriginallyDp={isOriginallyDp} 
+            dibayarSebelumnya={dibayarSebelumnya} 
+            tagihanItemBaru={tagihanItemBaru} 
+            minDpItemBaru={minDpItemBaru} 
+            showSimpleLunasView={showSimpleLunasView} 
+            isDpLocked={isDpLocked} 
+            isDiskonLocked={isDiskonLocked} 
+            bayarSekarang={bayarSekarang} 
+            sisaTagihan={sisaTagihan} 
+            isDpInvalid={isDpInvalid} 
+            inputTerkunci={inputTerkunci} 
+            subTotal={subTotal} 
+            nilaiDiskon={nilaiDiskon} 
+            subTotalBaru={subTotalBaru} 
+            totalHargaAkhir={totalHargaAkhir} 
+            formatRibuan={formatRibuan} 
+            parseRibuan={parseRibuan} 
+          />
 
           {/* SECTION 4: ESTIMASI & STATUS PRODUKSI */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-[11px]">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-black border-b pb-1">
-                <Calendar size={14} className="text-[#1A335A]" />
-                <span>Estimasi Produk Jadi</span>
-              </div>
-              <div>
-                <label className={LABEL}>Tanggal Estimasi Selesai</label>
-                <div className="relative flex items-center">
-                  <Calendar size={14} className="absolute left-3 text-[#A47352] pointer-events-none z-10" />
-                  <DatePicker
-                    selected={produksi.tanggal_selesai ? new Date(produksi.tanggal_selesai) : null}
-                    onChange={(date) => {
-                      if (date) {
-                        const yyyy = date.getFullYear();
-                        const mm = String(date.getMonth() + 1).padStart(2, "0");
-                        const dd = String(date.getDate()).padStart(2, "0");
-                        setProduksi({ ...produksi, tanggal_selesai: `${yyyy}-${mm}-${dd}` });
-                      } else {
-                        setProduksi({ ...produksi, tanggal_selesai: "" });
-                      }
-                    }}
-                    dateFormat="dd/MM/yyyy"
-                    placeholderText="Pilih Tanggal Selesai"
-                    className="w-full border border-[#A47352] bg-[#FFE176] rounded-lg py-2 pl-9 pr-3 focus:outline-none font-bold text-black text-xs cursor-pointer text-left"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-black border-b pb-1">
-                <Box size={14} className="text-[#1A335A]" />
-                <span>Status Produksi</span>
-              </div>
-              <div>
-                <label className={LABEL}>Status Produksi Aktif</label>
-                <div className="w-full bg-gray-100 border border-gray-300 text-gray-700 font-bold rounded-lg p-2.5 text-xs capitalize">
-                  {produksi.status ? produksi.status.replace(/_/g, " ") : "Belum diproses"}
-                </div>
-              </div>
-            </div>
-          </div>
+          <ProductionSection 
+            produksi={produksi} 
+            setProduksi={setProduksi} 
+            labelStyle={LABEL} 
+          />
 
           {/* SECTION 5: CATATAN */}
           <div className="space-y-2">
             <label className="block text-xs font-bold text-black border-b pb-1">Catatan</label>
-            <textarea rows={3} value={produksi.catatan} onChange={(e) => setProduksi({ ...produksi, catatan: e.target.value })} className={`${INPUT_CYAN} text-[11px] resize-none`} placeholder="Tambahkan catatan khusus pengerjaan lurik di sini..." />
+            <textarea 
+              rows={3} 
+              value={produksi.catatan} 
+              onChange={(e) => setProduksi({ ...produksi, catatan: e.target.value })} 
+              className={`${INPUT_CYAN} text-[11px] resize-none`} 
+              placeholder="Tambahkan catatan khusus pengerjaan lurik di sini..." 
+            />
           </div>
 
           {/* SUBMIT */}
-          <button type="button" disabled={loading} onClick={handleUpdateSubmit} className="w-full py-3 bg-[#f2b600] hover:bg-[#d9a300] text-white rounded-lg font-bold text-xs transition-all tracking-wide shadow disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
+          <button 
+            type="button" 
+            disabled={loading} 
+            onClick={handleUpdateSubmit} 
+            className="w-full py-3 bg-[#f2b600] hover:bg-[#d9a300] text-white rounded-lg font-bold text-xs transition-all tracking-wide shadow disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
             {loading ? "Menyimpan Perubahan..." : "Simpan"}
           </button>
-
         </div>
       </div>
     </div>

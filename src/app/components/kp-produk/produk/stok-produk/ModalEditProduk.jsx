@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Loader2, ThumbsUp, Trash2, Upload } from 'lucide-react'
+import { X, Loader2, ThumbsUp, Upload } from 'lucide-react'
 import Swal from 'sweetalert2'
 import { 
   BACKDROP_STYLE, 
@@ -19,18 +19,17 @@ export default function ModalEditProduk({
   categories = [], 
   motifs = [], 
   raks = [], 
-  prices = []
+  prices = []  
 }) {
-  // ── State Form Utama (Tanpa rakId di tingkat Produk) ──
+  // ── State Form Utama ──
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [kategoriId, setKategoriId] = useState('')
   const [motifId, setMotifId] = useState('')
   const [jenisPewarna, setJenisPewarna] = useState('Sintetis')
   
-  // ── Gulungan Tracking ──
-  const [gulungans, setGulungans] = useState([])
-  const [deletedGulunganIds, setDeletedGulunganIds] = useState([])
+  // State untuk mengunci tanggal + karakter random asli bawaan produk
+  const [existingSuffix, setExistingSuffix] = useState('')
 
   // ── State Kontrol UI ──
   const [isLoading, setIsLoading] = useState(true)
@@ -41,14 +40,25 @@ export default function ModalEditProduk({
 
   useEffect(() => { setMounted(true) }, [])
 
-  const isProductInfoComplete = kategoriId && motifId && jenisPewarna
+  const isFormValid = kategoriId && motifId && jenisPewarna
 
-  // ── PRE-COMPUTE UNTUK MENGAMANKAN DEPENDENCY ARRAY EFFECT DARI RESET SIZE RENDERS ──
-  const selectedMotifNama = motifs.find(m => m.id === motifId)?.nama || '';
-  const isBlokLurik = selectedMotifNama.toLowerCase() === 'blok lurik';
-  const pricesSerialized = JSON.stringify(prices); 
+  // ── 1. LIVE GENERATE KODE PRODUKSI UPSTREAM ──
+  const selectedKategori = categories.find(c => c.id === kategoriId)
+  const selectedMotif = motifs.find(m => m.id === motifId)
 
-  // ── 1. AMBIL DETAIL DATA PRODUK DARI DATABASE ──
+  const motifInitials = (selectedMotif?.nama || "M")
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase();
+
+  const catInitial = (selectedKategori?.nama || "K").charAt(0).toUpperCase();
+
+  const kodeProduksiPreview = existingSuffix 
+    ? `${motifInitials}-${catInitial}${existingSuffix}`
+    : '— Melengkapi Data —'
+
+  // ── 2. AMBIL DETAIL DATA PRODUK DARI DATABASE ──
   useEffect(() => {
     if (!isOpen || !productId) return
 
@@ -65,16 +75,17 @@ export default function ModalEditProduk({
         setMotifId(p.motif?.id || '')
         setJenisPewarna(p.jenis_pewarna ? (p.jenis_pewarna.charAt(0).toUpperCase() + p.jenis_pewarna.slice(1)) : 'Sintetis')
 
-        // Map data dari DB ke state agar properti harga_per_meter konsisten
-        setGulungans((p.gulungan || []).map(g => ({
-          id: g.id,
-          nomor_gulungan: g.nomor_gulungan,
-          lebar: g.lebar || 110,
-          panjang_total: g.panjang_total || 0, 
-          harga_per_meter: g.harga || g.harga_per_meter || 0, 
-          rak_id: g.rak_id || (g.rak?.id || '')
-        })))
-        setDeletedGulunganIds([])
+        if (p.kode_produksi && p.kode_produksi.includes('-')) {
+          const parts = p.kode_produksi.split('-')
+          const suffix = parts[1] ? parts[1].substring(1) : '' 
+          setExistingSuffix(suffix)
+        } else {
+          const now = new Date()
+          const dateStr = `${String(now.getDate()).padStart(2, '0')}${String(now.getMonth() + 1).padStart(2, '0')}${now.getFullYear()}`
+          const randomStr = Math.random().toString(36).substring(2, 4).toUpperCase()
+          setExistingSuffix(`${dateStr}${randomStr}`)
+        }
+
       } catch (err) {
         Swal.fire({ title: 'Gagal Memuat', text: err.message, icon: 'error', confirmButtonColor: '#A3704C' })
         onClose()
@@ -86,39 +97,6 @@ export default function ModalEditProduk({
     loadProduk()
   }, [isOpen, productId])
 
-  // ── 2. LOGIKA AUTO-FILL HARGA & SYNC UKURAN ATURAN KHUSUS BLOK LURIK ──
-  useEffect(() => {
-    if (!isOpen || !isProductInfoComplete || gulungans.length === 0) return
-
-    setGulungans(prevGulungans => 
-      prevGulungans.map(g => {
-        // Aturan Khusus: Jika motif diubah ke Blok Lurik, otomatis kunci lebar ke 110 cm
-        const targetLebar = isBlokLurik ? 110 : g.lebar;
-        const pewarnaLower = jenisPewarna.toLowerCase()
-        
-        let matchedPrice = prices.find(p => 
-          p.jenis_pewarna?.toLowerCase() === pewarnaLower &&
-          p.lebar === targetLebar &&
-          p.motif?.id === motifId
-        )
-
-        if (!matchedPrice) {
-          matchedPrice = prices.find(p => 
-            p.jenis_pewarna?.toLowerCase() === pewarnaLower &&
-            p.lebar === targetLebar &&
-            (p.motif === null || p.motif_id === null)
-          )
-        }
-
-        return {
-          ...g,
-          lebar: targetLebar,
-          harga_per_meter: matchedPrice?.harga_per_meter || g.harga_per_meter
-        }
-      })
-    )
-  }, [jenisPewarna, motifId, pricesSerialized, isProductInfoComplete, isBlokLurik, isOpen])
-
   if (!isOpen || !mounted) return null
 
   // ── HANDLER UTAMA FORM ──
@@ -126,7 +104,7 @@ export default function ModalEditProduk({
     if (isSubmitting) return
     setImageFile(null)
     setImagePreview(null)
-    setDeletedGulunganIds([])
+    setExistingSuffix('')
     setErrorMsg('')
     onClose()
   }
@@ -141,75 +119,12 @@ export default function ModalEditProduk({
     setImagePreview(URL.createObjectURL(file))
   }
 
-  // Handler Perubahan Lebar per Gulungan + Auto Kalkulasi Harga Master
-  const handleUpstreamLebarChange = (idx, val) => {
-    const lebarInt = parseInt(val)
-    setGulungans(prev => prev.map((g, i) => {
-      if (i !== idx) return g
-
-      const pewarnaLower = jenisPewarna.toLowerCase()
-      let matchedPrice = prices.find(p => 
-        p.jenis_pewarna?.toLowerCase() === pewarnaLower &&
-        p.lebar === lebarInt &&
-        p.motif?.id === motifId
-      )
-
-      if (!matchedPrice) {
-        matchedPrice = prices.find(p => 
-          p.jenis_pewarna?.toLowerCase() === pewarnaLower &&
-          p.lebar === lebarInt &&
-          (p.motif === null || p.motif_id === null)
-        )
-      }
-
-      return {
-        ...g,
-        lebar: lebarInt,
-        harga_per_meter: matchedPrice?.harga_per_meter || 0
-      }
-    }))
-  }
-
-  // Handler Perubahan Panjang per Gulungan
-  const handleUpstreamPanjangChange = (idx, val) => {
-    setGulungans(prev => prev.map((g, i) => i === idx ? { ...g, panjang_total: parseFloat(val) || 0 } : g))
-  }
-
-  // Handler Perubahan Lokasi Rak per Gulungan
-  const handleUpstreamRakChange = (idx, val) => {
-    setGulungans(prev => prev.map((g, i) => i === idx ? { ...g, rak_id: val } : g))
-  }
-
-  const handleRemoveGulungan = (idx) => {
-    const g = gulungans[idx]
-    if (g.id) {
-      setDeletedGulunganIds(prev => [...prev, g.id])
-    }
-    setGulungans(prev => prev.filter((_, i) => i !== idx))
-  }
-
-  const isFormValid = isProductInfoComplete && gulungans.length > 0
-
   // ── SUBMIT UPDATE (PATCH DATA) ──
   const handleSubmit = async (e) => {
     e.preventDefault?.()
     setErrorMsg('')
 
-    if (!isFormValid) return setErrorMsg('Pastikan informasi lengkap dan minimal menyisakan 1 gulungan kain')
-
-    // Validasi Akhir untuk Aturan Khusus Blok Lurik
-    if (isBlokLurik) {
-      const adaLebarIlegal = gulungans.some(g => g.lebar !== 110)
-      if (adaLebarIlegal) {
-        return setErrorMsg('Untuk motif Blok Lurik, seluruh lebar gulungan kain wajib berukuran 110 cm.')
-      }
-    }
-
-    // Pastikan semua gulungan sudah memilih lokasi rak penyimpanan
-    const adaRakKosong = gulungans.some(g => !g.rak_id)
-    if (adaRakKosong) {
-      return setErrorMsg('Harap tentukan Lokasi Rak untuk setiap gulungan kain yang terdaftar.')
-    }
+    if (!isFormValid) return setErrorMsg('Pastikan seluruh informasi produk telah dilengkapi')
 
     setIsSubmitting(true)
     try {
@@ -217,19 +132,8 @@ export default function ModalEditProduk({
       formData.append('kategori_id', kategoriId)
       formData.append('motif_id', motifId)
       formData.append('jenis_pewarna', jenisPewarna.toLowerCase())
+      formData.append('kode_produksi', kodeProduksiPreview) 
       if (imageFile) formData.append('image', imageFile)
-
-      // Payload dipetakan agar sesuai dengan skema 'gulungan_data' pada API PATCH
-      const gulunganPayload = gulungans.map(g => ({
-        id: g.id || undefined,
-        lebar: g.lebar,
-        panjang_total: g.panjang_total,
-        harga_per_meter: g.harga_per_meter,
-        rak_id: g.rak_id
-      }))
-
-      formData.append('gulungan_data', JSON.stringify(gulunganPayload))
-      formData.append('deleted_gulungan_ids', JSON.stringify(deletedGulunganIds))
 
       const response = await fetch(`/api/produk/${productId}`, {
         method: 'PATCH',
@@ -254,11 +158,22 @@ export default function ModalEditProduk({
     }
   }
 
-if (showSuccess) {
+  // ── MODAL SUCCESS VIEW ──
+  if (showSuccess) {
     return createPortal(
       <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ ...BACKDROP_STYLE, backgroundColor: 'rgba(26, 51, 90, 0.4)' }}>
-        <div className="bg-white rounded-[20px] shadow-xl w-full max-w-[372px] py-12 px-6 flex flex-col items-center animate-in fade-in zoom-in-95 duration-150">
-          {/* Berhasil icon & text diubah ke Navy #1A335A */}
+        <div className="bg-white rounded-[20px] shadow-xl w-full max-w-[372px] py-12 px-6 flex flex-col items-center relative animate-in fade-in zoom-in-95 duration-150">
+          <button 
+            type="button"
+            onClick={() => { 
+              setShowSuccess(false); 
+              handleClose(); 
+              if (onSuccess) onSuccess(); 
+            }} 
+            className="absolute top-4 right-4 text-[#1A335A] hover:opacity-80 transition-opacity"
+          >
+            <X size={18} strokeWidth={2.5} />
+          </button>
           <ThumbsUp size={56} className="text-[#1A335A] mb-5" strokeWidth={1.5} />
           <p className="text-[#1A335A] text-[18px] font-bold text-center">Produk Berhasil Diperbarui</p>
         </div>
@@ -267,55 +182,48 @@ if (showSuccess) {
     )
   }
 
+// ── MAIN MODAL FORM VIEW ──
   return createPortal(
-    /* Backdrop diubah ke tone navy transparan */
     <div className="fixed inset-0 w-screen h-screen z-[9998] flex items-center justify-center bg-[#1A335A]/40 backdrop-blur-[2px] p-4 cursor-default animate-in fade-in duration-100">
-      <style>
-        {`
-          .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-          .custom-scrollbar::-webkit-scrollbar-track { background: rgba(26, 51, 90, 0.05); border-radius: 10px; }
-          .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(26, 51, 90, 0.3); border-radius: 10px; }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(26, 51, 90, 0.5); }
-        `}
-      </style>
       <div className="absolute inset-0" onClick={!isSubmitting ? handleClose : undefined} />
 
-      <div className="relative bg-white shadow-2xl rounded-[24px] w-full max-w-[760px] max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 p-6 space-y-4">
+      {/* Padding disesuaikan jadi p-4, max-w dibuat 640px agar grid 2 kolom di bawahnya presisi */}
+      <div className="relative bg-white shadow-2xl rounded-[24px] w-full max-w-[640px] max-h-[95vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 p-4 space-y-4">
         
         {/* Header Title */}
         <div className="flex items-center justify-between flex-shrink-0">
-          <h3 className="text-[22px] font-semibold text-[#1A335A] tracking-tight">Edit Produk</h3>
+          <h3 className="text-[20px] font-semibold text-[#1A335A] tracking-tight">Edit Informasi Produk</h3>
           <button
             type="button"
             onClick={handleClose}
             disabled={isSubmitting}
             className="text-[#1A335A]/70 hover:text-[#1A335A] transition-colors rounded-full"
           >
-            <X size={24} strokeWidth={2.5} />
+            <X size={22} strokeWidth={2.5} />
           </button>
         </div>
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center flex-1 gap-3 py-32">
+          <div className="flex flex-col items-center justify-center flex-1 gap-3 py-24">
             <Loader2 className="animate-spin text-[#1A335A]" size={36} />
             <p className="text-xs font-semibold text-[#1A335A]/60">Memuat detail data kain...</p>
           </div>
         ) : (
           <>
-            <div className="flex-1 pr-1 space-y-5 overflow-y-auto text-xs text-gray-700 custom-scrollbar">
+            {/* Wrapper Content Area */}
+            <div className="flex-1 flex flex-col gap-4 text-xs text-gray-700">
               
-              {/* Gambar Uploader Banner Melengkung */}
-              <div className="space-y-1.5">
+              {/* 1. GAMBAR PRODUK (DI BAGIAN ATAS - BANNER MELEBAR BANGET BIAR GA SCROLL) */}
+              <div className="space-y-1.5 flex-shrink-0">
                 <label className="block text-[13px] font-semibold text-[#1A335A]">Gambar Produk</label>
                 <label className="block cursor-pointer">
-                  {/* Border dash & hover background disesuaikan ke tone soft blue/navy */}
-                  <div className="w-full aspect-[16/6] rounded-[14px] overflow-hidden border-2 border-dashed border-[#1A335A]/30 flex items-center justify-center hover:bg-[#EBF5FA]/40 transition-colors shadow-sm"
+                  <div className="w-full aspect-[16/5] rounded-[14px] overflow-hidden border-2 border-dashed border-[#1A335A]/30 flex items-center justify-center hover:bg-[#EBF5FA]/40 transition-colors shadow-sm"
                     style={{ backgroundColor: imagePreview ? 'transparent' : '#F4F7FA' }}>
                     {imagePreview ? (
                       <img src={imagePreview} alt="Preview" className="object-cover w-full h-full" />
                     ) : (
-                      <div className="flex flex-col items-center gap-2 text-[#1A335A]/70">
-                        <Upload size={32} strokeWidth={2} />
+                      <div className="flex items-center gap-2 text-[#1A335A]/70 p-4">
+                        <Upload size={20} strokeWidth={2} />
                         <span className="text-xs font-semibold">Klik area ini untuk mengganti gambar produk</span>
                       </div>
                     )}
@@ -324,12 +232,22 @@ if (showSuccess) {
                 </label>
               </div>
 
-              {/* Grid Form Input Utama Produk */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {/* 2. KOLOM INPUT DI BAWAH (GRID: KIRI 2, KANAN 2) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4 items-start">
+                
+                {/* [KANAN - BARIS 2] Live Preview Kode Produksi */}
+                <div className="bg-[#EBF5FA] border border-blue-100 rounded-[14px] p-3 flex flex-col gap-0.5 shadow-sm h-[58px] justify-center md:mt-1">
+                  <span className="text-[10px] font-bold text-[#1A335A]/60 uppercase tracking-wider">Preview Kode Produksi</span>
+                  <div className="text-[15px] font-mono font-bold text-[#1A335A] tracking-wide truncate">
+                    {kodeProduksiPreview}
+                  </div>
+                  </div>
+                  
+                {/* [KIRI - BARIS 1] Kategori */}
                 <FormField label="Kategori">
                   <SelectInput
                     value={kategoriId}
-                    onChange={(e) => setMotifId(e.target.value)}
+                    onChange={(e) => setKategoriId(e.target.value)}
                     disabled={isSubmitting}
                     options={categories.map(c => ({ value: c.id, label: c.nama }))}
                     placeholder="— Pilih Kategori —"
@@ -338,6 +256,7 @@ if (showSuccess) {
                   />
                 </FormField>
 
+                {/* [KANAN - BARIS 1] Motif */}
                 <FormField label="Motif">
                   <SelectInput
                     value={motifId}
@@ -350,6 +269,7 @@ if (showSuccess) {
                   />
                 </FormField>
 
+                {/* [KIRI - BARIS 2] Jenis Pewarna */}
                 <FormField label="Jenis Pewarna">
                   <SelectInput
                     value={jenisPewarna}
@@ -360,124 +280,28 @@ if (showSuccess) {
                     textColor="#1A335A"
                   />
                 </FormField>
+
+
               </div>
 
-              <div className="pt-1 border-t border-gray-200" />
-
-              {/* ── BAGIAN LIST UPSTREAM EDIT GULUNGAN KAIN ── */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-bold text-[#1A335A]">Daftar Gulungan Kain ({gulungans.length})</h4>
-                  {deletedGulunganIds.length > 0 && (
-                    <span className="text-[11px] text-red-500 font-semibold animate-pulse">
-                      ({deletedGulunganIds.length} gulungan kain akan dihapus permanent dari sistem saat disimpan)
-                    </span>
-                  )}
-                </div>
-
-                <div className="rounded-[14px] border border-gray-200 overflow-hidden bg-white shadow-sm">
-                  {gulungans.length === 0 ? (
-                    <p className="text-center text-[#1A335A]/50 font-medium py-6">Tidak ada gulungan kain yang tersisa pada produk ini.</p>
-                  ) : (
-                    <div className="divide-y divide-gray-100">
-                      {gulungans.map((g, idx) => (
-                        <div key={g.id || idx} className="grid grid-cols-[30px_1fr_1fr_1fr_1.2fr_auto] gap-3 items-end px-4 py-3.5 bg-white hover:bg-[#1A335A]/5 transition-colors">
-                          
-                          {/* Nomor Urut */}
-                          <span className="text-[#1A335A]/80 font-bold text-xs pb-2.5 text-center">{idx + 1}</span>
-                          
-                          {/* Upstream Input Lebar Dropdown */}
-                          <div>
-                            <label className="block text-[11px] text-[#1A335A]/80 font-semibold mb-1.5">Lebar</label>
-                            <select
-                              value={g.lebar}
-                              disabled={isSubmitting || isBlokLurik}
-                              onChange={(e) => handleUpstreamLebarChange(idx, e.target.value)}
-                              className="w-full h-[38px] px-3 bg-[#EBF5FA] border border-blue-200 rounded-[10px] outline-none text-[#1A335A] font-semibold text-xs focus:border-[#1A335A] cursor-pointer appearance-none disabled:opacity-80 disabled:cursor-not-allowed"
-                            >
-                              {isBlokLurik ? (
-                                <option value="110">110 cm</option>
-                              ) : (
-                                <>
-                                  <option value="70">70 cm</option>
-                                  <option value="110">110 cm</option>
-                                </>
-                              )}
-                            </select>
-                          </div>
-
-                          {/* Upstream Input Panjang */}
-                          <div>
-                            <label className="block text-[11px] text-[#1A335A]/80 font-semibold mb-1.5">Panjang (m)</label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              min="0"
-                              value={g.panjang_total}
-                              disabled={isSubmitting}
-                              onChange={(e) => handleUpstreamPanjangChange(idx, e.target.value)}
-                              className="w-full h-[38px] px-3 bg-white border border-gray-300 rounded-[10px] outline-none text-[#1A335A] font-semibold text-xs focus:border-[#1A335A] duration-150"
-                            />
-                          </div>
-
-                          {/* Upstream Input Lokasi Rak Penyimpanan */}
-                          <div>
-                            <label className="block text-[11px] text-[#1A335A]/80 font-semibold mb-1.5">Lokasi Rak</label>
-                            <select
-                              value={g.rak_id}
-                              disabled={isSubmitting}
-                              onChange={(e) => handleUpstreamRakChange(idx, e.target.value)}
-                              className="w-full h-[38px] px-3 bg-white border border-gray-300 rounded-[10px] outline-none text-[#1A335A] font-semibold text-xs focus:border-[#1A335A] cursor-pointer"
-                            >
-                              <option value="">Pilih Rak</option>
-                              {raks.map(r => (
-                                <option key={r.id} value={r.id}>Rak {r.nama}</option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Preview Harga Otomatis */}
-                          <div>
-                            <label className="block text-[11px] text-[#1A335A]/80 font-semibold mb-1.5">Harga/m (Auto)</label>
-                            <div className="h-[38px] px-3 bg-[#EBF5FA]/60 border border-blue-100 rounded-[10px] flex items-center text-[#1A335A] font-bold text-xs select-none cursor-not-allowed">
-                              Rp {g.harga_per_meter > 0 ? g.harga_per_meter.toLocaleString('id-ID') : '-'}
-                            </div>
-                          </div>
-
-                          {/* Tombol Hapus Gulungan */}
-                          <div className="pb-0.5">
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveGulungan(idx)}
-                              disabled={isSubmitting}
-                              className="p-2 rounded-[8px] bg-rose-500 hover:bg-rose-600 text-white transition-all shadow-sm active:scale-95 disabled:opacity-40"
-                              title="Hapus Gulungan"
-                            >
-                              <Trash2 size={16} strokeWidth={2.5} />
-                            </button>
-                          </div>
-
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              {errorMsg && (
+                <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-[8px] px-3 py-2 font-medium animate-in fade-in duration-200">
+                  {errorMsg}
+                </p>
+              )}
             </div>
 
-            {errorMsg && (
-              <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-[8px] px-3 py-2 font-medium mt-2">
-                {errorMsg}
-              </p>
-            )}
-
             {/* Footer Form Simpan Aksi */}
-            <div className="flex justify-end flex-shrink-0 pt-2">
+            <div className="flex justify-end flex-shrink-0 pt-3 border-t border-gray-100">
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={isSubmitting || !isFormValid}
-                className="bg-[#1A335A] hover:bg-[#132644] text-white px-8 py-2.5 rounded-[12px] text-sm font-semibold flex items-center gap-2 transition-all shadow-md active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+                className={`px-8 py-2.5 rounded-[12px] text-sm font-semibold flex items-center gap-2 transition-all shadow-md ${
+                  !isFormValid || isSubmitting
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-70'
+                    : 'bg-[#1A335A] hover:bg-[#132644] text-white active:scale-[0.98]'
+                }`}
               >
                 {isSubmitting ? (
                   <>
@@ -496,3 +320,4 @@ if (showSuccess) {
     document.body
   )
 }
+  

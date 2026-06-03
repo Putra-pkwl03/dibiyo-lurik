@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState } from "react";
-import { X, AlertTriangle, Trash2 } from "lucide-react";
+import { X, Trash, Loader2, ThumbsUp } from "lucide-react";
 import Swal from "sweetalert2";
 
 export default function PoCustomHapus({ isOpen, onClose, item, onSuccess }) {
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   if (!isOpen || !item) return null;
 
@@ -13,11 +14,10 @@ export default function PoCustomHapus({ isOpen, onClose, item, onSuccess }) {
     setLoading(true);
 
     try {
-      // PERBAIKAN: Mengirim request DELETE langsung ke endpoint dynamic URL /api/pre-order-custom/[id]
+      // Mengirim request DELETE langsung ke endpoint dynamic URL /api/pre-order-custom/[id]
       const response = await fetch(`/api/pre-order-custom/${item.id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" }
-        // Tidak perlu melempar JSON.stringify(body) lagi karena ID sudah dibaca via params oleh Next.js
       });
 
       const result = await response.json();
@@ -26,94 +26,103 @@ export default function PoCustomHapus({ isOpen, onClose, item, onSuccess }) {
         throw new Error(result.message || "Gagal menghapus data pre-order");
       }
 
-      // Notifikasi sukses menggunakan SweetAlert2
-      Swal.fire({
-        title: "Berhasil Dihapus!",
-        text: `Data pre-order atas nama ${item.nama_customer || 'Customer'} telah dihapus.`,
-        icon: "success",
-        confirmButtonColor: "#1A335A"
-      });
-
-      // Jalankan fungsi callback sukses jika dilempar dari komponen parent
-      if (onSuccess) {
-        onSuccess(item.id);
-      } else {
-        // Fallback jika tidak ada callback: reload halaman otomatis
-        window.location.reload();
-      }
-
-      onClose(); // Tutup modal
+      // Set state sukses untuk menampilkan Modal Success dan menyembunyikan Form Utama
+      setShowSuccess(true);
     } catch (error) {
+      // Notifikasi error tetap menggunakan SweetAlert2 agar info teknis terlihat jelas
       Swal.fire("Gagal Menghapus", error.message, "error");
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 font-inter">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
-        
-        {/* HEADER MODAL */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-red-50">
-          <div className="flex items-center gap-2 text-red-700 font-bold text-xs tracking-wide">
-            <AlertTriangle size={16} />
-            <span>Konfirmasi Hapus Data</span>
-          </div>
-          <button 
-            onClick={onClose} 
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            disabled={loading}
+  // ── MODAL SUCCESS SETELAH HAPUS ──
+  if (showSuccess) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-[1px]"
+      >
+        <div className="bg-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] w-[372px] relative animate-in fade-in zoom-in-95 duration-150">
+          <button
+            onClick={() => {
+              setShowSuccess(false);
+              onClose(); // Menutup modal penampung secara keseluruhan
+              if (onSuccess) {
+                onSuccess(item.id); // Callback update data di sisi parent
+              } else {
+                window.location.reload(); // Fallback reload halaman
+              }
+            }}
+            className="absolute top-4 right-4 text-[#1A335A] hover:opacity-80 transition-opacity cursor-pointer"
           >
-            <X size={16} strokeWidth={2.5} />
+            <X size={18} strokeWidth={2.5} />
           </button>
-        </div>
 
-        {/* KONTEN UTAMA */}
-        <div className="p-6 space-y-4">
-          <div className="text-center space-y-2">
-            <p className="text-xs text-gray-600 leading-relaxed">
-              Apakah Anda yakin ingin menghapus data Pre-Order Custom ini? Tindakan ini 
-              <span className="text-red-600 font-bold"> tidak dapat dibatalkan</span>.
+          <div className="flex flex-col items-center justify-center px-6 py-12">
+            <ThumbsUp size={56} className="text-[#1A335A] mb-5" strokeWidth={1.5} />
+            <p className="text-[#000000] text-[18px] font-bold text-center">
+              Pre-Order Berhasil Dihapus
             </p>
           </div>
-
-          {/* RINGKASAN DATA YANG AKAN DIHAPUS */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-[11px] space-y-1.5 text-stone-700">
-            <div className="flex justify-between">
-              <span className="text-gray-400 font-medium">ID Pre-Order:</span>
-              <span className="font-mono font-bold text-gray-800">{item.id?.slice(0, 8).toUpperCase() || "-"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400 font-medium">Nama Customer:</span>
-              <span className="font-bold text-gray-800">{item.nama_customer || "-"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400 font-medium">Total Tagihan:</span>
-              <span className="font-bold text-cyan-900">Rp {(item.total_harga || 0).toLocaleString('id-ID')}</span>
-            </div>
-          </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* AKSI TOMBOL */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center gap-3">
-          <button
-            type="button"
-            disabled={loading}
-            onClick={onClose}
-            className="flex-1 py-2 rounded-md bg-white border border-gray-300 text-[11px] font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-50"
-          >
-            Batal
-          </button>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={handleDeleteSubmit}
-            className={`flex-1 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm ${loading ? 'opacity-70 cursor-wait' : ''}`}
-          >
-            <Trash2 size={13} />
-            {loading ? "Menghapus..." : "Ya, Hapus"}
-          </button>
+  // ── MODAL KONFIRMASI HAPUS UTAMA ──
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 font-inter backdrop-blur-[1px]">
+      <div className="bg-white rounded-[20px] shadow-2xl w-[372px] overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-150 relative">
+        
+        {/* Tombol Close Silang di Pojok Kanan Atas */}
+        <button 
+          onClick={onClose} 
+          className="absolute top-4 right-4 text-[#1A335A] hover:opacity-80 transition-opacity cursor-pointer"
+          disabled={loading}
+        >
+          <X size={18} strokeWidth={2.5} />
+        </button>
+
+        {/* Konten */}
+        <div className="flex flex-col items-center px-6 pt-10 pb-7">
+          {/* Ikon Trash */}
+          <div className="text-[#1A335A] mb-4">
+            <Trash size={40} strokeWidth={1.8} />
+          </div>
+
+          {/* Teks Konfirmasi */}
+          <p className="text-[#000000] text-[15px] font-bold text-center leading-snug mb-1">
+            Apakah Anda Yakin Ingin<br />Menghapus Pre-Order ini
+          </p>
+          
+          {/* Informasi Tambahan Object Customer (Agar User Tidak Salah Hapus) */}
+          <p className="text-gray-400 text-[11px] text-center mb-7 max-w-[260px] truncate">
+            Customer: <span className="font-semibold text-gray-700">{item.nama_customer || "-"}</span>
+          </p>
+
+          {/* Tombol Batal & Ya, Hapus */}
+          <div className="flex items-center w-full gap-3">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={onClose}
+              className="flex-1 h-[47px] rounded-[10px] bg-[#1A335A] hover:bg-[#122440] text-white font-bold text-base transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={handleDeleteSubmit}
+              className="flex-1 h-[47px] rounded-[10px] bg-[#1A335A] hover:bg-[#122440] text-white font-bold text-base transition-colors disabled:opacity-50 flex items-center justify-center cursor-pointer"
+            >
+              {loading ? (
+                <Loader2 size={18} className="text-white animate-spin" />
+              ) : (
+                'Ya, Hapus'
+              )}
+            </button>
+          </div>
         </div>
 
       </div>

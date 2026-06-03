@@ -11,6 +11,15 @@ const BACKDROP_STYLE = {
   WebkitBackdropFilter: 'blur(2px)',
 }
 
+// 💡 HELPER: Ditaruh di luar komponen agar tidak dibuat ulang tiap render & bebas bug hoisting
+const formatRibuan = (nilai) => {
+  if (nilai === undefined || nilai === null || nilai === '') return ''
+  // Hapus semua karakter yang BUKAN angka
+  const angkaBersih = nilai.toString().replace(/[^0-9]/g, '')
+  // Berikan titik setiap 3 digit angka dari belakang
+  return angkaBersih.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
+
 export default function HargaEditModal({ isOpen, onClose, onSuccess, hargaData, swal, motifOptions = [] }) {
   const [hargaPerMeter, setHargaPerMeter] = useState('')
   const [jenisPewarna, setJenisPewarna] = useState('sintetis')
@@ -29,11 +38,12 @@ export default function HargaEditModal({ isOpen, onClose, onSuccess, hargaData, 
 
   useEffect(() => {
     if (isOpen && hargaData) {
-      setHargaPerMeter(hargaData.harga_per_meter || '')
+      // 💡 PERBAIKAN 1: Langsung format harga dengan titik saat modal terbuka agar UX rapi
+      setHargaPerMeter(formatRibuan(hargaData.harga_per_meter) || '')
       setJenisPewarna(hargaData.jenis_pewarna || 'sintetis')
       setLebar(hargaData.lebar ? parseInt(hargaData.lebar) : 110)
       
-      // PERBAIKAN 1: Paksa id motif menjadi string agar sinkron dengan value <select>
+      // PERBAIKAN 1 (Bawaan): Paksa id motif menjadi string agar sinkron dengan value <select>
       const idMotifAsli = hargaData.motif_id || hargaData.motif?.id
       setMotifId(idMotifAsli !== undefined && idMotifAsli !== null ? String(idMotifAsli) : '')
       
@@ -45,8 +55,10 @@ export default function HargaEditModal({ isOpen, onClose, onSuccess, hargaData, 
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const trimmedHarga = hargaPerMeter.toString().trim()
-    if (!trimmedHarga || parseFloat(trimmedHarga) < 0) {
+    
+    // 💡 PERBAIKAN 2: Hilangkan titik pemisah ribuan sebelum validasi angka dilakukan
+    const hargaBersihStr = hargaPerMeter.toString().replace(/\./g, '').trim()
+    if (!hargaBersihStr || parseFloat(hargaBersihStr) < 0) {
       setErrorMessage('Harga per meter wajib diisi dengan benar')
       return
     }
@@ -65,7 +77,7 @@ export default function HargaEditModal({ isOpen, onClose, onSuccess, hargaData, 
     setIsSubmitting(true)
     setErrorMessage('')
 
-    // PERBAIKAN 2: Jika ID berupa angka di database, konversi kembali sebelum dikirim ke BE
+    // PERBAIKAN 2 (Bawaan): Jika ID berupa angka di database, konversi kembali sebelum dikirim ke BE
     const finalMotifId = motifId === "" ? null : (isNaN(motifId) ? motifId : parseInt(motifId))
 
     try {
@@ -73,7 +85,7 @@ export default function HargaEditModal({ isOpen, onClose, onSuccess, hargaData, 
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          harga_per_meter: parseFloat(trimmedHarga),
+          harga_per_meter: parseFloat(hargaBersihStr), // 💡 Mengirim nilai angka asli tanpa titik ke API
           lebar: parseInt(lebar),
           jenis_pewarna: jenisPewarna,
           motif_id: finalMotifId
@@ -120,8 +132,12 @@ export default function HargaEditModal({ isOpen, onClose, onSuccess, hargaData, 
   const normalisasiMotifInput = motifId === "" ? null : String(motifId)
   const normalisasiMotifAsli = motifAsli !== undefined && motifAsli !== null ? String(motifAsli) : null
 
+  // 💡 PERBAIKAN 3: Bersihkan titik pada string input sebelum dibandingkan dengan nilai murni dari DB
+  const hargaInputAngka = parseFloat(hargaPerMeter.toString().replace(/\./g, '')) || 0
+  const hargaAsliAngka = parseFloat(hargaAsli) || 0
+
   const adaPerubahan = 
-    parseFloat(hargaPerMeter) !== parseFloat(hargaAsli) ||
+    hargaInputAngka !== hargaAsliAngka ||
     jenisPewarna !== pewarnaAsli ||
     parseInt(lebar) !== lebarAsli ||
     normalisasiMotifInput !== normalisasiMotifAsli
@@ -230,10 +246,11 @@ export default function HargaEditModal({ isOpen, onClose, onSuccess, hargaData, 
             <div className="relative flex items-center">
               <span className="absolute text-sm font-bold text-gray-500 left-3">Rp</span>
               <input
-                type="number"
+                type="text"
                 value={hargaPerMeter}
-                onChange={(e) => setHargaPerMeter(e.target.value)}
+                onChange={(e) => setHargaPerMeter(formatRibuan(e.target.value))}
                 disabled={isSubmitting}
+                placeholder="0"
                 className="w-full h-[46px] pl-9 pr-3 rounded-[10px] border border-[#1A335A] text-[#000000] text-sm focus:outline-none focus:ring-1 focus:ring-[#1A335A] transition-all font-semibold disabled:opacity-60"
                 style={{ backgroundColor: '#5AE3ED1C' }}
                 required

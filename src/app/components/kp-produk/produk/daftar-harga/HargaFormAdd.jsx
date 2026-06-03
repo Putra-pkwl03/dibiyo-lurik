@@ -80,6 +80,14 @@ export default function HargaFormAdd({ motifs, onRefresh, swal }) {
     }
   }
 
+  const formatRibuan = (nilai) => {
+  if (!nilai) return ''
+  // Hapus semua karakter yang BUKAN angka
+  const angkaBersih = nilai.toString().replace(/[^0-9]/g, '')
+  // Berikan titik setiap 3 digit angka dari belakang
+  return angkaBersih.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
+
   return (
     <div className="rounded-[10px] border border-[#1A335A]/10 overflow-hidden" style={{ backgroundColor: '#5AE3ED1C' }}>
       <div className="p-5">
@@ -168,10 +176,11 @@ export default function HargaFormAdd({ motifs, onRefresh, swal }) {
               <div className="relative flex items-center">
                 <span className="absolute text-sm font-bold text-gray-500 left-3">Rp</span>
                 <input
-                  type="number"
+                  type="text" // 👈 1. Wajib ganti ke 'text' agar bisa membaca karakter titik
                   value={hargaPerMeter}
-                  onChange={(e) => setHargaPerMeter(e.target.value)}
+                  onChange={(e) => setHargaPerMeter(formatRibuan(e.target.value))} // 👈 2. Format otomatis saat diketik
                   disabled={isSubmitting}
+                  placeholder="0" // Tambahan agar lebih clean saat kosong
                   className="w-full h-[40px] pl-9 pr-3 rounded-[10px] border border-[#1A335A] text-[#000000] text-sm focus:outline-none focus:ring-1 focus:ring-[#1A335A] transition-all font-semibold disabled:opacity-50 placeholder:font-normal placeholder:text-gray-400"
                   style={{ backgroundColor: '#ffffff' }}
                   required

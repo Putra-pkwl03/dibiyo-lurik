@@ -1,145 +1,103 @@
-﻿// import { successResponse, errorResponse } from '@/lib/helpers'
-// import supabaseAdmin from '@/lib/supabase-admin'
+﻿import supabaseAdmin from '../../../../lib/supabase-admin'
 
-// /**
-//  * GET /api/auth/forgot-password?role=owner
-//  * Return email yang ter-associate dengan role tersebut.
-//  *
-//  * Dipakai frontend untuk auto-fill email setelah user pilih role.
-//  */
-// export async function GET(request) {
-//   try {
-//     const { searchParams } = new URL(request.url)
-//     const role = searchParams.get('role')
+// Helper lokal agar tidak perlu import file lain
+const errorResponse = (message, status) => {
+  return Response.json({ success: false, message }, { status })
+}
 
-//     if (!role) {
-//       return errorResponse('Parameter role wajib diisi', 400)
-//     }
+const successResponse = (data) => {
+  return Response.json({ success: true, ...data }, { status: 200 })
+}
 
-//     const validRoles = ['owner', 'kepala_produksi', 'customer_service']
-//     if (!validRoles.includes(role)) {
-//       return errorResponse('Role tidak valid', 400)
-//     }
+/**
+ * GET /api/auth/forgot-password?role=owner
+ */
+export async function GET(request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const role = searchParams.get('role')
 
-//     const { data: profile, error } = await supabaseAdmin
-//       .from('profiles')
-//       .select('email, role, username')
-//       .eq('role', role)
-//       .single()
+    if (!role) return errorResponse('Parameter role wajib diisi', 400)
 
-//     if (error || !profile) {
-//       return errorResponse('Akun untuk role ini tidak ditemukan', 404)
-//     }
+    const validRoles = ['owner', 'kepala_produksi', 'customer_service']
+    if (!validRoles.includes(role)) return errorResponse('Role tidak valid', 400)
 
-//     return successResponse({
-//       email: profile.email,
-//       role: profile.role,
-//       username: profile.username,
-//     })
-//   } catch (error) {
-//     return errorResponse(error.message, 500)
-//   }
-// }
+    const { data: profile, error } = await supabaseAdmin
+      .from('profiles')
+      .select('email, role, username')
+      .eq('role', role)
+      .single()
 
-// /**
-//  * POST /api/auth/forgot-password
-//  * Body: { role, newUsername?, newPassword? }
-//  *
-//  * Update username dan/atau password untuk akun dengan role tertentu.
-//  * Minimal salah satu (newUsername atau newPassword) WAJIB diisi.
-//  *
-//  * Operasi:
-//  * - Update username -> tabel profiles
-//  * - Update password -> auth.users via supabaseAdmin.auth.admin.updateUserById
-//  */
-// export async function POST(request) {
-//   try {
-//     const body = await request.json()
-//     const { role, newUsername, newPassword } = body
+    if (error || !profile) return errorResponse('Akun untuk role ini tidak ditemukan', 404)
 
-//     if (!role) {
-//       return errorResponse('Role wajib diisi', 400)
-//     }
+    return successResponse({
+      email: profile.email,
+      role: profile.role,
+      username: profile.username,
+    })
+  } catch (error) {
+    return errorResponse(error.message, 500)
+  }
+}
 
-//     const validRoles = ['owner', 'kepala_produksi', 'customer_service']
-//     if (!validRoles.includes(role)) {
-//       return errorResponse('Role tidak valid', 400)
-//     }
+/**
+ * POST /api/auth/forgot-password
+ */
+export async function POST(request) {
+  try {
+    const body = await request.json()
+    const { role, newUsername, newPassword } = body
 
-//     // Minimal salah satu harus diisi
-//     const hasUsername = newUsername && newUsername.trim().length > 0
-//     const hasPassword = newPassword && newPassword.length > 0
-//     if (!hasUsername && !hasPassword) {
-//       return errorResponse('Minimal isi username atau password baru', 400)
-//     }
+    if (!role) return errorResponse('Role wajib diisi', 400)
 
-//     // Validasi password jika diisi
-//     if (hasPassword && newPassword.length < 6) {
-//       return errorResponse('Password minimal 6 karakter', 400)
-//     }
+    const validRoles = ['owner', 'kepala_produksi', 'customer_service']
+    if (!validRoles.includes(role)) return errorResponse('Role tidak valid', 400)
 
-//     // Validasi username jika diisi
-//     if (hasUsername && newUsername.trim().length < 3) {
-//       return errorResponse('Username minimal 3 karakter', 400)
-//     }
+    const hasUsername = newUsername && newUsername.trim().length > 0
+    const hasPassword = newPassword && newPassword.length > 0
 
-//     // Cari profile by role untuk dapat user ID
-//     const { data: profile, error: profileError } = await supabaseAdmin
-//       .from('profiles')
-//       .select('id, username, email, role')
-//       .eq('role', role)
-//       .single()
+    if (!hasUsername && !hasPassword) return errorResponse('Minimal isi username atau password baru', 400)
+    if (hasPassword && newPassword.length < 6) return errorResponse('Password minimal 6 karakter', 400)
+    if (hasUsername && newUsername.trim().length < 3) return errorResponse('Username minimal 3 karakter', 400)
 
-//     if (profileError || !profile) {
-//       return errorResponse('Akun untuk role ini tidak ditemukan', 404)
-//     }
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, username, email, role')
+      .eq('role', role)
+      .single()
 
-//     // Update username (kalau diisi)
-//     if (hasUsername) {
-//       const trimmedUsername = newUsername.trim()
+    if (profileError || !profile) return errorResponse('Akun untuk role ini tidak ditemukan', 404)
 
-//       // Cek apakah username baru sudah dipakai user lain
-//       const { data: existing } = await supabaseAdmin
-//         .from('profiles')
-//         .select('id')
-//         .eq('username', trimmedUsername)
-//         .neq('id', profile.id)
-//         .maybeSingle()
+    if (hasUsername) {
+      const trimmedUsername = newUsername.trim()
+      const { data: existing } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('username', trimmedUsername)
+        .neq('id', profile.id)
+        .maybeSingle()
 
-//       if (existing) {
-//         return errorResponse('Username sudah dipakai akun lain', 409)
-//       }
+      if (existing) return errorResponse('Username sudah dipakai akun lain', 409)
 
-//       const { error: updateUsernameError } = await supabaseAdmin
-//         .from('profiles')
-//         .update({ username: trimmedUsername, updated_at: new Date().toISOString() })
-//         .eq('id', profile.id)
+      const { error: updateUsernameError } = await supabaseAdmin
+        .from('profiles')
+        .update({ username: trimmedUsername, updated_at: new Date().toISOString() })
+        .eq('id', profile.id)
 
-//       if (updateUsernameError) {
-//         return errorResponse('Gagal update username: ' + updateUsernameError.message, 500)
-//       }
-//     }
+      if (updateUsernameError) return errorResponse('Gagal update username', 500)
+    }
 
-//     // Update password (kalau diisi)
-//     if (hasPassword) {
-//       const { error: updatePasswordError } = await supabaseAdmin.auth.admin.updateUserById(
-//         profile.id,
-//         { password: newPassword }
-//       )
+    if (hasPassword) {
+      const { error: updatePasswordError } = await supabaseAdmin.auth.admin.updateUserById(
+        profile.id,
+        { password: newPassword }
+      )
 
-//       if (updatePasswordError) {
-//         return errorResponse('Gagal update password: ' + updatePasswordError.message, 500)
-//       }
-//     }
+      if (updatePasswordError) return errorResponse('Gagal update password', 500)
+    }
 
-//     return successResponse({
-//       message: 'Akun berhasil diperbarui',
-//       updated: {
-//         username: hasUsername,
-//         password: hasPassword,
-//       },
-//     })
-//   } catch (error) {
-//     return errorResponse(error.message, 500)
-//   }
-// }
+    return successResponse({ message: 'Akun berhasil diperbarui' })
+  } catch (error) {
+    return errorResponse(error.message, 500)
+  }
+}

@@ -10,15 +10,12 @@ const PORegulerTable = dynamic(() => import('../../../../../components/cs/po/por
   ssr: false,
 })
 
-
 const PORegulerEditModal = dynamic(() => import('../../../../../components/cs/po/por/PoRegulerEditModal'), {
   ssr: false,
 })
 
-
 // Komponen Skeleton Loader untuk Baris Tabel PO Reguler
 function TableSkeleton({ limit = 10 }) {
-
   return (
     <div className="w-full overflow-x-auto border rounded-sm border-stone-100 animate-pulse">
       <div className="bg-[#1A335A]/90 h-11 w-full flex items-center px-4 justify-between gap-4">
@@ -31,7 +28,6 @@ function TableSkeleton({ limit = 10 }) {
         <div className="w-16 h-4 rounded bg-stone-300/30"></div>
       </div>
       
-
       {/* Rows Skeleton */}
       <div className="bg-white divide-y divide-stone-100">
         {[...Array(limit)].map((_, index) => (
@@ -51,38 +47,33 @@ function TableSkeleton({ limit = 10 }) {
 }
 
 export default function PreOrderRegulerPage() {
+  // Semua Deklarasi State diletakkan di paling atas komponen
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
-  
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [selectedItemToEdit, setSelectedItemToEdit] = useState(null)
 
-  useEffect(() => {
-    fetchData(true)
-
-  // State Baru untuk Pagination & Metadata dari Backend
+  // State Pagination & Metadata Backend
   const [currentPage, setCurrentPage] = useState(1)
   const [totalItems, setTotalItems] = useState(0)
   const itemsPerPage = 10
 
-  // Setiap kali halaman berganti, picu pemanggilan ulang data ke backend
+  // Satukan efek pemanggilan data ke dalam satu useEffect berdasarkan perubahan currentPage
   useEffect(() => {
     fetchData(true)
+  }, [currentPage])
 
   const fetchData = async (isInitial = false) => {
     if (isInitial) setLoading(true)
     try {
-      // Menembak endpoint dengan menyertakan halaman dan batasan data yang dinamis
       const res = await fetch(`/api/pre-order-reguler?page=${currentPage}&limit=${itemsPerPage}`)
       if (!res.ok) throw new Error('Gagal mengambil data')
       const json = await res.json()
       
       if (json && Array.isArray(json.data)) {
         setData(json.data)
-        // Menyimpan total records aktual ke state dari metadata backend
         setTotalItems(json.meta?.total || json.data.length || 0)
       } else {
         setData([])
@@ -100,7 +91,6 @@ export default function PreOrderRegulerPage() {
     setData((prevData) => prevData.filter((item) => item.id !== confirmedId))
     fetchData(false)
   }
-
 
   const handleEditClick = (item) => {
     setSelectedItemToEdit(item)
@@ -151,7 +141,6 @@ export default function PreOrderRegulerPage() {
     return matchSearch && matchStatus
   })
 
-  // Kalkulasi total halaman berdasarkan respon total item keseluruhan database
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1
 
   const handlePageChange = (pageNumber) => {
@@ -205,8 +194,11 @@ export default function PreOrderRegulerPage() {
         {/* Render Tabel Konten / Skeleton */}
         {loading ? (
           <TableSkeleton limit={itemsPerPage} />
+        ) : filteredData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 border border-dashed rounded-lg border-stone-200 bg-stone-50/50">
+            <p className="text-xs font-medium text-stone-400">Tidak ada antrean pre-order ditemukan.</p>
+          </div>
         ) : (
-
           <div className="overflow-x-auto">
             <PORegulerTable 
               data={filteredData} 
@@ -215,70 +207,53 @@ export default function PreOrderRegulerPage() {
               onDelete={handleDeleteClick}
             />
           </div>
-          <>
-            {filteredData.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 border border-dashed rounded-sm border-stone-200 bg-stone-50/50">
-                <p className="text-xs font-medium text-stone-400">Tidak ada antrean pre-order ditemukan.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <PORegulerTable 
-                  data={filteredData} 
-                  onConfirmReceipt={handleConfirmReceiptSuccess}
-                />
-              </div>
-            )}
+        )}
 
-            {/* ================= CONTROLLER PAGINATION MODERN ================= */}
-            {totalPages > 1 && (
-              <div className="flex flex-col items-center justify-between gap-4 pt-4 mt-4 border-t border-stone-100 sm:flex-row">
-                <div className="text-xs font-medium text-stone-500">
-                  Menampilkan <span className="text-[#1A335A] font-bold">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>–{Math.min(currentPage * itemsPerPage, totalItems)} dari <span className="text-[#1A335A] font-bold">{totalItems}</span> Total Antrean
-                </div>
-                
-                <div className="flex items-center gap-1">
-                  {/* Tombol Halaman Sebelumnya */}
+        {/* ================= CONTROLLER PAGINATION MODERN ================= */}
+        {totalPages > 1 && (
+          <div className="flex flex-col items-center justify-between gap-4 pt-4 mt-4 border-t border-stone-100 sm:flex-row">
+            <div className="text-xs font-medium text-stone-500">
+              Menampilkan <span className="text-[#1A335A] font-bold">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>–{Math.min(currentPage * itemsPerPage, totalItems)} dari <span className="text-[#1A335A] font-bold">{totalItems}</span> Total Antrean
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex items-center justify-center w-8 h-8 transition-all bg-white border rounded shadow-sm cursor-pointer border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-40 disabled:hover:bg-white"
+              >
+                <ChevronLeft size={14} strokeWidth={2.5} />
+              </button>
+
+              {[...Array(totalPages)].map((_, idx) => {
+                const pageNum = idx + 1;
+                return (
                   <button
+                    key={pageNum}
                     type="button"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="flex items-center justify-center w-8 h-8 transition-all bg-white border rounded shadow-sm cursor-pointer border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-40 disabled:hover:bg-white"
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded transition-all cursor-pointer ${
+                      currentPage === pageNum
+                        ? 'bg-[#1A335A] text-white shadow-md shadow-[#1A335A]/10'
+                        : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 shadow-sm'
+                    }`}
                   >
-                    <ChevronLeft size={14} strokeWidth={2.5} />
+                    {pageNum}
                   </button>
+                );
+              })}
 
-                  {/* Looping Nomor Halaman */}
-                  {[...Array(totalPages)].map((_, idx) => {
-                    const pageNum = idx + 1;
-                    return (
-                      <button
-                        key={pageNum}
-                        type="button"
-                        onClick={() => handlePageChange(pageNum)}
-                        className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded transition-all cursor-pointer ${
-                          currentPage === pageNum
-                            ? 'bg-[#1A335A] text-white shadow-md shadow-[#1A335A]/10'
-                            : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 shadow-sm'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
-
-                  {/* Tombol Halaman Selanjutnya */}
-                  <button
-                    type="button"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="flex items-center justify-center w-8 h-8 transition-all bg-white border rounded shadow-sm cursor-pointer border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-40 disabled:hover:bg-white"
-                  >
-                    <ChevronRight size={14} strokeWidth={2.5} />
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
+              <button
+                type="button"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="flex items-center justify-center w-8 h-8 transition-all bg-white border rounded shadow-sm cursor-pointer border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-40 disabled:hover:bg-white"
+              >
+                <ChevronRight size={14} strokeWidth={2.5} />
+              </button>
+            </div>
+          </div>
         )}
       </div>
 

@@ -132,7 +132,6 @@ const { data: produkBaru, error: produkError } = await supabaseAdmin
     kategori_id,
     jenis_pewarna,
     gambar_url: finalGambarUrl,
-    rak_id: primaryRakId 
   })
   .select('id')
   .single()

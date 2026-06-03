@@ -304,45 +304,52 @@ export default function MotifList() {
         </div>
       )}
 
-      {/* ── MODAL KONFIRMASI HAPUS ── */}
+{/* ── MODAL KONFIRMASI HAPUS MOTIF ── */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={BACKDROP_STYLE}>
           <div className="bg-white rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] w-[372px] relative overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Tombol Close Silang */}
             <button
               onClick={() => {
                 setIsDeleteModalOpen(false)
                 setMotifToDelete(null)
               }}
               disabled={isDeleting}
-              className="absolute top-4 right-4 text-[#1A335A] hover:opacity-80 transition-opacity disabled:opacity-50"
+              className="absolute top-4 right-4 text-[#1A335A] hover:opacity-80 transition-opacity disabled:opacity-50 cursor-pointer"
             >
               <X size={18} strokeWidth={2.5} />
             </button>
 
             <div className="flex flex-col items-center px-6 pt-10 pb-7">
-              <div className="text-[#FF695E] mb-4">
+              {/* Ikon Trash (Ubah ke Biru) */}
+              <div className="text-[#1A335A] mb-4">
                 <Trash size={40} strokeWidth={1.8} />
               </div>
 
+              {/* Teks Konfirmasi */}
               <p className="text-[#000000] text-[15px] font-bold text-center leading-snug mb-7">
                 Apakah Anda Yakin Ingin<br />Menghapus Motif ini
               </p>
 
+              {/* Grid Tombol Aksi */}
               <div className="flex items-center w-full gap-3">
+                {/* Tombol Batal (Ubah ke Biru) */}
                 <button
                   disabled={isDeleting}
                   onClick={() => {
                     setIsDeleteModalOpen(false)
                     setMotifToDelete(null)
                   }}
-                  className="flex-1 h-[47px] rounded-[10px] bg-gray-200 hover:bg-gray-300 text-[#000000] font-bold text-base transition-colors disabled:opacity-50"
+                  className="flex-1 h-[47px] rounded-[10px] bg-[#1A335A] hover:bg-[#122440] text-white font-bold text-base transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   Batal
                 </button>
+                
+                {/* Tombol Konfirmasi Hapus (Ubah ke Biru) */}
                 <button
                   disabled={isDeleting}
                   onClick={handleConfirmDelete}
-                  className="flex-1 h-[47px] rounded-[10px] bg-[#FF695E] hover:bg-[#FF695E]/85 text-white font-bold text-base transition-colors disabled:opacity-50 flex items-center justify-center"
+                  className="flex-1 h-[47px] rounded-[10px] bg-[#1A335A] hover:bg-[#122440] text-white font-bold text-base transition-colors disabled:opacity-50 flex items-center justify-center cursor-pointer"
                 >
                   {isDeleting ? (
                     <Loader2 size={18} className="text-white animate-spin" />
@@ -352,6 +359,7 @@ export default function MotifList() {
                 </button>
               </div>
             </div>
+
           </div>
         </div>
       )}
