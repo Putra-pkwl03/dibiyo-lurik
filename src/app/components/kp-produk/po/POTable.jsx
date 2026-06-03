@@ -1,6 +1,7 @@
 'use client';
 
-import { Eye, Trash2 } from 'lucide-react';
+// Impor icon Pencil untuk tombol Edit
+import { Pencil, Trash2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import POTableSkeleton from './POTableSkeleton';
 
@@ -22,8 +23,6 @@ export default function POTable({ data, loading, setSelectedItem, onDeleteSucces
       : 'bg-[#F0A864] text-white';
   };
 
-  
-
   return (
     <div className="w-full overflow-x-auto bg-white border-t border-[#E0D3C9] rounded-b-lg overflow-hidden">
       <table className="w-full text-left border-collapse min-w-[900px]">
@@ -36,12 +35,11 @@ export default function POTable({ data, loading, setSelectedItem, onDeleteSucces
             <th className="px-3 py-3 font-bold">Status Produksi</th>
             <th className="px-3 py-3 font-bold">Status Pembayaran</th>
             <th className="px-4 py-3 font-bold">Total Harga</th>
-            <th className="px-4 py-3 font-bold rounded-r-md">Aksi</th>
+            <th className="px-4 py-3 font-bold text-center rounded-r-md">Aksi</th>
           </tr>
         </thead>
         <tbody className="text-[11px] text-black font-medium">
           {loading ? (
-            /* FIX: Langsung render skeleton tanpa bungkus <tr><td> lagi */
             <POTableSkeleton />
           ) : (
             data.map((item, index) => (
@@ -75,15 +73,19 @@ export default function POTable({ data, loading, setSelectedItem, onDeleteSucces
                 <td className="px-4 py-3.5 font-bold text-gray-700">
                   Rp. {item.total_harga ? item.total_harga.toLocaleString('id-ID') : '0'}
                 </td>
-                <td className="px-4 py-3.5">
-                  <div className="flex items-center justify-center gap-1.5">
+                <td className="px-4 py-2 text-center">
+                  <div className="flex items-center justify-center">
+                    {/* BUTTON ACTION: VERTICAL LAYOUT & BIRU TUA */}
                     <button 
                       type="button"
                       onClick={() => setSelectedItem(item)}
-                      className="bg-[#F2B600] hover:bg-[#d4a001] text-white p-2.5 rounded-md shadow-sm transition-colors"
-                      title="Lihat Detail"
+                      className="flex flex-col items-center justify-center bg-[#1A335A] hover:bg-[#122442] text-white w-12 h-12 rounded-lg shadow-sm transition-colors font-bold tracking-wide cursor-pointer"
+                      title="Edit Detail / Ubah Status"
                     >
-                      <Eye size={13} strokeWidth={2.5} />
+                      {/* Icon di atas */}
+                      <Pencil size={13} strokeWidth={2.5} className="mb-0.5" />
+                      {/* Teks di bawah */}
+                      <span className="text-[9px] uppercase tracking-wider">Edit</span>
                     </button>
                   </div>
                 </td>

@@ -38,7 +38,7 @@ export default function LatestProductsTable({ products }) {
                     <span className={`inline-block px-5 py-1 text-xs font-semibold text-white rounded-full min-w-[75px] ${
                       String(item.lebar).includes('110') ? 'bg-[#4D90FF]' : 'bg-[#B533FF]'
                     }`}>
-                      {item.lebar ? `${item.lebar} cm` : '-'}
+                      {item.lebar ? `${item.lebar} ` : '-'}
                     </span>
                   </td>
                   <td className="p-3 font-semibold text-center text-gray-700 whitespace-nowrap">
