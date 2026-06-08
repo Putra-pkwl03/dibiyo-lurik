@@ -2,11 +2,15 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import ModalDetail from './catalog/ModalDetail' 
 
 export default function Catalog() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  
+  // <-- 2. STATE UNTUK KONTROL MODAL
+  const [selectedProduct, setSelectedProduct] = useState(null)
 
   useEffect(() => {
     async function fetchProducts() {
@@ -29,10 +33,8 @@ export default function Catalog() {
     }
 
     fetchProducts()
-  } 
-  , [])
+  }, [])
 
-  // Fungsi pembantu untuk memformat mata uang rupiah secara rapi
   const formatRupiah = (number) => {
     if (!number) return 'Rp 0'
     return new Intl.NumberFormat('id-ID', {
@@ -94,8 +96,6 @@ export default function Catalog() {
                 
                 {/* Visual Gambar Produk */}
                 <div className="w-full aspect-[4/3] bg-[#12110F] relative flex items-center justify-center overflow-hidden">
-                  
-                  {/* Status Badge Dinamis */}
                   <span className="absolute top-3 left-3 text-[9px] font-bold tracking-widest bg-[#12110F]/80 text-[#E5BA73] px-2 py-1 rounded border border-[#E5BA73]/20 uppercase z-10">
                     {prod.jenis_pewarna || prod.status || 'ATBM'}
                   </span>
@@ -108,7 +108,6 @@ export default function Catalog() {
                       loading="lazy"
                     />
                   ) : (
-                    // Fallback visual jika gambar belum diunggah ke storage
                     <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#1E293B] to-[#0F172A]">
                       <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#fff_1px,transparent_1px)] bg-[size:6px]"></div>
                       <span className="text-2xl opacity-40">🧵</span>
@@ -131,7 +130,11 @@ export default function Catalog() {
                     </div>
                   </div>
                   
-                  <button className="w-full py-2.5 bg-transparent border border-[#A3A19E]/20 text-xs font-semibold tracking-wider text-[#A3A19E] hover:text-[#E5BA73] hover:border-[#E5BA73] hover:bg-[#E5BA73]/5 rounded-lg transition-all duration-300 mt-auto">
+                  {/* <-- 3. DI SINI AKTIFKAN TRIGGER KLIK BUTTON */}
+                  <button 
+                    onClick={() => setSelectedProduct(prod)}
+                    className="w-full py-2.5 bg-transparent border border-[#A3A19E]/20 text-xs font-semibold tracking-wider text-[#A3A19E] hover:text-[#E5BA73] hover:border-[#E5BA73] hover:bg-[#E5BA73]/5 rounded-lg transition-all duration-300 mt-auto"
+                  >
                     Lihat Detail
                   </button>
                 </div>
@@ -141,6 +144,13 @@ export default function Catalog() {
           })}
         </div>
       )}
+
+      {/* <-- 4. RENDER MODALNYA DI BAWAH LUAR LOOPING GRID */}
+      <ModalDetail 
+        isOpen={Boolean(selectedProduct)} 
+        product={selectedProduct} 
+        onClose={() => setSelectedProduct(null)} 
+      />
     </section>
   )
 }
