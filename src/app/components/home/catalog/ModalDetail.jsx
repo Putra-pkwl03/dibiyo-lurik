@@ -136,56 +136,42 @@ export default function ModalDetail({ isOpen, onClose, product }) {
     }
   }
 
-  const handleTambahKeranjang = async () => {
-    if (!gulunganDipilih || panjangSisa <= 0) return
-    
-    try {
-      setIsSubmitting(true)
+const handleTambahKeranjang = async () => {
+  if (!gulunganDipilih || panjangSisa <= 0) return
+  
+  try {
+    setIsSubmitting(true)
 
-      const res = await fetch('/api/keranjang', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          produk_id: product.id,
-          gulungan_id: gulunganDipilih.id,
-          jumlah_order: qty 
-        })
-      })
-
-      if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.message || "Gagal menyimpan ke database keranjang")
-      }
-
-      if (addToCart) {
-        addToCart(product, gulunganDipilih, qty)
-      }
-
-      // Memicu animasi remas kertas
-      setIsCrumpling(true)
-
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent("updateCartCount", { detail: { itemCount: 1 } }))
-        setIsCrumpling(false)
-        onClose()
-        router.refresh()
-      }, 900)
-
-    } catch (err) {
-      console.error("Gagal menambahkan ke keranjang:", err)
-      setIsCrumpling(false)
-      Swal.fire({
-        title: 'Oops!',
-        text: err.message || 'Terjadi kesalahan sistem.',
-        icon: 'error',
-        background: '#1A1917',
-        color: '#F9F6F0',
-        confirmButtonColor: '#d33'
-      })
-    } finally {
-      setIsSubmitting(false)
+    // WAJIB menggunakan await agar Next.js menyelesaikan request POST ke database terlebih dahulu
+    if (addToCart) {
+      await addToCart(product, gulunganDipilih, qty)
     }
+
+    // Memicu animasi setelah dipastikan proses await di atas selesai/sukses
+    setIsCrumpling(true)
+
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("updateCartCount", { detail: { itemCount: 1 } }))
+      setIsCrumpling(false)
+      onClose()
+      router.refresh() // Sekarang aman di-refresh karena request POST sudah selesai sepenuhnya
+    }, 900)
+
+  } catch (err) {
+    console.error("Gagal menambahkan ke keranjang:", err)
+    setIsCrumpling(false)
+    Swal.fire({
+      title: 'Oops!',
+      text: 'Terjadi kesalahan saat menambahkan ke keranjang.',
+      icon: 'error',
+      background: '#1A1917',
+      color: '#F9F6F0',
+      confirmButtonColor: '#d33'
+    })
+  } finally {
+    setIsSubmitting(false)
   }
+}
 
   return (
     <AnimatePresence>

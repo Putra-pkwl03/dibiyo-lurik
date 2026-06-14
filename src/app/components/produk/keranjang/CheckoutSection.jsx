@@ -117,7 +117,7 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 font-sans text-[#F9F6F0]">
+    <div className="max-w-6xl mx-auto space-y-6 font-sans text-[#F9F6F0]">
       
       {/* Script Midtrans Snap Loader */}
       <Script 
@@ -139,35 +139,35 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
       </div>
 
       {/* List Mini Tinjauan Kain */}
-      <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
+      <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
         {items.map((item) => {
           const hargaKain = item.gulungan?.harga_per_meter || item.gulungan?.harga || 0;
           const meteran = item.input_panjang || item.gulungan?.panjang_sisa || 0;
           return (
             <div key={item.id} className="flex items-center gap-4 p-3 border bg-[#0A1715]/40 border-white/5 rounded-xl shadow-md text-xs">
-              <div className="w-14 h-14 bg-zinc-900 rounded-lg overflow-hidden border border-white/5 shrink-0">
+              <div className="w-24 h-24 overflow-hidden border rounded-lg bg-zinc-900 border-white/5 shrink-0">
                 <img 
                   src={item.gulungan?.produk?.gambar_url || '/placeholder-kain.jpg'} 
                   className="object-cover w-full h-full opacity-80" 
                   alt={`Produk kain ${item.gulungan?.produk?.kode_produk || ''}`} 
                 />
               </div>
-              <div className="grid flex-1 grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
                 <div>
-                  <p className="text-[9px] text-[#A3A19E] uppercase tracking-wider">Kode Kain</p>
-                  <p className="font-bold text-[#F9F6F0] truncate">{item.gulungan?.produk?.kode_produk || 'Lurik Premium'}</p>
+                  <p className="text-[12px] text-[#A3A19E] uppercase tracking-wider">Kode Kain</p>
+                  <p className="font-bold text-[#F9F6F0] truncate text-[10px]">{item.gulungan?.produk?.kode_produk || 'Lurik Premium'}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-[#A3A19E] uppercase tracking-wider">No Gulungan</p>
-                  <p className="font-semibold text-[#E5BA73]">G-{item.gulungan?.nomor_gulungan || '-'}</p>
+                  <p className="text-[12px] text-[#A3A19E] uppercase tracking-wider">No Gulungan</p>
+                  <p className="font-semibold text-[#E5BA73] text-[12px]">G-{item.gulungan?.nomor_gulungan || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-[#A3A19E] uppercase tracking-wider">Panjang Potong</p>
-                  <p className="font-bold text-[#F9F6F0]/90">{meteran} meter</p>
+                  <p className="text-[12px] text-[#A3A19E] uppercase tracking-wider">Panjang Potong</p>
+                  <p className="font-bold text-[#F9F6F0]/90 text-[12px]">{meteran} meter</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[9px] text-[#A3A19E] uppercase tracking-wider">Subtotal</p>
-                  <p className="font-black text-[#E5BA73]">Rp{(meteran * hargaKain).toLocaleString('id-ID')}</p>
+                  <p className="text-[12px] text-[#A3A19E] uppercase tracking-wider">Subtotal</p>
+                  <p className="font-black text-[#E5BA73] text-[12px]">Rp{(meteran * hargaKain).toLocaleString('id-ID')}</p>
                 </div>
               </div>
             </div>

@@ -7,7 +7,12 @@ export default function CartItem({ item, onChange, onRemove }) {
   const nomorGulungan = item.gulungan?.nomor_gulungan ?? "-";
   const lebar         = item.gulungan?.lebar ?? 0;
   const panjangSisa   = item.gulungan?.panjang_sisa ?? 0;
-  const kodeProduk    = item.gulungan?.produk?.kode_produk || "Kain Lurik";
+  
+  // ====================================================================
+  // KUNCI PERBAIKAN: Fallback Adaptif untuk Gambar dan Kode Produk
+  // ====================================================================
+  const gambarKain = item.product?.gambar_url || item.gulungan?.produk?.gambar_url || '/placeholder-kain.jpg';
+  const kodeProduk = item.product?.kode_produk || item.gulungan?.produk?.kode_produk || "Kain Lurik";
   
   // Mengantisipasi perbedaan penamaan field harga di database
   const hargaPerMeter = item.gulungan?.harga_per_meter || item.gulungan?.harga || 0; 
@@ -19,9 +24,9 @@ export default function CartItem({ item, onChange, onRemove }) {
     <div className="bg-[#0A1715]/60 p-3 rounded-xl flex flex-col sm:flex-row items-center gap-4 shadow-md border border-white/5 transition-all hover:border-[#E5BA73]/20">
       
       {/* Gambar Mini Status Gulungan */}
-      <div className="w-full sm:w-28 h-24 shrink-0 relative rounded-lg overflow-hidden border border-white/5 bg-zinc-900 flex items-center justify-center">
+      <div className="relative flex items-center justify-center w-full h-24 overflow-hidden border rounded-lg sm:w-28 shrink-0 border-white/5 bg-zinc-900">
         <img
-          src={item.gulungan?.produk?.gambar_url || '/placeholder-kain.jpg'}
+          src={gambarKain} // <-- Menggunakan variabel aman hasil fallback
           className="object-cover w-full h-full opacity-70"
           alt={`Gulungan kain lurik ${kodeProduk}`}
         />
@@ -35,10 +40,12 @@ export default function CartItem({ item, onChange, onRemove }) {
       {/* Grid Informasi Kain */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4 flex-1 w-full text-xs text-[#F9F6F0]">
         
-        {/* Kolom 1: No Gulungan */}
+        {/* Kolom 1: No Gulungan / Kode Produk */}
         <div className="hidden md:block">
-          <p className="text-[9px] text-[#A3A19E] uppercase tracking-wider mb-0.5">No. Gulung</p>
-          <p className="font-bold text-[#E5BA73]">G-{nomorGulungan}</p>
+          <p className="text-[9px] text-[#A3A19E] uppercase tracking-wider mb-0.5">Kode Kain</p>
+          <p className="font-bold text-[#E5BA73] truncate max-w-[100px]" title={kodeProduk}>
+            {kodeProduk}
+          </p>
         </div>
 
         {/* Kolom 2: Lebar */}
@@ -80,7 +87,7 @@ export default function CartItem({ item, onChange, onRemove }) {
         </div>
 
         {/* Kolom 6: Subtotal Harga */}
-        <div className="text-right md:text-left col-span-1 md:col-span-1">
+        <div className="col-span-1 text-right md:text-left md:col-span-1">
           <p className="text-[9px] text-[#A3A19E] uppercase tracking-wider mb-0.5">Subtotal</p>
           <p className="font-black text-[#E5BA73] text-sm">Rp{totalHarga.toLocaleString('id-ID')}</p>
         </div>

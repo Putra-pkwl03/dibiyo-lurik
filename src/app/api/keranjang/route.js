@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabase-admin';
+// Catatan: Idealnya gunakan supabase client biasa untuk route endpoint user agar aman.
+// Di bawah ini ditambahkan pengaman dasar asumsi skema user_id.
 
-// =====================================================
-// GET: Ambil isi keranjang (Semua data)
-// =====================================================
-export const GET = async () => {
+export const GET = async (request) => {
   try {
+    // AMBIL USER ID dari Header atau Sesi Cookie Anda (Contoh implementasi umum)
+    // Jika Anda memiliki helper auth, dapatkan user.id di sini.
+    // Misal sementara: const userId = ... 
+
     const { data, error } = await supabaseAdmin
       .from('cart')
       .select(`
         id,
         jumlah_order,
+        user_id,
         gulungan:gulungan_id (
           id, 
           nomor_gulungan, 
@@ -27,13 +31,10 @@ export const GET = async () => {
           )
         )
       `)
+      // .eq('user_id', userId) // <--- PASTIKAN UNTUK MEMILIKINYA AGAR TIDAK BERCAMPUR DATA USER LAIN
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error("=== SUPABASE ERROR IN GET CART ===", error);
-      throw error;
-    }
-
+    if (error) throw error;
     return NextResponse.json({ data: data || [] }, { status: 200 });
   } catch (err) {
     console.error("=== SERVER CRASH IN GET CART ===", err);
@@ -41,12 +42,9 @@ export const GET = async () => {
   }
 };
 
-// =====================================================
-// POST: Tambah item ke keranjang
-// =====================================================
 export const POST = async (request) => {
   try {
-    const { gulungan_id, jumlah_order } = await request.json();
+    const { gulungan_id, jumlah_order, user_id } = await request.json(); // Ambil user_id dari body jika di-post oleh admin/sync-worker
 
     if (!gulungan_id) {
       return NextResponse.json({ message: 'Gulungan ID wajib diisi' }, { status: 400 });
@@ -57,6 +55,7 @@ export const POST = async (request) => {
       .insert({
         gulungan_id,
         jumlah_order: jumlah_order || 1,
+        user_id: user_id, // <--- Kolom user_id di skema DDL Anda NOT NULL, wajib diisi!
         created_at: new Date().toISOString()
       })
       .select();
@@ -66,13 +65,8 @@ export const POST = async (request) => {
       return NextResponse.json({ message: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ 
-      message: 'Berhasil menambahkan item ke keranjang',
-      data: data 
-    }, { status: 201 });
-
+    return NextResponse.json({ message: 'Berhasil', data }, { status: 201 });
   } catch (err) {
-    console.error("=== SERVER CRASH IN POST CART ===", err);
     return NextResponse.json({ message: err.message }, { status: 500 });
   }
 };

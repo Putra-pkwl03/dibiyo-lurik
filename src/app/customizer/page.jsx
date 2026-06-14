@@ -34,7 +34,7 @@ export default function CustomizerPage() {
 
   return (
     <main className="min-h-screen bg-[#0A1715] text-[#F9F6F0] pt-28 pb-16 px-4 sm:px-6 lg:px-8">
-      <div className="flex flex-col items-stretch gap-10 mx-auto max-w-7xl lg:flex-row">
+      <div className="flex flex-col items-stretch gap-10 p-6 mx-auto max-w-7xl lg:flex-row">
         
         <CustomizerCanvas 
           bgColor={bgColor}

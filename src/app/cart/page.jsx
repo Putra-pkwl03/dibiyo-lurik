@@ -1,146 +1,89 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShoppingBag, ArrowRight, Loader2 } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { ShoppingBag, ArrowRight } from 'lucide-react';
+import { useCart } from '../context/CartContext'; 
 import CartItem from '@/app/components/produk/keranjang/CartItem';
 import CheckoutSection from '@/app/components/produk/keranjang/CheckoutSection';
 
 export default function CartPage() {
   const router = useRouter();
-  const [cartItems, setCartItems] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [isCheckout, setIsCheckout] = useState(false);
+  
+  // Menggunakan global state dari Provider yang menghandle otomatis Guest vs Login
+  const { cartItems, updateQty, removeFromCart, loading, totalHarga } = useCart();
 
-  // 1. Ambil data keranjang dari API backend
-  const fetchKeranjang = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch('/api/keranjang');
-      if (!res.ok) throw new Error("Gagal memuat data keranjang");
-      const result = await res.json();
-      
-      // Sinkronisasi field meteran dari database ke internal component state
-      const normalizedData = (result.data || []).map(item => ({
-        ...item,
-        // Prioritaskan input_panjang (meteran), jika kosong gunakan jumlah_order
-        input_panjang: item.input_panjang || item.jumlah_order || 1
-      }));
-
-      setCartItems(normalizedData);
-    } catch (err) {
-      console.error("Gagal mengambil data keranjang:", err);
-    } finally {
-      setLoading(false);
+  // Handle Perubahan kuantitas meteran kain
+  const handleQtyChange = (itemId, field, value) => {
+    if (field === 'input_panjang') {
+      updateQty(itemId, Number(value));
     }
   };
 
-  useEffect(() => {
-    fetchKeranjang();
-  }, []);
-
-  // 2. Mengubah Kuantitas Meteran Real-time & Sinkronisasi ke Database (PUT)
-  const handleQtyChange = async (itemId, field, value) => {
-    const updatedItems = cartItems.map(item => {
-      if (item.id === itemId) {
-        const maxSisa = item.gulungan?.panjang_sisa || 100;
-        // Kunci input agar minimal 1 meter dan tidak melebihi sisa kain di gulungan
-        const safeValue = Math.min(maxSisa, Math.max(1, value));
-        return { ...item, [field]: safeValue };
-      }
-      return item;
-    });
-    setCartItems(updatedItems);
-
-    const targetItem = updatedItems.find(item => item.id === itemId);
-    try {
-      await fetch(`/api/keranjang`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: itemId,
-          jumlah_order: targetItem.input_panjang // Kirim data panjang meter baru ke server
-        })
-      });
-    } catch (err) {
-      console.error("Gagal sinkronisasi kuantitas ke database:", err);
-    }
-  };
-
-  // 3. Menghapus Item dari Keranjang
-  const handleRemoveItem = async (itemId) => {
-    const result = await Swal.fire({
-      title: 'Keluarkan Kain?',
-      text: 'Kain lurik ini akan dihapus dari daftar belanja Anda.',
-      icon: 'warning',
-      showCancelButton: true,
-      background: '#1A1917',
-      color: '#F9F6F0',
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Ya, Hapus',
-      cancelButtonText: 'Batal'
-    });
-
-    if (result.isConfirmed) {
-      try {
-        const res = await fetch(`/api/keranjang?id=${itemId}`, {
-          method: 'DELETE',
-        });
-
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.message || "Gagal menghapus item dari server");
-        }
-
-        setCartItems(prev => prev.filter(item => item.id !== itemId));
-
-        // Mengurangi counter badge global
-        window.dispatchEvent(new CustomEvent("updateCartCount", { detail: { count: -1 } }));
-
-        Swal.fire({
-          title: 'Berhasil Dihapus',
-          text: 'Keranjang belanja diperbarui.',
-          icon: 'success',
-          background: '#1A1917',
-          color: '#F9F6F0',
-          confirmButtonColor: '#E5BA73'
-        });
-      } catch (err) {
-        Swal.fire('Oops!', err.message, 'error');
-      }
-    }
-  };
-
-  // 4. Hitung Total Meter & Total Harga Berdasarkan Satuan Panjang Kain
+  // Hitung total panjang meter kain real-time
   const totalPanjangMeter = useMemo(() => {
     return cartItems.reduce((acc, item) => acc + (item.input_panjang || 0), 0);
   }, [cartItems]);
 
-  const subTotalSementara = useMemo(() => {
-    return cartItems.reduce((acc, item) => {
-      const meteran = item.input_panjang || 0;
-      const hargaMeter = item.gulungan?.harga_per_meter || item.gulungan?.harga || 0;
-      return acc + (meteran * hargaMeter);
-    }, 0);
-  }, [cartItems]);
-
+  // ====================================================================
+  // SKELETON LOADING UI (Disetarakan dengan Layout Halaman Utama)
+  // ====================================================================
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0A1715] text-[#F9F6F0]">
-        <Loader2 className="w-10 h-10 animate-spin text-[#E5BA73] mb-4" />
-        <p className="text-sm font-light tracking-wide text-[#A3A19E]">Memperhitungkan detail gulungan tenun Anda...</p>
-      </div>
+      <main className="min-h-screen bg-[#0A1715] text-[#F9F6F0] pt-28 pb-16 px-2 sm:px-4 lg:px-6">
+        <div className="mx-auto space-y-8 max-w-7xl animate-pulse">
+          {/* Breadcrumb Skeleton */}
+          <div className="w-40 h-3 rounded bg-white/10"></div>
+          
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            {/* Bagian Kiri: List Item Skeleton */}
+            <div className="space-y-4 lg:col-span-2">
+              <div className="w-48 h-6 mb-4 rounded bg-white/10"></div>
+              <div className="space-y-3 bg-[#12110F] p-4 rounded-2xl border border-white/5">
+                {[1, 2].map((i) => (
+                  <div key={i} className="bg-[#0A1715]/60 p-3 rounded-xl flex flex-col sm:flex-row items-center gap-4 border border-white/5">
+                    {/* Kotak Gambar */}
+                    <div className="w-full h-24 rounded-lg sm:w-28 bg-white/5 shrink-0"></div>
+                    {/* Baris data dummy */}
+                    <div className="grid flex-1 w-full grid-cols-2 gap-4 md:grid-cols-6">
+                      <div className="space-y-2"><div className="w-12 h-3 rounded bg-white/5"></div><div className="w-16 h-4 rounded bg-white/10"></div></div>
+                      <div className="space-y-2"><div className="w-12 h-3 rounded bg-white/5"></div><div className="h-4 rounded bg-white/10 w-14"></div></div>
+                      <div className="space-y-2"><div className="w-12 h-3 rounded bg-white/5"></div><div className="w-10 h-4 rounded bg-white/10"></div></div>
+                      <div className="space-y-2"><div className="w-12 h-3 rounded bg-white/5"></div><div className="w-20 h-4 rounded bg-white/10"></div></div>
+                      <div className="space-y-2"><div className="w-20 rounded h-7 bg-white/5"></div></div>
+                      <div className="space-y-2"><div className="w-12 h-3 rounded bg-white/5"></div><div className="w-24 h-4 rounded bg-white/10"></div></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bagian Kanan: Summary Card Skeleton */}
+            <div className="h-fit space-y-5 p-5 bg-[#12110F] border border-white/5 rounded-2xl">
+              <div className="h-4 rounded bg-white/10 w-28"></div>
+              <div className="pt-4 space-y-4 border-t border-white/5">
+                <div className="flex justify-between"><div className="w-16 h-3 rounded bg-white/5"></div><div className="w-12 h-3 rounded bg-white/10"></div></div>
+                <div className="flex justify-between"><div className="w-20 h-3 rounded bg-white/5"></div><div className="w-10 h-3 rounded bg-white/10"></div></div>
+                <div className="flex justify-between pt-4 border-t border-white/5"><div className="h-4 rounded bg-white/5 w-14"></div><div className="h-5 rounded bg-white/10 w-28"></div></div>
+              </div>
+              <div className="w-full h-10 mt-4 bg-white/5 rounded-xl"></div>
+            </div>
+          </div>
+        </div>
+      </main>
     );
   }
 
+  // ====================================================================
+  // HALAMAN KETIKA DATA SUDAH SIAP LOAD
+  // ====================================================================
   return (
-    <div className="min-h-screen bg-[#0A1715] text-[#F9F6F0] antialiased pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
+    <main className="min-h-screen bg-[#0A1715] text-[#F9F6F0] antialiased pt-28 pb-16 px-2 sm:px-4 lg:px-6">
+      <div className="p-6 mx-auto max-w-7xl">
         
         {cartItems.length === 0 ? (
-          <div className="max-w-md mx-auto text-center py-16 space-y-6 border border-white/5 bg-[#12110F] rounded-2xl shadow-xl">
+          <div className="max-w-xl mx-auto text-center py-16 space-y-6 border border-white/5 bg-[#12110F] rounded-2xl shadow-xl">
             <div className="flex justify-center">
               <div className="p-4 rounded-full bg-[#E5BA73]/10 text-[#E5BA73]">
                 <ShoppingBag size={40} />
@@ -164,13 +107,13 @@ export default function CartPage() {
             <div className="flex items-center gap-2 text-[10px] font-bold tracking-wider uppercase text-[#A3A19E]">
               <span className={!isCheckout ? "text-[#E5BA73]" : ""}>1. Daftar Belanja</span>
               <span className="text-white/20">/</span>
-              <span className={isCheckout ? "text-[#E5BA73]" : ""}>2. Gerbang Pembayaran Midtrans</span>
+              <span className={isCheckout ? "text-[#E5BA73]" : ""}>2. Gerbang Pembayaran</span>
             </div>
 
             {!isCheckout ? (
               <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
                 
-                {/* Bagian Kiri: List Item Kain */}
+                {/* Bagian Kiri */}
                 <div className="space-y-4 lg:col-span-2">
                   <h2 className="text-xl font-bold tracking-tight text-[#E5BA73]">Keranjang Kain Lurik</h2>
                   <div className="space-y-3 bg-[#12110F] p-4 rounded-2xl border border-white/5 shadow-xl">
@@ -179,18 +122,16 @@ export default function CartPage() {
                         key={item.id}
                         item={item}
                         onChange={(field, value) => handleQtyChange(item.id, field, value)}
-                        onRemove={() => handleRemoveItem(item.id)}
+                        onRemove={() => removeFromCart(item.id)}
                       />
                     ))}
                   </div>
                 </div>
 
-                {/* Bagian Kanan: Kalkulator Total Ringkasan */}
+                {/* Bagian Rangkuman Kanan */}
                 <div className="h-fit space-y-4 p-5 bg-[#12110F] border border-[#E5BA73]/10 rounded-2xl shadow-xl">
                   <h3 className="text-xs font-bold text-[#E5BA73] tracking-wide uppercase">Ringkasan Pesanan</h3>
                   <div className="pt-2 space-y-3 border-t border-white/5">
-                    
-                    {/* SINKRONISASI: Mengganti teks "Total Gulungan" menjadi data Meteran */}
                     <div className="flex justify-between text-xs text-[#A3A19E]">
                       <span>Total Panjang</span>
                       <span className="font-semibold text-white">{totalPanjangMeter} Meter</span>
@@ -199,10 +140,9 @@ export default function CartPage() {
                       <span>Jumlah Jenis Kain</span>
                       <span className="font-semibold text-white">{cartItems.length} Item</span>
                     </div>
-                    
                     <div className="flex items-baseline justify-between pt-2 border-t border-white/5">
                       <span className="text-xs text-[#A3A19E]">Subtotal</span>
-                      <span className="text-xl font-black text-[#E5BA73]">Rp {subTotalSementara.toLocaleString('id-ID')}</span>
+                      <span className="text-xl font-black text-[#E5BA73]">Rp {totalHarga.toLocaleString('id-ID')}</span>
                     </div>
                   </div>
 
@@ -221,7 +161,6 @@ export default function CartPage() {
                   items={cartItems}
                   onBack={() => setIsCheckout(false)}
                   onOrderSuccess={() => {
-                    setCartItems([]);
                     setIsCheckout(false);
                   }}
                 />
@@ -230,6 +169,6 @@ export default function CartPage() {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }

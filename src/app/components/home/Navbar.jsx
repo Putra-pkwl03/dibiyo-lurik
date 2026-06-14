@@ -68,7 +68,7 @@ export default function Navbar() {
     }
   }, [])
 
-  const handleLogout = async () => {
+ const handleLogout = async () => {
     setShowUserDropdown(false)
     setIsOpen(false)
     Swal.fire({
@@ -90,8 +90,10 @@ export default function Navbar() {
           const res = await fetch('/api/auth/logout', { method: 'POST' })
           
           if (res.ok) {
+            localStorage.removeItem("biyo_guest_cart");
+
             setUser(null)
-            setCartCount(0) // Reset keranjang
+            setCartCount(0) 
             window.location.href = '/auth/login'
           } else {
             throw new Error("Gagal menghapus sesi di server")
@@ -127,7 +129,7 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0A1715]/80 backdrop-blur-lg border-b border-[#E5BA73]/10">
-      <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
+      <div className="px-2 mx-auto max-w-7xl sm:px-4 lg:px-6">
         <div className="flex items-center justify-between h-20">
           
           {/* Logo */}

@@ -39,7 +39,7 @@ export default function CustomizerSidebar({
   };
 
   return (
-    <div className="w-full lg:w-[45%] bg-[#0A1715] flex flex-col justify-between p-2 lg:p-6 overflow-y-auto lg:h-[750px] custom-scrollbar">
+    <div className="w-full lg:w-[45%] bg-[#0A1715] flex flex-col justify-between p-2 lg:p-6 overflow-y-auto lg:h-[780px] custom-scrollbar">
       
       <div className="space-y-6">
         <div>

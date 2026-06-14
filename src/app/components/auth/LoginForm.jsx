@@ -6,9 +6,14 @@ import { useRouter } from 'next/navigation'
 import NProgress from 'nprogress' 
 import { User, Eye, EyeOff, Mail, Fingerprint } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+// 1. IMPORT USE_CART CONTEXT
+import { useCart } from '../../context/CartContext' 
 
 export default function LoginForm() {
   const router = useRouter()
+  
+  // Ambil fungsi sinkronisasi dari Global Cart Context
+  const { syncGuestCartToDatabase } = useCart()
   
   // State manajemen mode Auth
   const [isLogin, setIsLogin] = useState(true)
@@ -52,6 +57,17 @@ export default function LoginForm() {
       }
       
       if (isLogin) {
+        setSuccess('Login berhasil! Menyinkronkan keranjang Anda...')
+        
+        // ====================================================================
+        // KUNCI UTAMA: Jalankan sinkronisasi keranjang tepat setelah login sukses
+        // ====================================================================
+        const loggedInUserId = data.data?.profile?.id
+        if (loggedInUserId) {
+          // Tunggu proses looping POST data local storage ke DB selesai
+          await syncGuestCartToDatabase(loggedInUserId)
+        }
+
         setSuccess('Login berhasil! Mengalihkan...')
         NProgress.done()
         
@@ -364,30 +380,30 @@ export default function LoginForm() {
           </form>
 
           {/* Toggle Form Action Switcher */}
-<motion.div variants={itemVariants} className="mt-6 text-center">
-  <p className="text-xs font-medium text-gray-500">
-    {isLogin ? 'Belum mempunyai akun pelanggan?' : 'Sudah terdaftar sebagai pelanggan?'}
-    <button
-      type="button"
-      onClick={() => {
-        const nextState = !isLogin;
-        setIsLogin(nextState);
-        setError('');
-        setSuccess('');
-        
-        // KUNCI UTAMA: Mengubah URL di browser tanpa reload halaman
-        if (nextState) {
-          window.history.pushState(null, '', '/auth/login');
-        } else {
-          window.history.pushState(null, '', '/auth/register');
-        }
-      }}
-      className="ml-1 font-bold text-[#1A335A] hover:text-[#376DC0] hover:underline bg-transparent border-none outline-none cursor-pointer"
-    >
-      {isLogin ? 'Daftar Di Sini' : 'Masuk Di Sini'}
-    </button>
-  </p>
-</motion.div>
+          <motion.div variants={itemVariants} className="mt-6 text-center">
+            <p className="text-xs font-medium text-gray-500">
+              {isLogin ? 'Belum mempunyai akun pelanggan?' : 'Sudah terdaftar sebagai pelanggan?'}
+              <button
+                type="button"
+                onClick={() => {
+                  const nextState = !isLogin;
+                  setIsLogin(nextState);
+                  setError('');
+                  setSuccess('');
+                  
+                  // Mengubah URL di browser tanpa reload halaman
+                  if (nextState) {
+                    window.history.pushState(null, '', '/auth/login');
+                  } else {
+                    window.history.pushState(null, '', '/auth/register');
+                  }
+                }}
+                className="ml-1 font-bold text-[#1A335A] hover:text-[#376DC0] hover:underline bg-transparent border-none outline-none cursor-pointer"
+              >
+                {isLogin ? 'Daftar Di Sini' : 'Masuk Di Sini'}
+              </button>
+            </p>
+          </motion.div>
 
         </motion.div>
 
