@@ -8,27 +8,28 @@ export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([])
 
   const addToCart = (product, gulungan, qty) => {
-    // Buat ID unik berdasarkan produk + gulungan yang dipilih
+    // ID unik gabungan produk + gulungan
     const itemId = `${product.id}-${gulungan.id}`
 
     setCartItems((prev) => {
       const sudahAda = prev.find((item) => item.itemId === itemId)
+      const panjangMaksimal = gulungan.panjang_sisa ?? 100
 
       if (sudahAda) {
-        // Kalau produk + gulungan yang sama sudah ada, tambah qty-nya
+        // Tambah meteran kain dengan batas maksimal panjang_sisa
         return prev.map((item) =>
           item.itemId === itemId
-            ? { ...item, qty: item.qty + qty }
+            ? { ...item, qty: Math.min(item.qty + qty, panjangMaksimal) }
             : item
         )
       }
 
-      // Kalau belum ada, tambahkan sebagai item baru
+      // Tambahkan sebagai item meteran baru
       return [...prev, {
         itemId,
-        product,       // seluruh data produk
-        gulungan,      // gulungan yang dipilih (berisi harga, lebar, dll)
-        qty,
+        product,       
+        gulungan,      
+        qty, // qty bertindak sebagai jumlah meter
       }]
     })
   }
@@ -40,15 +41,24 @@ export function CartProvider({ children }) {
   const updateQty = (itemId, qty) => {
     if (qty < 1) return
     setCartItems((prev) =>
-      prev.map((item) => item.itemId === itemId ? { ...item, qty } : item)
+      prev.map((item) => {
+        if (item.itemId === itemId) {
+          const panjangMaksimal = item.gulungan?.panjang_sisa ?? 100
+          return { ...item, qty: Math.min(qty, panjangMaksimal) }
+        }
+        return item
+      })
     )
   }
 
+  // Menghitung total panjang meter dari seluruh kain di keranjang
   const totalItem = cartItems.reduce((acc, item) => acc + item.qty, 0)
 
-  const totalHarga = cartItems.reduce(
-    (acc, item) => acc + item.gulungan.harga * item.qty, 0
-  )
+  // ─── SINKRONISASI: TOTAL HARGA BERDASARKAN HARGA PER METER GULUNGAN ───
+  const totalHarga = cartItems.reduce((acc, item) => {
+    const hargaKain = item.gulungan?.harga_per_meter ?? item.product?.harga ?? 0
+    return acc + (hargaKain * item.qty)
+  }, 0)
 
   return (
     <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, updateQty, totalItem, totalHarga }}>

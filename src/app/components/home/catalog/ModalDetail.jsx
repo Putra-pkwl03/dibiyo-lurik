@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import { useCart } from "@/app/context/CartContext" 
 import { useRouter } from "next/navigation" 
+import Swal from "sweetalert2" // Menggunakan SweetAlert agar serasi dengan CartPage Anda
 
-// Fungsi pembantu untuk format Rupiah
 const formatRupiah = (angka) => {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -14,52 +14,93 @@ const formatRupiah = (angka) => {
 }
 
 export default function ModalDetail({ isOpen, onClose, product }) {
-  const [qty, setQty] = useState(1)
+  const [qty, setQty] = useState(1) 
   const [gulunganDipilih, setGulunganDipilih] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false) // State loading tombol
   const { addToCart } = useCart() 
   const router = useRouter() 
 
-  // Reset state setiap modal dibuka
   useEffect(() => {
     if (!isOpen || !product) return
     setQty(1)
 
-    // Otomatis pilih gulungan pertama yang masih ada stoknya
     const gulunganAktif = product.gulungan?.find(g => g.panjang_sisa > 0)
     setGulunganDipilih(gulunganAktif ?? product.gulungan?.[0] ?? null)
   }, [isOpen, product])
 
-  // Jangan render apapun jika modal ditutup atau data produk kosong
   if (!isOpen || !product) return null
 
-  // ─── DEKLARASI VARIABEL TURUNAN (Agar tidak undefined) ───
   const productTitle = product.nama ?? "Lurik Premium"
   const gulunganList = product.gulungan ?? []
   
-  // Menghitung stok berdasarkan jumlah gulungan yang panjang sisanya > 0
-  const stok = gulunganList.filter(g => g.panjang_sisa > 0).length
-  const stokPersen = gulunganList.length > 0 ? (stok / gulunganList.length) * 100 : 0
-  
   const lebar = gulunganDipilih?.lebar ?? product.lebar ?? "—"
   const panjangSisa = gulunganDipilih?.panjang_sisa ?? 0
-  const harga = product.harga ?? 0
-  const total = harga * qty
+  const panjangTotal = gulunganDipilih?.panjang_total ?? 1 
+  
+  const stokPersen = (panjangSisa / panjangTotal) * 100
+  const hargaPerMeter = gulunganDipilih?.harga_per_meter ?? gulunganDipilih?.harga ?? 0
+  const total = hargaPerMeter * qty
 
-  // Handler aksi tambah keranjang
-  const handleTambahKeranjang = () => {
-    if (!gulunganDipilih) return
+  // ─── PERBAIKAN UTAMA: SINKRONISASI KE API DATABASE (POST) ───
+  const handleTambahKeranjang = async () => {
+    if (!gulunganDipilih || panjangSisa <= 0) return
     
-    addToCart({
-      id: `${product.id}-${gulunganDipilih.id}`, // ID unik gabungan produk + gulungan
-      productId: product.id,
-      nama: productTitle,
-      harga: harga,
-      qty: qty,
-      gulungan: gulunganDipilih,
-      gambar_url: product.gambar_url
-    })
+    try {
+      setIsSubmitting(true)
 
-    onClose() // Tutup modal setelah berhasil ditambahkan
+      // 1. Kirim data ke API Backend agar masuk ke Database Keranjang
+      const res = await fetch('/api/keranjang', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          produk_id: product.id,
+          gulungan_id: gulunganDipilih.id,
+          jumlah_order: qty // Mengirimkan kuantitas meteran kain
+        })
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.message || "Gagal menyimpan ke database keranjang")
+      }
+
+      // 2. Perbarui state Context Global (Jika digunakan untuk komponen lain)
+      if (addToCart) {
+        addToCart(product, gulunganDipilih, qty)
+      }
+
+      // 3. Picu event global untuk memperbarui angka badge counter di Navbar
+      window.dispatchEvent(new CustomEvent("updateCartCount", { detail: { count: 1 } }))
+
+      // 4. Beri notifikasi sukses kepada pelanggan
+      await Swal.fire({
+        title: 'Berhasil Masuk Keranjang',
+        text: `${productTitle} (Gulungan ${gulunganDipilih.nomor_gulungan}) sebanyak ${qty} meter telah ditambahkan.`,
+        icon: 'success',
+        background: '#1A1917',
+        color: '#F9F6F0',
+        confirmButtonColor: '#E5BA73',
+        confirmButtonText: 'Lihat Keranjang'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          router.push('/cart') // Redirect ke halaman keranjang belanja
+        }
+      })
+
+      onClose() // Tutup modal dtail
+    } catch (err) {
+      console.error("Gagal menambahkan ke keranjang:", err)
+      Swal.fire({
+        title: 'Oops!',
+        text: err.message || 'Terjadi kesalahan sistem.',
+        icon: 'error',
+        background: '#1A1917',
+        color: '#F9F6F0',
+        confirmButtonColor: '#d33'
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -71,7 +112,7 @@ export default function ModalDetail({ isOpen, onClose, product }) {
         className="bg-[#1A1917] border border-[#E5BA73]/25 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl relative p-6 space-y-6 animate-scale-up"
         onClick={(e) => e.stopPropagation()} 
       >
-        {/* Tombol Close Pojok Kanan Atas */}
+        {/* Tombol Close */}
         <button 
           onClick={onClose}
           className="absolute top-4 right-4 text-[#A3A19E] hover:text-[#E5BA73] transition-colors p-1"
@@ -81,7 +122,7 @@ export default function ModalDetail({ isOpen, onClose, product }) {
           </svg>
         </button>
 
-        {/* ─── HEADER ─── */}
+        {/* HEADER */}
         <div className="flex gap-4 p-5 border-b border-[#E5BA73]/10">
           <div className="w-20 h-20 rounded-xl bg-[#252220] border border-[#E5BA73]/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
             {product.gambar_url
@@ -101,27 +142,14 @@ export default function ModalDetail({ isOpen, onClose, product }) {
         </div>
 
         <div className="p-5 space-y-5">
-          {/* ─── SPESIFIKASI ─── */}
+          {/* SPESIFIKASI */}
           <div>
-            <p className="text-[11px] font-medium tracking-widest uppercase text-[#706E6B] mb-2">
-              Spesifikasi Kain
-            </p>
+            <p className="text-[11px] font-medium tracking-widest uppercase text-[#706E6B] mb-2">Spesifikasi Kain</p>
             <div className="grid grid-cols-2 gap-2">
               {[
-                {
-                  label: "Lebar",
-                  value: lebar ? `${lebar} cm` : "—"
-                },
-                {
-                  label: "Panjang Tersisa",
-                  value: panjangSisa ? `${panjangSisa} meter` : "Habis"
-                },
-                {
-                  label: "Jenis Pewarna",
-                  value: product.jenis_pewarna
-                    ? product.jenis_pewarna.charAt(0).toUpperCase() + product.jenis_pewarna.slice(1)
-                    : "—"
-                }
+                { label: "Lebar Kain", value: lebar ? `${lebar} cm` : "—" },
+                { label: "Sisa di Gulungan Ini", value: panjangSisa > 0 ? `${panjangSisa} meter` : "Habis" },
+                { label: "Jenis Pewarna", value: product.jenis_pewarna ? product.jenis_pewarna.charAt(0).toUpperCase() + product.jenis_pewarna.slice(1) : "—" }
               ].map(({ label, value }) => (
                 <div key={label} className="bg-white/[0.025] border border-[#E5BA73]/20 rounded-lg px-3 py-2">
                   <p className="text-[11px] text-[#706E6B]">{label}</p>
@@ -131,12 +159,10 @@ export default function ModalDetail({ isOpen, onClose, product }) {
             </div>
           </div>
 
-          {/* ─── PILIH GULUNGAN (kalau lebih dari 1) ─── */}
-          {gulunganList.length > 1 && (
+          {/* PILIH GULUNGAN */}
+          {gulunganList.length > 0 && (
             <div>
-              <p className="text-[11px] font-medium tracking-widest uppercase text-[#706E6B] mb-2">
-                Pilih Gulungan
-              </p>
+              <p className="text-[11px] font-medium tracking-widest uppercase text-[#706E6B] mb-2">Pilih Gulungan Kain</p>
               <div className="flex flex-wrap gap-2">
                 {gulunganList.map((g) => {
                   const habis = g.panjang_sisa <= 0
@@ -146,7 +172,7 @@ export default function ModalDetail({ isOpen, onClose, product }) {
                       key={g.id}
                       disabled={habis}
                       onClick={() => { setGulunganDipilih(g); setQty(1) }}
-                      className={`px-3 py-2 rounded-lg border text-xs font-medium transition-colors
+                      className={`px-3 py-2 rounded-lg border text-xs font-medium transition-colors text-left
                         ${habis
                           ? "border-[#3a3835] text-[#4a4845] cursor-not-allowed"
                           : dipilih
@@ -156,7 +182,7 @@ export default function ModalDetail({ isOpen, onClose, product }) {
                     >
                       Gulungan {g.nomor_gulungan}
                       <span className="block text-[10px] mt-0.5 opacity-70">
-                        {habis ? "Habis" : `${g.lebar}cm · ${g.panjang_sisa}m`}
+                        {habis ? "Habis" : `L: ${g.lebar}cm · Sisa: ${g.panjang_sisa}m`}
                       </span>
                     </button>
                   )
@@ -165,51 +191,53 @@ export default function ModalDetail({ isOpen, onClose, product }) {
             </div>
           )}
 
-          {/* ─── STOK ─── */}
+          {/* STATUS SISA KAIN */}
           <div>
-            <p className="text-[11px] font-medium tracking-widest uppercase text-[#706E6B] mb-2">
-              Stok Tersedia
-            </p>
+            <p className="text-[11px] font-medium tracking-widest uppercase text-[#706E6B] mb-2">Ketersediaan Panjang Kain</p>
             <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#E5BA73] rounded-full transition-all"
-                style={{ width: `${stokPersen}%` }}
-              />
+              <div className="h-full bg-[#E5BA73] rounded-full transition-all" style={{ width: `${stokPersen}%` }} />
             </div>
-            <p className="text-xs text-[#706E6B] mt-1.5">{stok} gulungan tersisa</p>
+            <p className="text-xs text-[#706E6B] mt-1.5">
+              Tersisa {panjangSisa} meter pada Gulungan No. {gulunganDipilih?.nomor_gulungan ?? "—"}
+            </p>
           </div>
 
-          {/* ─── JUMLAH ─── */}
+          {/* JUMLAH METER */}
           <div>
-            <p className="text-[11px] font-medium tracking-widest uppercase text-[#706E6B] mb-2">
-              Jumlah Gulungan
-            </p>
+            <p className="text-[11px] font-medium tracking-widest uppercase text-[#706E6B] mb-2">Jumlah Panjang Pesanan (Meter)</p>
             <div className="flex items-center gap-3">
               <button
+                type="button"
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
                 className="w-8 h-8 rounded-lg border border-[#E5BA73]/25 text-[#E5BA73] text-xl flex items-center justify-center hover:bg-[#E5BA73]/10 transition-colors"
               >
                 −
               </button>
-              <span className="text-lg font-semibold text-[#F9F6F0] min-w-[2rem] text-center">
-                {qty}
+              <span className="text-lg font-semibold text-[#F9F6F0] min-w-[2.5rem] text-center">
+                {qty} <span className="text-xs font-normal text-[#706E6B]">m</span>
               </span>
               <button
-                onClick={() => setQty((q) => Math.min(stok, q + 1))}
-                className="w-8 h-8 rounded-lg border border-[#E5BA73]/25 text-[#E5BA73] text-xl flex items-center justify-center hover:bg-[#E5BA73]/10 transition-colors"
+                type="button"
+                disabled={qty >= panjangSisa}
+                onClick={() => setQty((q) => Math.min(panjangSisa, q + 1))}
+                className={`w-8 h-8 rounded-lg border text-xl flex items-center justify-center transition-colors
+                  ${qty >= panjangSisa 
+                    ? "border-[#3a3835] text-[#4a4845] cursor-not-allowed" 
+                    : "border-[#E5BA73]/25 text-[#E5BA73] hover:bg-[#E5BA73]/10"
+                  }`}
               >
                 +
               </button>
-              <span className="text-xs text-[#706E6B]">maks. {stok} gulungan</span>
+              <span className="text-xs text-[#706E6B]">maksimal pembelian {panjangSisa} meter</span>
             </div>
           </div>
 
-          {/* ─── RINGKASAN HARGA ─── */}
+          {/* RINGKASAN HARGA */}
           <div className="flex justify-between items-baseline bg-[#E5BA73]/5 border border-[#E5BA73]/20 rounded-xl px-4 py-3">
-            {gulunganDipilih ? (
+            {gulunganDipilih && panjangSisa > 0 ? (
               <>
                 <span className="text-xs text-[#8a8780]">
-                  {formatRupiah(harga)} × {qty} gulungan
+                  {formatRupiah(hargaPerMeter)} × {qty} meter
                 </span>
                 <span className="text-xl font-semibold text-[#E5BA73]">
                   {formatRupiah(total)}
@@ -217,36 +245,44 @@ export default function ModalDetail({ isOpen, onClose, product }) {
               </>
             ) : (
               <span className="text-xs text-[#706E6B] w-full text-center">
-                Tidak ada gulungan tersedia
+                Gulungan ini telah habis atau tidak tersedia
               </span>
             )}
           </div>
         </div>
 
-        {/* ─── FOOTER ─── */}
+        {/* FOOTER TOMBOL AKSI */}
         <div className="flex gap-2 px-5 pb-5">
           <button
+            type="button"
+            disabled={panjangSisa <= 0}
             onClick={() => {
+              if (panjangSisa <= 0) return
               const pesan = encodeURIComponent(
-                `Halo, saya ingin memesan ${productTitle} (${lebar}cm) sebanyak ${qty} gulungan. Total: ${formatRupiah(total)}`
+                `Halo Biyo Lurik, saya tertarik memesan kain "${productTitle}" (Lebar ${lebar}cm) dari Gulungan No. ${gulunganDipilih?.nomor_gulungan} sepanjang ${qty} meter. Total: ${formatRupiah(total)}`
               )
               window.open(`https://wa.me/6281234567890?text=${pesan}`, "_blank")
             }}
-            className="flex-1 py-2.5 text-center rounded-xl border border-[#A3A19E]/20 text-xs font-semibold tracking-wider text-[#A3A19E] hover:text-[#E5BA73] hover:border-[#E5BA73] transition-colors"
+            className={`flex-1 py-2.5 text-center rounded-xl border text-xs font-semibold tracking-wider transition-colors
+              ${panjangSisa > 0 
+                ? "border-[#A3A19E]/20 text-[#A3A19E] hover:text-[#E5BA73] hover:border-[#E5BA73] cursor-pointer" 
+                : "border-[#3a3835] text-[#4a4845] cursor-not-allowed"
+              }`}
           >
             WhatsApp
           </button>
           
           <button
-            disabled={!gulunganDipilih || stok === 0}
+            type="button"
+            disabled={!gulunganDipilih || panjangSisa <= 0 || isSubmitting}
             onClick={handleTambahKeranjang}
             className={`flex-[2] py-2.5 rounded-xl text-xs font-bold tracking-wider transition-all
-              ${gulunganDipilih && stok > 0
+              ${gulunganDipilih && panjangSisa > 0 && !isSubmitting
                 ? "bg-[#E5BA73] text-[#1A1917] hover:opacity-90 cursor-pointer"
                 : "bg-[#2a2825] text-[#4a4845] cursor-not-allowed"
               }`}
           >
-            {stok === 0 ? "Stok Habis" : "Tambah ke Keranjang"}
+            {isSubmitting ? "Memproses..." : panjangSisa <= 0 ? "Stok Habis" : "Tambah ke Keranjang"}
           </button>
         </div>
       </div>

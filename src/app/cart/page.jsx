@@ -13,7 +13,7 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true);
   const [isCheckout, setIsCheckout] = useState(false);
 
-  // 1. Ambil data keranjang milik pelanggan dari API
+  // 1. Ambil data keranjang dari API backend
   const fetchKeranjang = async () => {
     try {
       setLoading(true);
@@ -21,10 +21,11 @@ export default function CartPage() {
       if (!res.ok) throw new Error("Gagal memuat data keranjang");
       const result = await res.json();
       
-      // Sinkronisasi data field dari API internal ke properti yang dibutuhkan komponen
+      // Sinkronisasi field meteran dari database ke internal component state
       const normalizedData = (result.data || []).map(item => ({
         ...item,
-        input_panjang: item.input_panjang || item.jumlah_order || item.gulungan?.panjang_sisa || 0
+        // Prioritaskan input_panjang (meteran), jika kosong gunakan jumlah_order
+        input_panjang: item.input_panjang || item.jumlah_order || 1
       }));
 
       setCartItems(normalizedData);
@@ -39,12 +40,12 @@ export default function CartPage() {
     fetchKeranjang();
   }, []);
 
-  // 2. Fungsi Mengubah Panjang Order Secara Real-time dari Input Box
+  // 2. Mengubah Kuantitas Meteran Real-time & Sinkronisasi ke Database (PUT)
   const handleQtyChange = async (itemId, field, value) => {
     const updatedItems = cartItems.map(item => {
       if (item.id === itemId) {
-        const maxSisa = item.gulungan?.panjang_sisa || 0;
-        // Memastikan input tidak minus dan tidak melampaui batas sisa kain di gulungan
+        const maxSisa = item.gulungan?.panjang_sisa || 100;
+        // Kunci input agar minimal 1 meter dan tidak melebihi sisa kain di gulungan
         const safeValue = Math.min(maxSisa, Math.max(1, value));
         return { ...item, [field]: safeValue };
       }
@@ -52,7 +53,6 @@ export default function CartPage() {
     });
     setCartItems(updatedItems);
 
-    // Sinkronisasi perubahan kuantitas ke database di latar belakang (PUT)
     const targetItem = updatedItems.find(item => item.id === itemId);
     try {
       await fetch(`/api/keranjang`, {
@@ -60,7 +60,7 @@ export default function CartPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: itemId,
-          jumlah_order: targetItem.input_panjang
+          jumlah_order: targetItem.input_panjang // Kirim data panjang meter baru ke server
         })
       });
     } catch (err) {
@@ -68,7 +68,7 @@ export default function CartPage() {
     }
   };
 
-  // 3. Fungsi Menghapus Item dari Daftar Keranjang (SUDAH DISINKRONKAN)
+  // 3. Menghapus Item dari Keranjang
   const handleRemoveItem = async (itemId) => {
     const result = await Swal.fire({
       title: 'Keluarkan Kain?',
@@ -85,7 +85,6 @@ export default function CartPage() {
 
     if (result.isConfirmed) {
       try {
-        // PERBAIKAN UTAMA: ID sekarang dikirim via query string agar klop dengan API Backend
         const res = await fetch(`/api/keranjang?id=${itemId}`, {
           method: 'DELETE',
         });
@@ -95,10 +94,9 @@ export default function CartPage() {
           throw new Error(errData.message || "Gagal menghapus item dari server");
         }
 
-        // Hapus dari memori lokal komponen
         setCartItems(prev => prev.filter(item => item.id !== itemId));
 
-        // Berikan sinyal global ke Navbar untuk mengurangi angka counter badge
+        // Mengurangi counter badge global
         window.dispatchEvent(new CustomEvent("updateCartCount", { detail: { count: -1 } }));
 
         Swal.fire({
@@ -115,12 +113,16 @@ export default function CartPage() {
     }
   };
 
-  // 4. Hitung Total Harga Sementara di Sisi Kanan Screen
+  // 4. Hitung Total Meter & Total Harga Berdasarkan Satuan Panjang Kain
+  const totalPanjangMeter = useMemo(() => {
+    return cartItems.reduce((acc, item) => acc + (item.input_panjang || 0), 0);
+  }, [cartItems]);
+
   const subTotalSementara = useMemo(() => {
     return cartItems.reduce((acc, item) => {
       const meteran = item.input_panjang || 0;
-      const harga = item.gulungan?.harga_per_meter || item.gulungan?.harga || 0;
-      return acc + (meteran * harga);
+      const hargaMeter = item.gulungan?.harga_per_meter || item.gulungan?.harga || 0;
+      return acc + (meteran * hargaMeter);
     }, 0);
   }, [cartItems]);
 
@@ -137,7 +139,6 @@ export default function CartPage() {
     <div className="min-h-screen bg-[#0A1715] text-[#F9F6F0] antialiased pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
         
-        {/* VIEW KONDISI: JIKA KERANJANG KOSONG */}
         {cartItems.length === 0 ? (
           <div className="max-w-md mx-auto text-center py-16 space-y-6 border border-white/5 bg-[#12110F] rounded-2xl shadow-xl">
             <div className="flex justify-center">
@@ -159,19 +160,14 @@ export default function CartPage() {
             </button>
           </div>
         ) : (
-          /* VIEW KONDISI: JIKA ADA ITEM DI DALAM KERANJANG */
           <div className="space-y-8">
-            
-            {/* Alur Indikator Tahapan Belanja */}
             <div className="flex items-center gap-2 text-[10px] font-bold tracking-wider uppercase text-[#A3A19E]">
               <span className={!isCheckout ? "text-[#E5BA73]" : ""}>1. Daftar Belanja</span>
               <span className="text-white/20">/</span>
               <span className={isCheckout ? "text-[#E5BA73]" : ""}>2. Gerbang Pembayaran Midtrans</span>
             </div>
 
-            {/* SEGMENTASI HALAMAN BERDASARKAN PROSESNYA */}
             {!isCheckout ? (
-              // STEP 1: REVIEW DAFTAR PRODUK YANG INGIN DIBELI
               <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
                 
                 {/* Bagian Kiri: List Item Kain */}
@@ -189,14 +185,21 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                {/* Bagian Kanan: Kalkulator Total & Tombol Lanjut */}
+                {/* Bagian Kanan: Kalkulator Total Ringkasan */}
                 <div className="h-fit space-y-4 p-5 bg-[#12110F] border border-[#E5BA73]/10 rounded-2xl shadow-xl">
                   <h3 className="text-xs font-bold text-[#E5BA73] tracking-wide uppercase">Ringkasan Pesanan</h3>
                   <div className="pt-2 space-y-3 border-t border-white/5">
+                    
+                    {/* SINKRONISASI: Mengganti teks "Total Gulungan" menjadi data Meteran */}
                     <div className="flex justify-between text-xs text-[#A3A19E]">
-                      <span>Total Gulungan</span>
+                      <span>Total Panjang</span>
+                      <span className="font-semibold text-white">{totalPanjangMeter} Meter</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-[#A3A19E]">
+                      <span>Jumlah Jenis Kain</span>
                       <span className="font-semibold text-white">{cartItems.length} Item</span>
                     </div>
+                    
                     <div className="flex items-baseline justify-between pt-2 border-t border-white/5">
                       <span className="text-xs text-[#A3A19E]">Subtotal</span>
                       <span className="text-xl font-black text-[#E5BA73]">Rp {subTotalSementara.toLocaleString('id-ID')}</span>
@@ -213,7 +216,6 @@ export default function CartPage() {
 
               </div>
             ) : (
-              // STEP 2: FORM CHECKOUT & INTERAKSI POP-UP DENGAN MIDTRANS SNAP SDK
               <div className="bg-[#12110F] p-6 rounded-2xl border border-white/5 shadow-2xl">
                 <CheckoutSection 
                   items={cartItems}
@@ -225,10 +227,8 @@ export default function CartPage() {
                 />
               </div>
             )}
-
           </div>
         )}
-
       </div>
     </div>
   );
