@@ -175,7 +175,7 @@ export default function Catalog() {
                     onClick={() => setSelectedProduct(prod)}
                     className="w-full py-2.5 bg-transparent border border-[#A3A19E]/20 text-xs font-semibold tracking-wider text-[#A3A19E] hover:text-[#E5BA73] hover:border-[#E5BA73] hover:bg-[#E5BA73]/5 rounded-lg transition-all duration-300 mt-auto"
                   >
-                    Lihat Detail
+                    Beli
                   </button>
                 </div>
 
