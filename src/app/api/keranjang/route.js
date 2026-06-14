@@ -30,29 +30,28 @@ export const GET = async () => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      // Log ini akan muncul di TERMINAL VS Code kamu
       console.error("=== SUPABASE ERROR IN GET CART ===", error);
       throw error;
     }
 
     return NextResponse.json({ data: data || [] }, { status: 200 });
   } catch (err) {
-    // Log ini membantu melacak jika ada crash code lain
     console.error("=== SERVER CRASH IN GET CART ===", err);
     return NextResponse.json({ message: err.message }, { status: 500 });
   }
 };
 
+// =====================================================
+// POST: Tambah item ke keranjang
+// =====================================================
 export const POST = async (request) => {
   try {
-    // Menyesuaikan dengan apa yang dikirim oleh Frontend
     const { gulungan_id, jumlah_order } = await request.json();
 
     if (!gulungan_id) {
       return NextResponse.json({ message: 'Gulungan ID wajib diisi' }, { status: 400 });
     }
 
-    // Insert data ke tabel cart (sesuai relasi di fungsi GET kamu)
     const { data, error } = await supabaseAdmin
       .from('cart')
       .insert({
@@ -74,6 +73,55 @@ export const POST = async (request) => {
 
   } catch (err) {
     console.error("=== SERVER CRASH IN POST CART ===", err);
+    return NextResponse.json({ message: err.message }, { status: 500 });
+  }
+};
+
+// =====================================================
+// DELETE: Hapus item dari keranjang (Fungsi Baru)
+// =====================================================
+export const DELETE = async (request) => {
+  try {
+    // 1. Coba ambil ID dari URL parameter (?id=xxx)
+    const { searchParams } = new URL(request.url);
+    let itemId = searchParams.get("id");
+
+    // 2. Jika tidak ada di URL, coba ambil dari Body JSON ({ id: xxx })
+    // Strategi ganda ini dipasang agar otomatis cocok dengan metode apa pun yang dipakai frontend Anda
+    if (!itemId) {
+      try {
+        const body = await request.json();
+        itemId = body.id || body.cartId || body.gulungan_id;
+      } catch (e) {
+        // Abaikan jika request tidak membawa body JSON
+      }
+    }
+
+    if (!itemId) {
+      console.error("[DELETE CART ERROR] Frontend tidak mengirimkan ID item yang akan dihapus.");
+      return NextResponse.json(
+        { message: "ID item wajib dikirim (bisa via query ?id= atau body JSON)" }, 
+        { status: 400 }
+      );
+    }
+
+    console.log(`=== MENCOBA HAPUS ITEM CART DENGAN ID: ${itemId} ===`);
+
+    // 3. Eksekusi penghapusan di tabel 'cart' menggunakan supabaseAdmin
+    const { error } = await supabaseAdmin
+      .from('cart')
+      .delete()
+      .eq('id', itemId);
+
+    if (error) {
+      console.error("=== SUPABASE ERROR IN DELETE CART ===", error);
+      return NextResponse.json({ message: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ message: 'Item berhasil dihapus dari keranjang' }, { status: 200 });
+
+  } catch (err) {
+    console.error("=== SERVER CRASH IN DELETE CART ===", err);
     return NextResponse.json({ message: err.message }, { status: 500 });
   }
 };
