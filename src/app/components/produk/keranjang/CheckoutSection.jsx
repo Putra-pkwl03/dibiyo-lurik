@@ -7,6 +7,29 @@ import { useRouter } from 'next/navigation';
 import Script from 'next/script';
 import { useCart } from '../../../context/CartContext'; 
 
+// ====================================================================
+// UTILITY: Generator Gradient CSS Lurik (Sama seperti di CartItem)
+// ====================================================================
+const generateLurikGradient = (stripes) => {
+  let gradientString = '';
+  let currentOffset = 0;
+
+  if (!stripes || stripes.length === 0) return { gradient: 'none', totalWidth: 0 };
+
+  stripes.forEach((stripe) => {
+    const startPoint = currentOffset;
+    const endPoint = currentOffset + stripe.thickness;
+    gradientString += `${stripe.color} ${startPoint}px, ${stripe.color} ${endPoint}px, `;
+    gradientString += `transparent ${endPoint}px, transparent ${endPoint + 2}px, `;
+    currentOffset = endPoint + 2; 
+  });
+
+  return {
+    gradient: `linear-gradient(90deg, ${gradientString.slice(0, -2)})`,
+    totalWidth: currentOffset
+  };
+};
+
 export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -28,9 +51,6 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
   const handleBayarMidtrans = async () => {
     if (items.length === 0) return;
 
-    // ====================================================================
-    // VALIDASI STATUS LOGIN USER
-    // ====================================================================
     if (!user) {
       Swal.fire({
         title: 'Autentikasi Diperlukan',
@@ -74,7 +94,7 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
                 items.map(item =>
                   fetch(`/api/keranjang?id=${item.id}`, {
                     method: 'DELETE',
-                  })
+                    })
                 )
               );
               console.log("=== SEMUA ITEM DI KERANJANG BERHASIL DIBERSIHKAN ===");
@@ -140,14 +160,12 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-sans text-[#F9F6F0]">
       
-      {/* Script Midtrans Snap Loader */}
       <Script 
         src="https://app.sandbox.midtrans.com/snap/snap.js" 
         data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
         strategy="lazyOnload"
       />
 
-      {/* Header Panel Ringkasan */}
       <div className="flex items-center justify-between pb-4 border-b border-[#E5BA73]/10">
         <h2 className="text-lg font-bold text-[#E5BA73] tracking-wide">Ringkasan Pembayaran (Check-out)</h2>
         <button 
@@ -165,33 +183,78 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
           const hargaKain = item.gulungan?.harga_per_meter || item.gulungan?.harga || 0;
           const meteran = item.input_panjang || item.gulungan?.panjang_sisa || 0;
 
-          // ====================================================================
-          // PENERAPAN FALLBACK MULTI-JALUR UNTUK GAMBAR & KODE PRODUK
-          // ====================================================================
-          const gambarKain = 
-            item.gambar_url || 
-            item.product?.gambar_url || 
-            item.produk?.gambar_url || 
-            item.gulungan?.produk?.gambar_url || 
-            item.gulungan?.gambar_url || 
-            '/placeholder-kain.jpg';
+          // Flag Deteksi Kustom
+          const isCustomItem = item.isCustom || item.gulungan?.nomor_gulungan === "CUSTOM";
 
           const kodeProduk = 
             item.kode_produk || 
             item.product?.kode_produk || 
             item.produk?.kode_produk || 
             item.gulungan?.produk?.kode_produk || 
-            "Lurik Premium";
+            (isCustomItem ? "Lurik Kustom" : "Lurik Premium");
+
+          // ====================================================================
+          // RENDER VISUAL ADAPTIF UNTUK CHECKOUT BOX
+          // ====================================================================
+          let miniVisual;
+
+          if (isCustomItem && item.gulungan?.configurasi) {
+            const { bgColor, patternDensity, stripes } = item.gulungan.configurasi;
+            const { gradient, totalWidth } = generateLurikGradient(stripes);
+            const ukuranKerapatanDinamis = (totalWidth * (patternDensity / 100)) || 20;
+
+            const patternStyle = {
+              backgroundColor: bgColor, 
+              backgroundImage: gradient,
+              backgroundSize: `${ukuranKerapatanDinamis}px 100%`,
+              maskImage: "url('/mockups/kain-gantung-mask.png')",
+              WebkitMaskImage: "url('/mockups/kain-gantung-mask.png')",
+              maskSize: 'contain',
+              WebkitMaskSize: 'contain',
+              maskRepeat: 'no-repeat',
+              maskPosition: 'center',
+            };
+
+            miniVisual = (
+              <div className="relative w-full h-full">
+                <div style={patternStyle} className="absolute inset-0 w-full h-full" />
+                <img 
+                  src="/mockups/kain-gantung-mask.png" 
+                  alt="Shading Kustom" 
+                  className="absolute inset-0 object-contain w-full h-full pointer-events-none mix-blend-multiply opacity-80" 
+                />
+              </div>
+            );
+          } else {
+            const gambarKain = 
+              item.gambar_url || 
+              item.product?.gambar_url || 
+              item.produk?.gambar_url || 
+              item.gulungan?.produk?.gambar_url || 
+              item.gulungan?.gambar_url || 
+              '/placeholder-kain.jpg';
+
+            miniVisual = (
+              <img 
+                src={gambarKain} 
+                className="object-cover w-full h-full opacity-80" 
+                alt={`Produk kain ${kodeProduk}`} 
+              />
+            );
+          }
 
           return (
             <div key={item.id} className="flex items-center gap-4 p-3 border bg-[#0A1715]/40 border-white/5 rounded-xl shadow-md text-xs">
-              <div className="w-24 h-24 overflow-hidden border rounded-lg bg-zinc-900 border-white/5 shrink-0">
-                <img 
-                  src={gambarKain} 
-                  className="object-cover w-full h-full opacity-80" 
-                  alt={`Produk kain ${kodeProduk}`} 
-                />
+              {/* Tempat Mini Visual */}
+              <div className="relative w-24 h-24 overflow-hidden border rounded-lg bg-zinc-900 border-white/5 shrink-0">
+                {miniVisual}
+                {isCustomItem && (
+                  <div className="absolute top-1.5 left-1.5 pb-1 bg-black/10">
+                    <span className="text-[8px] font-black bg-[#12110F]/90 text-[#E5BA73] border-[#E5BA73]/20 px-1 rounded">K</span>
+                  </div>
+                )}
               </div>
+
               <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
                 <div>
                   <p className="text-[12px] text-[#A3A19E] uppercase tracking-wider">Kode Kain</p>
@@ -199,7 +262,9 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
                 </div>
                 <div>
                   <p className="text-[12px] text-[#A3A19E] uppercase tracking-wider">No Gulungan</p>
-                  <p className="font-semibold text-[#E5BA73] text-[12px]">G-{item.gulungan?.nomor_gulungan || '-'}</p>
+                  <p className="font-semibold text-[#E5BA73] text-[12px]">
+                    {isCustomItem ? "-" : `G-${item.gulungan?.nomor_gulungan || '-'}`}
+                  </p>
                 </div>
                 <div>
                   <p className="text-[12px] text-[#A3A19E] uppercase tracking-wider">Panjang Potong</p>

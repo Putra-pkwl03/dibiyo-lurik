@@ -4,7 +4,8 @@
 export default function CustomizerSidebar({
   bgColor, setBgColor,                
   patternDensity, setPatternDensity,
-  stripes, setStripes                 
+  stripes, setStripes,
+  onOpenCartModal 
 }) {
 
   const colorPalette = [
@@ -16,23 +17,19 @@ export default function CustomizerSidebar({
     { hex: '#12110F', name: 'Deep Charcoal (Arang Hitam)' }
   ];
 
-  // Handler mengubah ketebalan spesifik satu garis berdasarkan ID-nya
   const updateStripeThickness = (id, newThickness) => {
     setStripes(stripes.map(s => s.id === id ? { ...s, thickness: Number(newThickness) } : s));
   };
 
-  // Handler mengubah warna spesifik satu garis berdasarkan ID-nya
   const updateStripeColor = (id, newColor) => {
     setStripes(stripes.map(s => s.id === id ? { ...s, color: newColor } : s));
   };
 
-  // Tambah baris benang baru ke dalam susunan kain
   const addStripe = () => {
     const newId = stripes.length > 0 ? Math.max(...stripes.map(s => s.id)) + 1 : 1;
     setStripes([...stripes, { id: newId, thickness: 3, color: '#E5BA73' }]);
   };
 
-  // Hapus baris benang dari susunan kain
   const removeStripe = (id) => {
     if (stripes.length <= 1) return; 
     setStripes(stripes.filter(s => s.id !== id));
@@ -53,8 +50,6 @@ export default function CustomizerSidebar({
 
         {/* ================= BAGIAN A: KONTROL KAIN UTAMA ================= */}
         <div className="bg-[#12110F] border border-white/5 rounded-2xl p-4 space-y-4">
-          
-          {/* 1. EDIT WARNA BACKGROUND */}
           <div className="space-y-2">
             <span className="text-xs font-bold tracking-widest text-[#E5BA73] block">WARNA DASAR KAIN (LATAR BELAKANG)</span>
             <div className="flex flex-wrap gap-2">
@@ -72,7 +67,6 @@ export default function CustomizerSidebar({
             </div>
           </div>
 
-          {/* 2. UKURAN REPEAT KAIN (ZOOOMING / KERAPATAN) */}
           <div className="space-y-1">
             <div className="flex justify-between items-center text-xs font-bold text-[#A3A19E]">
               <span>SKALA KERAPATAN POLA TENUN</span>
@@ -114,7 +108,6 @@ export default function CustomizerSidebar({
                   )}
                 </div>
 
-                {/* Kontrol Ketebalan Garis Tertentu */}
                 <div className="flex items-center gap-4">
                   <div className="flex-1 space-y-1">
                     <div className="flex justify-between text-[10px] text-[#A3A19E]/70 font-semibold">
@@ -129,7 +122,6 @@ export default function CustomizerSidebar({
                     />
                   </div>
 
-                  {/* Kontrol Warna Garis Tertentu */}
                   <div className="flex flex-col items-center space-y-1">
                     <span className="text-[9px] text-[#A3A19E]/70 font-semibold">Warna</span>
                     <div className="flex gap-1 p-1 border rounded-lg bg-black/40 border-white/5">
@@ -154,9 +146,12 @@ export default function CustomizerSidebar({
 
       </div>
 
-      {/* Section Bawah: CTA */}
+      {/* Section Bawah: CTA (SEKARANG MEMBUKA MODAL SPESIFIKASI) */}
       <div className="pt-4 mt-4 border-t border-white/5">
-        <button className="w-full py-4 bg-[#E5BA73] text-[#0A1715] hover:bg-[#F9F6F0] transition-all duration-300 rounded-xl font-bold text-xs tracking-widest uppercase flex items-center justify-center gap-2 shadow-lg shadow-[#E5BA73]/5">
+        <button 
+          onClick={onOpenCartModal} // Eksekusi prop callback pembuka modal kustom di sini
+          className="w-full py-4 bg-[#E5BA73] text-[#0A1715] hover:bg-[#F9F6F0] transition-all duration-300 rounded-xl font-bold text-xs tracking-widest uppercase flex items-center justify-center gap-2 shadow-lg shadow-[#E5BA73]/5"
+        >
           Masukkan Kain Kustom Ke Keranjang
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"/>

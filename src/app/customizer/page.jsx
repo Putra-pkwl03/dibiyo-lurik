@@ -1,15 +1,20 @@
-// src/app/customizer/page.jsx
 "use client"
 
 import { useState } from 'react'
 import CustomizerCanvas from '../components/home/custom/CustomizerCanvas' 
 import CustomizerSidebar from '../components/home/custom/CustomizerSidebar'
+import CustomCartModal from '../components/home/custom/CustomCartModal'
+import { useCart } from '../context/CartContext' 
+import Swal from 'sweetalert2'
 
 export default function CustomizerPage() {
+  const { addToCart } = useCart(); 
 
   const [stripeThickness, setStripeThickness] = useState(4)
   const [activeColor, setActiveColor] = useState('gold')
   const [previewMode, setPreviewMode] = useState('fabric')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
   const DEFAULT_BG_COLOR = '#132237'
   const DEFAULT_DENSITY = 80
   const DEFAULT_STRIPES = [
@@ -27,10 +32,50 @@ export default function CustomizerPage() {
     setPatternDensity(DEFAULT_DENSITY)
     setStripes(DEFAULT_STRIPES)
     setPreviewMode('fabric') 
-    
     setStripeThickness(4)
     setActiveColor('gold')
   }
+
+const handleAddToCartConfirm = (specs) => {
+  setIsModalOpen(false);
+
+  const productData = {
+    kode_produk: "Lurik Desain Kustom",
+    gambar_url: '/placeholder-kain.jpg',
+    isCustom: true 
+  };
+
+  const gulunganData = {
+    id: `CUSTOM-${Date.now()}`,
+    nomor_gulungan: "CUSTOM",
+    lebar: specs.lebar,
+    panjang_sisa: 999, 
+    harga_per_meter: specs.hargaPerMeter,
+    harga: specs.hargaPerMeter,
+    configurasi: { 
+      bgColor,
+      patternDensity,
+      stripes
+    }
+  };
+
+  // Kuantitas panjang yang dibeli dimasukkan ke parameter ke-3 (qty)
+  const qty = specs.panjang; 
+
+  if (addToCart) {
+    // 🔥 Panggil dengan 3 parameter: (product, gulungan, qty)
+    addToCart(productData, gulunganData, qty);
+    
+    Swal.fire({
+      title: 'Berhasil!',
+      text: 'Kain tenun kustom Anda sukses dimasukkan ke dalam keranjang.',
+      icon: 'success',
+      background: '#1A1917',
+      color: '#F9F6F0',
+      confirmButtonColor: '#E5BA73'
+    });
+  }
+}
 
   return (
     <main className="min-h-screen bg-[#0A1715] text-[#F9F6F0] pt-28 pb-16 px-4 sm:px-6 lg:px-8">
@@ -44,6 +89,7 @@ export default function CustomizerPage() {
           setPreviewMode={setPreviewMode}
           onReset={handleResetAll} 
         />
+        
         <CustomizerSidebar 
           bgColor={bgColor}
           setBgColor={setBgColor}
@@ -51,9 +97,22 @@ export default function CustomizerPage() {
           setPatternDensity={setPatternDensity}
           stripes={stripes}
           setStripes={setStripes}
+          // 🔥 Ganti pemanggilan fungsi capture yang rumit dengan membuka modal secara langsung (instan!)
+          onOpenCartModal={() => setIsModalOpen(true)} 
         />
-
       </div>
+
+      <CustomCartModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleAddToCartConfirm}
+        // 🔥 Oper data kain asli ke dalam prop customProperties modal
+        customProperties={{
+          bgColor,
+          patternDensity,
+          stripes
+        }}
+      />
     </main>
   )
 }
