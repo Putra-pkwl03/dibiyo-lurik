@@ -5,12 +5,14 @@ import { CornerDownLeft, Loader2, CreditCard } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useRouter } from 'next/navigation';
 import Script from 'next/script';
+import { useCart } from '../../../context/CartContext'; 
 
 export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  
+  const { user } = useCart(); 
 
-  // 1. Kalkulasi Total Harga Kain Berdasarkan Input Kuantitas Pelanggan
   const subTotal = useMemo(() => {
     return items.reduce((acc, item) => {
       const panjangDiorder = item.input_panjang || item.gulungan?.panjang_sisa || 0;
@@ -20,16 +22,38 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
   }, [items]);
 
   const total = useMemo(() => {
-    return subTotal; // Sisi pelanggan bersih tanpa manipulasi diskon manual kasir
+    return subTotal; 
   }, [subTotal]);
 
-  // 2. Handler Jembatan Pembayaran Midtrans Snap SDK
   const handleBayarMidtrans = async () => {
     if (items.length === 0) return;
+
+    // ====================================================================
+    // VALIDASI STATUS LOGIN USER
+    // ====================================================================
+    if (!user) {
+      Swal.fire({
+        title: 'Autentikasi Diperlukan',
+        text: 'Anda harus masuk (login) ke akun Anda terlebih dahulu sebelum dapat melanjutkan transaksi pembayaran aman.',
+        icon: 'info',
+        background: '#1A1917',
+        color: '#F9F6F0',
+        showCancelButton: true,
+        confirmButtonColor: '#E5BA73',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Masuk Sekarang',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          router.push('/auth/login');
+        }
+      });
+      return; 
+    }
+
     setLoading(true);
     
     try {
-      // Minta token transaksi dari API internal secure checkout
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,11 +66,9 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
       const checkoutData = await res.json();
       if (!res.ok) throw new Error(checkoutData.message || "Gagal inisialisasi pembayaran.");
 
-      // Luncurkan Pop-up Midtrans Snap directly di layar pelanggan
       if (window.snap) {
         window.snap.pay(checkoutData.token, {
           onSuccess: async function (result) {
-            // PERBAIKAN UTAMA: Bersihkan seluruh item terbayar dari DB secara paralel (Sinkron dengan API baru)
             try {
               await Promise.all(
                 items.map(item =>
@@ -60,7 +82,6 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
               console.error("Gagal membersihkan keranjang setelah pembayaran:", err);
             }
 
-            // Semburkan sinyal event global untuk mereset counter angka di badge Navbar
             window.dispatchEvent(new CustomEvent("updateCartCount", { detail: { count: -items.length } }));
 
             Swal.fire({
@@ -72,7 +93,7 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
               confirmButtonColor: '#E5BA73'
             }).then(() => {
               if (onOrderSuccess) onOrderSuccess();
-              router.push('/produk'); // Arahkan kembali ke katalog kain
+              router.push('/produk'); 
             });
           },
           onPending: function (result) {
@@ -117,7 +138,7 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 font-sans text-[#F9F6F0]">
+    <div className="max-w-7xl mx-auto space-y-6 font-sans text-[#F9F6F0]">
       
       {/* Script Midtrans Snap Loader */}
       <Script 
@@ -143,19 +164,38 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
         {items.map((item) => {
           const hargaKain = item.gulungan?.harga_per_meter || item.gulungan?.harga || 0;
           const meteran = item.input_panjang || item.gulungan?.panjang_sisa || 0;
+
+          // ====================================================================
+          // PENERAPAN FALLBACK MULTI-JALUR UNTUK GAMBAR & KODE PRODUK
+          // ====================================================================
+          const gambarKain = 
+            item.gambar_url || 
+            item.product?.gambar_url || 
+            item.produk?.gambar_url || 
+            item.gulungan?.produk?.gambar_url || 
+            item.gulungan?.gambar_url || 
+            '/placeholder-kain.jpg';
+
+          const kodeProduk = 
+            item.kode_produk || 
+            item.product?.kode_produk || 
+            item.produk?.kode_produk || 
+            item.gulungan?.produk?.kode_produk || 
+            "Lurik Premium";
+
           return (
             <div key={item.id} className="flex items-center gap-4 p-3 border bg-[#0A1715]/40 border-white/5 rounded-xl shadow-md text-xs">
               <div className="w-24 h-24 overflow-hidden border rounded-lg bg-zinc-900 border-white/5 shrink-0">
                 <img 
-                  src={item.gulungan?.produk?.gambar_url || '/placeholder-kain.jpg'} 
+                  src={gambarKain} 
                   className="object-cover w-full h-full opacity-80" 
-                  alt={`Produk kain ${item.gulungan?.produk?.kode_produk || ''}`} 
+                  alt={`Produk kain ${kodeProduk}`} 
                 />
               </div>
               <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
                 <div>
                   <p className="text-[12px] text-[#A3A19E] uppercase tracking-wider">Kode Kain</p>
-                  <p className="font-bold text-[#F9F6F0] truncate text-[10px]">{item.gulungan?.produk?.kode_produk || 'Lurik Premium'}</p>
+                  <p className="font-bold text-[#F9F6F0] truncate text-[10px]">{kodeProduk}</p>
                 </div>
                 <div>
                   <p className="text-[12px] text-[#A3A19E] uppercase tracking-wider">No Gulungan</p>
@@ -187,7 +227,6 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
         </div>
       </div>
 
-      {/* Button Secure Gateway */}
       <button 
         onClick={handleBayarMidtrans}
         disabled={loading || items.length === 0}
@@ -195,7 +234,7 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
       >
         {loading ? (
           <>
-            <Loader2 className="animate-spin" size={14} /> Membuka Gerbang Aman Midtrans...
+            <Loader2 className="animate-spin" size={14} /> Membuka Gerbang Pembayaran...
           </>
         ) : (
           <>

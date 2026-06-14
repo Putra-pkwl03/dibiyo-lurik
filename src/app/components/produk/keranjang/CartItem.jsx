@@ -14,19 +14,15 @@ export default function CartItem({ item, onChange, onRemove }) {
   const gambarKain = item.product?.gambar_url || item.gulungan?.produk?.gambar_url || '/placeholder-kain.jpg';
   const kodeProduk = item.product?.kode_produk || item.gulungan?.produk?.kode_produk || "Kain Lurik";
   
-  // Mengantisipasi perbedaan penamaan field harga di database
   const hargaPerMeter = item.gulungan?.harga_per_meter || item.gulungan?.harga || 0; 
-
-  // Rumus total harga item kain
   const totalHarga = (item.input_panjang || 0) * hargaPerMeter;
 
   return (
     <div className="bg-[#0A1715]/60 p-3 rounded-xl flex flex-col sm:flex-row items-center gap-4 shadow-md border border-white/5 transition-all hover:border-[#E5BA73]/20">
       
-      {/* Gambar Mini Status Gulungan */}
       <div className="relative flex items-center justify-center w-full h-24 overflow-hidden border rounded-lg sm:w-28 shrink-0 border-white/5 bg-zinc-900">
         <img
-          src={gambarKain} // <-- Menggunakan variabel aman hasil fallback
+          src={gambarKain} 
           className="object-cover w-full h-full opacity-70"
           alt={`Gulungan kain lurik ${kodeProduk}`}
         />

@@ -1,4 +1,3 @@
-// src/app/components/home/Navbar.jsx
 "use client"
 
 import Link from 'next/link'
@@ -21,27 +20,37 @@ export default function Navbar() {
   // STATE JUMLAH ITEM KERANJANG (Bukan total panjang/qty)
   const [cartCount, setCartCount] = useState(0)
 
-  // 1. Ambil Profile & Hitung Jumlah Baris/Item Keranjang Awal
+  // 1. Ambil Profile & Hitung Jumlah Baris/Item Keranjang Awal (Mendukung Guest & Login)
   useEffect(() => {
     async function fetchInitialData() {
       try {
         const resProfile = await fetch('/api/auth/profile', { cache: 'no-store' })
+        
         if (resProfile.ok) {
           const jsonProfile = await resProfile.json()
           setUser(jsonProfile.data)
 
-          // Jika user login, ambil data keranjang
+          // Jika user login, ambil data keranjang dari database
           const resCart = await fetch('/api/keranjang', { cache: 'no-store' })
           if (resCart.ok) {
             const jsonCart = await resCart.json()
             
-            // 🔥 PERBAIKAN: Menghitung jumlah item/baris unik, bukan total meter
+            // Menghitung jumlah item/baris unik, bukan total meter
             const totalItems = jsonCart.data?.length ?? 0
             setCartCount(totalItems)
           }
         } else {
+          // ====================================================================
+          // JALUR GUEST: Jika tidak login, hitung item unik dari Local Storage
+          // ====================================================================
           setUser(null)
-          setCartCount(0)
+          const localData = localStorage.getItem("biyo_guest_cart")
+          if (localData) {
+            const parsedCart = JSON.parse(localData) || []
+            setCartCount(parsedCart.length)
+          } else {
+            setCartCount(0)
+          }
         }
       } catch (err) {
         console.error("Gagal memuat data awal navbar:", err)
@@ -51,13 +60,12 @@ export default function Navbar() {
       }
     }
     fetchInitialData()
-  }, [pathname])
+  }, [pathname]) // Memicu pengecekan ulang setiap kali rute halaman (pathname) berubah
 
   // 2. Pasang Event Listener saat Ada Item Baru Ditambahkan
   useEffect(() => {
     const handleCartUpdate = (event) => {
-      // 🔥 PERBAIKAN: Jika item baru ditambahkan, jumlah item di navbar cukup bertambah 1 
-      // (Bisa juga disesuaikan jika item yang sama ditambahkan lagi, tergantung perilaku backend kamu)
+      // Event listener kustom untuk memanipulasi badge counter secara fleksibel jika diperlukan
       const addedItemCount = event.detail?.itemCount || 1
       setCartCount((prevCount) => prevCount + addedItemCount)
     }
@@ -68,7 +76,7 @@ export default function Navbar() {
     }
   }, [])
 
- const handleLogout = async () => {
+  const handleLogout = async () => {
     setShowUserDropdown(false)
     setIsOpen(false)
     Swal.fire({
@@ -129,6 +137,7 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0A1715]/80 backdrop-blur-lg border-b border-[#E5BA73]/10">
+      {/* KUNCI PERBAIKAN LEBAR: Mengganti px-2 ke px-4 agar lurus simetris dengan halaman utama */}
       <div className="px-2 mx-auto max-w-7xl sm:px-4 lg:px-6">
         <div className="flex items-center justify-between h-20">
           
