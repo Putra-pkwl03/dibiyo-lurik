@@ -1,0 +1,171 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+html {
+  height: 100%;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
+  }
+}
+
+/* Styling NProgress Modern */
+#nprogress .bar {
+  /* Menggunakan gradient agar terlihat terang (Biru ke Putih) */
+  background: linear-gradient(to right, #3b82f6, #ffffff, #94a3b8) !important;
+  height: 4px !important;
+  /* Sedikit lebih tebal agar lebih terlihat */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 9999;
+}
+
+/* Mengatur efek glow pada ujung bar agar terlihat menyala */
+#nprogress .peg {
+  display: block;
+  position: absolute;
+  right: 0px;
+  width: 100px;
+  height: 100%;
+  box-shadow: 0 0 10px #3b82f6, 0 0 5px #3b82f6 !important;
+  opacity: 1.0;
+  transform: rotate(3deg) translate(0px, -4px);
+}
+
+/* Opsional: Jika ingin spinner-nya juga diaktifkan, warnanya ikut biru */
+#nprogress .spinner-icon {
+  border-top-color: #3b82f6 !important;
+  border-left-color: #3b82f6 !important;
+}
+
+/* Netralkan latar gelap autofill Chrome/Edge pada input */
+input.nominal-input:-webkit-autofill,
+input.nominal-input:-webkit-autofill:hover,
+input.nominal-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #111827;
+  /* teks gelap terbaca */
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+  /* paksa latar putih */
+  box-shadow: 0 0 0 1000px #ffffff inset;
+  caret-color: #111827;
+  transition: background-color 9999s ease-in-out 0s;
+  /* tahan override autofill */
+}
+
+/* ==========================================================================
+   KUSTOMISASI REACT DATEPICKER (THEME CONCEPT: NAVY, CYAN & GOLD)
+   ========================================================================== */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+/* Box Utama Kalender */
+.react-datepicker {
+  border: 1px solid #1A335A !important;
+  background: #FDFDFD !important;
+  font-family: inherit;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px !important;
+}
+
+/* Bagian Atas / Header Kalender */
+.react-datepicker__header {
+  background: #1A335A !important;
+  border-bottom: 1px solid #1A335A !important;
+  border-top-left-radius: 7px !important;
+  border-top-right-radius: 7px !important;
+  padding-top: 10px !important;
+}
+
+/* Nama Bulan & Hari di Header */
+.react-datepicker__current-month,
+.react-datepicker__day-name {
+  color: #FFFFFF !important;
+  font-weight: 600;
+}
+
+/* Angka Tanggal Biasa */
+.react-datepicker__day {
+  color: #1A335A !important;
+  font-weight: 600;
+}
+
+/* Efek Hover Tanggal */
+.react-datepicker__day:hover {
+  background-color: rgba(90, 227, 237, 0.25) !important;
+  color: #1A335A !important;
+  border-radius: 4px;
+}
+
+/* Tanggal yang Sedang Dipilih (Gold Accent) */
+.react-datepicker__day--selected {
+  background: #F2B600 !important;
+  color: #FFFFFF !important;
+  border-radius: 4px !important;
+}
+
+/* Tanggal yang Terpilih via Keyboard */
+.react-datepicker__day--keyboard-selected {
+  background: rgba(90, 227, 237, 0.4) !important;
+  color: #1A335A !important;
+}
+
+/* Navigasi Panah Bulan */
+.react-datepicker__navigation-icon::before {
+  border-color: #FFFFFF !important;
+}
+
+/* Sinkronisasi warna Teks Input */
+.react-datepicker__input-container input {
+  color: #1A335A !important;
+  font-weight: bold;
+}
+
+.react-datepicker__input-container input::placeholder {
+  color: rgba(26, 51, 90, 0.4) !important;
+}
