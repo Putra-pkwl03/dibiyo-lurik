@@ -1,4 +1,6 @@
 import Image from 'next/image';
+import Footer from '../components/home/Footer.jsx'
+
 
 const DATA_PRODUKSI = [
   {
@@ -40,7 +42,7 @@ const DATA_PRODUKSI = [
 
 export default function ProduksiPage() {
   return (
-    <div className="bg-[#0b1311] text-[#f3f4f6] min-h-screen py-20 px-4 sm:px-6 lg:px-8">
+    <div className="bg-[#0b1311] text-[#f3f4f6] min-h-screen py-40 px-4 sm:px-6 lg:px-8">
       {/* 1. Header Section */}
       <div className="max-w-4xl mx-auto text-center mb-24">
         <h1 className="text-3xl sm:text-4xl font-bold text-[#d9a05b] mb-4 uppercase tracking-wider">
@@ -103,6 +105,7 @@ export default function ProduksiPage() {
           );
         })}
       </div>
+      <Footer />
     </div>
   );
 }
