@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
+import supabaseAdmin from '@/lib/supabase-admin'; // 1. ✨ TAMBAHAN: Import Supabase Admin
+import crypto from 'crypto';
 
 export async function POST(request) {
   try {
-    const { items } = await request.json();
+    // 2. ✨ TAMBAHAN: Ambil user_id dari body yang dikirim frontend
+    const { items, user_id } = await request.json();
 
     if (!items || items.length === 0) {
       return NextResponse.json({ message: "Keranjang kosong" }, { status: 400 });
     }
 
-    // 1. Ambil Server Key & bersihkan dari spasi/baris baru liar dengan .trim()
+    if (!user_id) {
+      return NextResponse.json({ message: "User ID tidak ditemukan atau tidak valid" }, { status: 400 });
+    }
+
+    // Ambil Server Key & bersihkan dari spasi/baris baru liar dengan .trim()
     const rawServerKey = process.env.MIDTRANS_SERVER_KEY;
     const serverKey = rawServerKey ? rawServerKey.trim() : null;
 
@@ -20,15 +27,10 @@ export async function POST(request) {
       );
     }
 
-    // INSPEKSI KEAMANAN: Tampilkan data key di terminal backend
-    console.log("=== VERIFIKASI KEY DI TERMINAL ===");
-    console.log("Awalan Key:", serverKey.substring(0, 14));
-    console.log("Total Karakter:", serverKey.length);
-
-    // Proses konversi basic auth token Midtrans (Username: ServerKey, Password: Di-kosongkan)
+    // Proses konversi basic auth token Midtrans
     const encodedSecret = Buffer.from(serverKey + ":").toString("base64");
 
-    // 2. Buat ID Order unik khusus untuk transaksi ini
+    // Buat ID Order unik khusus untuk transaksi ini
     const orderId = `DIBIYO-${Date.now()}`;
 
     // 3. Petakan item belanja ke format yang dikenali Midtrans
@@ -61,7 +63,7 @@ export async function POST(request) {
       },
     };
 
-    // 🔒 KUNCI LANGSUNG KE URL SANDBOX (Menghindari salah deteksi 401)
+    // KUNCI LANGSUNG KE URL SANDBOX
     const midtransApiUrl = "https://app.sandbox.midtrans.com/snap/v1/transactions";
 
     // 6. Tembak ke API Midtrans Sandbox
@@ -79,12 +81,30 @@ export async function POST(request) {
 
     if (!response.ok) {
       console.error("=== [MIDTRANS REJECTED TRANSMISSION] ===");
-      console.error("Status Code Response:", response.status);
       console.error("Detail Error dari Midtrans:", data);
-      console.error("========================================");
-      
       throw new Error(data.error_messages?.[0] || data.status_message || "Akses ditolak oleh Midtrans.");
     }
+
+    // 7. ✨ TAMBAHAN UTAMA: Simpan data pesanan ke dalam tabel transaksi Supabase
+    // Disimpan di sini karena data.token dan orderId sudah terkonfirmasi valid oleh Midtrans
+    const { error: dbError } = await supabaseAdmin
+      .from('transaksi')
+      .insert({
+        order_id: orderId,
+        user_id: user_id,
+        total_nominal: totalGrossAmount,
+        status_transaksi: 'pending',
+        snap_token: data.token,
+        items_transaksi: items // Kita simpan array 'items' asli agar file webhook Anda nanti bisa mendeteksi produk_id / gulungan_id dengan lancar!
+      });
+
+    if (dbError) {
+      console.error("=== [SUPABASE INSERT TRANSACTION FAILED] ===");
+      console.error(dbError);
+      throw new Error(`Gagal mencatat transaksi ke database: ${dbError.message}`);
+    }
+
+    console.log(`[DATABASE OK] Transaksi ${orderId} berhasil dicatat di Supabase.`);
 
     return NextResponse.json({ 
       token: data.token, 

@@ -28,7 +28,7 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [snapToken, setSnapToken] = useState(null);
-  const [isLoadingToken, setIsLoadingToken] = useState(false); // State baru untuk handling loading internal modal
+  const [isLoadingToken, setIsLoadingToken] = useState(false); 
   
   const router = useRouter();
   const { user } = useCart(); 
@@ -58,7 +58,8 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
         const profileRes = await fetch('/api/auth/profile');
         if (profileRes.ok) {
           const profileData = await profileRes.json();
-          currentUser = profileData.user || profileData; 
+          // ✨ PERBAIKAN 1: Tambahkan profileData.data agar cocok dengan respon API profile terbaru
+          currentUser = profileData.user || profileData.data || profileData; 
         }
       } catch (error) {
         console.error("Gagal melakukan verifikasi session otomatis:", error);
@@ -66,7 +67,6 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
     }
 
     if (!currentUser) {
-      // Tutup kembali jika ternyata user tidak sah/belum login
       setIsModalOpen(false);
       setIsLoadingToken(false);
       setLoading(false);
@@ -90,23 +90,27 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
       return; 
     }
 
+    // Ekstraksi ID User secara aman dari berbagai kemungkinan struktur objek auth/profile Anda
+    const targetUserId = currentUser.id || currentUser.user?.id || currentUser.data?.id;
+
     try {
+      // ✨ PERBAIKAN 2: Kirimkan user_id ke dalam body request API Checkout
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: items,
           totalNet: total,
+          user_id: targetUserId, 
         }),
       });
 
       const checkoutData = await res.json();
       if (!res.ok) throw new Error(checkoutData.message || "Gagal inisialisasi pembayaran.");
 
-      // Token sukses didapatkan, kirim ke modal untuk menghilangkan skeleton loader
       setSnapToken(checkoutData.token);
     } catch (err) {
-      setIsModalOpen(false); // Tutup modal jika API checkout error
+      setIsModalOpen(false); 
       Swal.fire({
         title: 'Gagal Memproses Pesanan',
         text: err.message,
@@ -161,8 +165,8 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
           }
 
           return (
-            <div key={item.id} className="flex items-center gap-4 p-3 border bg-[#ffffff] border-white/5 rounded-xl shadow-md text-xs">
 
+            <div key={item.id} className="flex items-center gap-4 p-3 border bg-[#ffffff] border-white/5 rounded-xl shadow-md text-xs">
               <div className="relative w-24 h-24 overflow-hidden border rounded-lg bg-zinc-900 border-white/5 shrink-0">
                 {miniVisual}
               </div>
@@ -171,7 +175,6 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
                 <div><p className="text-[12px] text-[#000000]">No Gulungan</p><p className="font-semibold text-[#E5BA73] text-[12px]">{isCustomItem ? "-" : `G-${item.gulungan?.nomor_gulungan || '-'}`}</p></div>
                 <div><p className="text-[12px] text-[#000000]">Panjang Potong</p><p className="font-bold text-[#F9F6F0]/90 text-[12px]">{meteran} meter</p></div>
                 <div className="text-right"><p className="text-[12px] text-[#A3A19E]">Subtotal</p><p className="font-black text-[#E5BA73] text-[12px]">Rp{(meteran * hargaKain).toLocaleString('id-ID')}</p></div>
-  
               </div>
             </div>
           );
@@ -188,6 +191,7 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
       <button 
         onClick={handleBayarMidtrans}
         disabled={loading || items.length === 0}
+
         className="flex items-center justify-center w-full gap-2 py-3.5 text-xs font-bold uppercase tracking-wider transition-all text-[#ffffff] bg-[#635032] hover:bg-[#d4982f] rounded-xl shadow-xl disabled:bg-white/5 disabled:text-white/20"
 
       >
@@ -201,7 +205,7 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
       <ModalMidtrans
         isOpen={isModalOpen}
         snapToken={snapToken}
-        isLoadingToken={isLoadingToken} // Oper state loading ke komponen modal
+        isLoadingToken={isLoadingToken} 
         onClose={() => setIsModalOpen(false)}
         onSuccess={async (result) => {
           setIsModalOpen(false);

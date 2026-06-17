@@ -29,19 +29,19 @@ export async function GET() {
     });
   }
 
-  // 4. Ambil user setelah sesi dipaksa
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  // 4. ✨ PERBAIKAN: Gunakan getUser() untuk verifikasi data otentik langsung ke server auth
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
   
-  if (!session || !session.user) {
-    console.error('Session Error:', sessionError);
+  if (!user) {
+    console.error('Auth User Error:', userError);
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // 5. Query profil user
+  // 5. Query profil user berdasarkan user.id yang aman
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .maybeSingle();
 
   if (error) {
@@ -80,10 +80,11 @@ export async function PATCH(request) {
     });
   }
 
-  // 4. Ambil session untuk verifikasi user
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  // 4. ✨ PERBAIKAN: Gunakan getUser() untuk verifikasi user sebelum mengubah data
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
   
-  if (!session || !session.user) {
+  if (!user) {
+    console.error('Auth User Error:', userError);
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -96,7 +97,7 @@ export async function PATCH(request) {
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ username: username.trim() })
-        .eq('id', session.user.id);
+        .eq('id', user.id);
       
       if (profileError) throw profileError;
     }
