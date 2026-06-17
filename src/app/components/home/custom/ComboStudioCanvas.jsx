@@ -308,27 +308,6 @@ export default function ComboStudioCanvas({
         </div>
       </div>
 
-      {previewView === 'setelan' && (
-        <div className="absolute top-20 right-6 z-20 flex flex-col gap-2 items-end bg-[#adadab44]/80 p-3 rounded-xl border border-white/5 backdrop-blur-md">
-          <div className="flex gap-1 bg-white p-0.5 rounded-lg border border-white/5">
-            <button 
-              type="button"
-              onClick={() => setSubBawahan('kain')}
-              className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ${subBawahan === 'kain' ? 'bg-[#E5BA73] text-[#0A1715] font-bold' : 'text-[#A3A19E]'}`}
-            >
-              + Lipatan Kain
-            </button>
-            <button 
-              type="button"
-              onClick={() => setSubBawahan('celana')}
-              className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ${subBawahan === 'celana' ? 'bg-[#E5BA73] text-[#0A1715] font-bold' : 'text-[#A3A19E]'}`}
-            >
-              + Celana Hitam
-            </button>
-          </div>
-        </div>
-      )}
-
       {isLoading && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black/70 backdrop-blur-sm rounded-2xl">
           <Loader2 className="animate-spin text-[#E5BA73]" size={32} />

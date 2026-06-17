@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link' 
 import CustomizerCanvas from '../components/home/custom/CustomizerCanvas' 
 import CustomizerSidebar from '../components/home/custom/CustomizerSidebar'
-import ComboStudioSidebar from '../components/home/custom/ComboStudioSidebar' // Pastikan ini diimport
+import ComboStudioSidebar from '../components/home/custom/ComboStudioSidebar' 
 import CustomCartModal from '../components/home/custom/CustomCartModal'
 import ComboStudioCanvas from '../components/home/custom/ComboStudioCanvas'
 
@@ -31,14 +31,12 @@ export default function CustomizerPage() {
   const [previewMode, setPreviewMode] = useState('fabric')
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  // 🎨 PENYESUAIAN STATE DEFAULT SESUAI GAMBAR UI (Light Mode & Palet Tenun)
-  // Berdasarkan gambar: latar belakang kain dominan hijau zaitun/lumut dengan garis emas & cokelat
-  const DEFAULT_BG_COLOR = '#53593B' // Hijau Zaitun/Lumut Tua (Olive Green)
-  const DEFAULT_DENSITY = 86        // Sesuai nilai slider di gambar: 86%
+  const DEFAULT_BG_COLOR = '#53593B' 
+  const DEFAULT_DENSITY = 86        
   const DEFAULT_STRIPES = [
-    { id: 1, thickness: 4, color: '#E5BA73' }, // Denang Garis Slang #1 (Emas/Gold)
-    { id: 2, thickness: 2, color: '#4A3429' }, // Renang Garis Slang #2 (Cokelat Tua)
-    { id: 3, thickness: 6, color: '#2C3E50' }, // Denang Garis Slang #3 (Navy/Gelap)
+    { id: 1, thickness: 4, color: '#E5BA73' }, 
+    { id: 2, thickness: 2, color: '#4A3429' }, 
+    { id: 3, thickness: 6, color: '#2C3E50' }, 
   ]
 
   // ==========================================

@@ -9,7 +9,7 @@ import { useRealtime } from '@upstash/realtime/client'
 import { 
   LayoutDashboard, Package, ShoppingCart, 
   Database, FileText, User, LogOut, ChevronDown, ClipboardList,
-  Layers, Clock7, X 
+  Layers, Clock7, X, BaggageClaim
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Swal from 'sweetalert2';
@@ -219,6 +219,7 @@ export default function Sidebar() {
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/dashboard', roles: ['kepala_produksi', 'cs', 'customer_service', 'owner'] },
     { name: 'Order', icon: <FileText size={20} />, path: '/dashboard/cs/order', roles: ['cs', 'customer_service'] },
     { name: 'Keranjang', icon: <ShoppingCart size={20} />, path: '/dashboard/cs/keranjang', roles: ['cs', 'customer_service'], hasBadge: true },
+    { name: 'Pesanan', icon: <BaggageClaim size={20} />, path: '/dashboard/cs/pesanan', roles: ['cs', 'customer_service'] },
     { 
       name: 'Master Data', 
       icon: <Database size={20} />, 

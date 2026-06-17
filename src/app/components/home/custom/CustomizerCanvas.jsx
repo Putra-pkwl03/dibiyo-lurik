@@ -152,26 +152,7 @@ export default function CustomizerCanvas({
         </span>
       </div>
 
-      {/* ================= PANEL PILIHAN KHUSUS MODE SETELAN ================= */}
-      {previewMode === 'outfit' && (
-        <div className="absolute top-20 right-6 z-20 flex flex-col gap-2 items-end bg-[#adadab44] p-3 rounded-xl border border-white/5 backdrop-blur-md animate-fade-in">
-          <div className="flex gap-1 bg-white p-0.5 rounded-lg border border-white/5">
-            <button 
-              onClick={() => setSubBawahan('kain')}
-              className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ${subBawahan === 'kain' ? 'bg-[#E5BA73] text-[#0A1715] font-bold' : 'text-[#A3A19E]'}`}
-            >
-              + Lipatan Kain
-            </button>
-            <button 
-              onClick={() => setSubBawahan('celana')}
-              className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ${subBawahan === 'celana' ? 'bg-[#E5BA73] text-[#0A1715] font-bold' : 'text-[#A3A19E]'}`}
-            >
-              + Celana Hitam
-            </button>
-          </div>
-        </div>
-      )}
-
+      
       {/* 2. AREA PREVIEW KANVAS UTAMA */}
       <div ref={canvasRef} className="w-full h-full mt-10 rounded-2xl shadow-inner relative overflow-hidden flex items-center justify-center border border-white/5 bg-[#9e9d9b44]">
         
@@ -260,11 +241,7 @@ export default function CustomizerCanvas({
                           }} 
                           className="absolute inset-0 w-full h-full transition-all duration-300"
                         />
-                        <img 
-                          src="/mockups/shirt-long-front-mask.png" 
-                          alt="Tekstur Atasan" 
-                          className="object-contain w-full h-full pointer-events-none mix-blend-multiply opacity-60" 
-                        />
+                       
                       </div>
                     </>
                   );
