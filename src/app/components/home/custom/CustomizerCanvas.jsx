@@ -1,6 +1,7 @@
 "use client"
 import { useState, useRef } from 'react';
 import html2canvas from 'html2canvas';
+import { Layers, Loader2, Scissors, Shirt, Sparkles } from 'lucide-react'
 import JSZip from 'jszip';
 
 export default function CustomizerCanvas({ 
@@ -124,19 +125,20 @@ export default function CustomizerCanvas({
       {/* 1. TOMBOL UTAMA SWITCH PREVIEW MODEL */}
       <div className="absolute top-6 right-6 bg-[#12110F]/90 backdrop-blur-md border border-[#E5BA73]/20 rounded-xl p-1 flex gap-1 z-20">
         {[
-          { id: 'fabric', label: '🧵 Kain' },
-          { id: 'shirt', label: '👔 Baju' },
-          { id: 'outfit', label: '🧍 Setelan' }
+          { id: 'fabric', label: 'Kain', icon: <Scissors size={13} /> },
+          { id: 'shirt', label: 'Baju', icon: <Shirt size={13} /> },
+          { id: 'outfit', label: 'Setelan', icon: <Layers size={13} /> }
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setPreviewMode(tab.id)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium tracking-wide transition-all duration-300 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium tracking-wide transition-all duration-300 flex items-center gap-1.5 ${
               previewMode === tab.id 
                 ? 'bg-[#E5BA73] text-[#0A1715] font-bold shadow-md' 
                 : 'text-[#A3A19E] hover:text-[#F9F6F0]'
             }`}
           >
+            {tab.icon}
             {tab.label}
           </button>
         ))}
@@ -171,7 +173,7 @@ export default function CustomizerCanvas({
       )}
 
       {/* 2. AREA PREVIEW KANVAS UTAMA */}
-      <div ref={canvasRef} className="w-full h-full rounded-2xl shadow-inner relative overflow-hidden flex items-center justify-center border border-white/5 bg-[#9e9d9b44]">
+      <div ref={canvasRef} className="w-full h-full mt-10 rounded-2xl shadow-inner relative overflow-hidden flex items-center justify-center border border-white/5 bg-[#9e9d9b44]">
         
         {/* JIKA MODE KAIN */}
         {previewMode === 'fabric' && (
@@ -301,11 +303,9 @@ export default function CustomizerCanvas({
           </div>
         )}
 
-        {/* Efek Tekstur Serat Kain Kedalaman Gradasi Global */}
         <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_center,transparent_30%,rgba(0,0,0,0.6)_100%)] pointer-events-none" />
       </div>
 
-      {/* Floating Action Menu Bawah */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#12110F]/80 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 flex items-center gap-8 shadow-2xl z-10">
         <button 
           onClick={handleResetDesain} 

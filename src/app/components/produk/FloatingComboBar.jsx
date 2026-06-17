@@ -46,7 +46,7 @@ export default function FloatingComboBar() {
                     {/* Nilai Gambar Produk */}
                     <img
                       src={item.gambar_url}
-                      className="w-full h-full object-cover rounded-lg"
+                      className="object-cover w-full h-full rounded-lg"
                       alt="Selected Lurik"
                     />
                     
@@ -66,15 +66,15 @@ export default function FloatingComboBar() {
               </div>
             </div>
 
-            {/* RAMPING: Mengubah tinggi tombol dengan py-2 agar tampil ramping dan mewah */}
-            <button
-              type="button"
-              onClick={() => router.push("/customizer")}
-              className="flex items-center justify-center gap-2 w-full py-2 bg-gradient-to-r from-zinc-800 to-zinc-900 hover:from-zinc-700 hover:to-zinc-800 border border-white/10 text-[#F9F6F0] text-[11px] font-bold rounded-lg transition-all active:scale-95"
-            >
-              <Wand2 size={11} className="text-[#E5BA73]" />
-              Pindahkan ke Studio Desain
-            </button>
+
+<button
+  type="button"
+  onClick={() => router.push("/customizer?mode=combo")}
+  className="flex items-center justify-center gap-2 w-full py-2 bg-gradient-to-r from-zinc-800 to-zinc-900 hover:from-zinc-700 hover:to-zinc-800 border border-white/10 text-[#F9F6F0] text-[11px] font-bold rounded-lg transition-all active:scale-95"
+>
+  <Wand2 size={11} className="text-[#E5BA73]" />
+  Pindahkan ke Studio Desain
+</button>
 
           </div>
         </motion.div>

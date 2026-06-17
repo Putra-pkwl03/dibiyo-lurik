@@ -1,0 +1,166 @@
+"use client"
+
+import { Shirt, Info, ChevronRight, Plus, Trash2, Sliders, Palette } from 'lucide-react'
+
+export default function ComboStudioSidebar({ 
+  combination, 
+  onCheckoutCombo,
+  bgColor,
+  setBgColor,
+  patternDensity,
+  setPatternDensity,
+  stripes,
+  setStripes
+}) {
+  const activeItems = Object.entries(combination).filter(([_, item]) => item !== null);
+
+  const handleStripeColorChange = (id, newColor) => {
+    setStripes(stripes.map(s => s.id === id ? { ...s, color: newColor } : s));
+  };
+
+  const handleThicknessChange = (id, newThickness) => {
+    const parsedValue = parseInt(newThickness, 10);
+    setStripes(stripes.map(s => s.id === id ? { ...s, thickness: isNaN(parsedValue) ? 1 : parsedValue } : s));
+  };
+
+  const handleAddStripe = () => {
+    const newId = stripes.length > 0 ? Math.max(...stripes.map(s => s.id)) + 1 : 1;
+    setStripes([...stripes, { id: newId, thickness: 8, color: '#E5BA73' }]);
+  };
+
+  const handleRemoveStripe = (id) => {
+    setStripes(stripes.filter(s => s.id !== id));
+  };
+
+  return (
+    <div className="w-full lg:w-[45%] bg-[#0A1715] flex flex-col justify-between p-2 lg:p-6 lg:h-[750px] overflow-y-auto custom-scrollbar">
+      
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <h2 className="text-2xl lg:text-3xl font-bold tracking-wide text-[#E5BA73]">
+            Studio Lurik Combain
+          </h2>
+          <p className="text-sm text-[#A3A19E] font-light mt-1 leading-relaxed">
+            Eksperimen kombinasi struktur pakaian sekaligus modifikasi kerapatan benang kain secara langsung (*real-time*).
+          </p>
+        </div>
+
+        {/* PANEL 2: KONTROL WARNA DASAR & KERAPATAN TENUN */}
+        <div className="bg-[#12110F] border border-white/5 rounded-2xl p-4 space-y-4">
+          <span className="text-xs font-bold tracking-widest text-[#E5BA73] flex items-center gap-1.5">
+            <Sliders size={14} /> KONTROL DENSITY & BASE
+          </span>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between bg-black/20 p-2.5 rounded-xl border border-white/5">
+              <label className="text-xs text-[#F9F6F0]/80 font-medium">Warna Dasar Kanvas</label>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-zinc-400 uppercase font-mono">{bgColor}</span>
+                <input 
+                  type="color" 
+                  value={bgColor} 
+                  onChange={(e) => setBgColor(e.target.value)}
+                  className="w-8 h-8 bg-transparent border rounded-lg cursor-pointer border-white/20"
+                />
+              </div>
+            </div>
+
+            <div className="p-3 space-y-2 border bg-black/20 rounded-xl border-white/5">
+              <div className="flex justify-between text-xs">
+                <span className="text-[#F9F6F0]/80 font-medium">Skala Kerapatan Tenun</span>
+                <span className="text-[#E5BA73] font-bold">{patternDensity}%</span>
+              </div>
+              <input 
+                type="range" 
+                min="30" 
+                max="250" 
+                value={patternDensity} 
+                onChange={(e) => setPatternDensity(parseInt(e.target.value))}
+                className="w-full accent-[#E5BA73] bg-zinc-800 h-1.5 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* PANEL 3: EDITOR HELAI BENANG (STRIPES) */}
+        <div className="bg-[#12110F] border border-white/5 rounded-2xl p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold tracking-widest text-[#E5BA73] flex items-center gap-1.5">
+              <Palette size={14} /> STRUKTUR BENANG EKSTRAKSI
+            </span>
+            <button 
+              type="button"
+              onClick={handleAddStripe}
+              className="text-[10px] font-bold bg-[#E5BA73]/10 hover:bg-[#E5BA73] text-[#E5BA73] hover:text-[#0A1715] px-2.5 py-1 rounded-md transition-all flex items-center gap-1 border border-[#E5BA73]/20"
+            >
+              <Plus size={10} /> Tambah Benang
+            </button>
+          </div>
+
+          <div className="max-h-[220px] overflow-y-auto pr-1 space-y-2.5">
+            {stripes.map((stripe, index) => (
+              <div key={stripe.id} className="flex items-center gap-3 bg-black/40 p-2.5 rounded-xl border border-white/5">
+                <div className="text-[10px] text-zinc-500 font-mono w-4">#{index + 1}</div>
+                
+                <input 
+                  type="color" 
+                  value={stripe.color} 
+                  onChange={(e) => handleStripeColorChange(stripe.id, e.target.value)}
+                  className="w-6 h-6 bg-transparent rounded cursor-pointer shrink-0"
+                />
+
+                <div className="flex items-center flex-1 gap-2">
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="40" 
+                    value={stripe.thickness} 
+                    onChange={(e) => handleThicknessChange(stripe.id, e.target.value)}
+                    className="w-full h-1 rounded-lg appearance-none cursor-pointer accent-zinc-400 bg-zinc-800"
+                  />
+                  <span className="text-[10px] font-mono font-bold text-zinc-400 w-7 text-right">{stripe.thickness}px</span>
+                </div>
+
+                <button 
+                  type="button"
+                  onClick={() => handleRemoveStripe(stripe.id)}
+                  className="p-1 transition-colors text-zinc-500 hover:text-red-400"
+                  title="Hapus baris benang"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+
+            {stripes.length === 0 && (
+              <p className="text-[11px] text-zinc-500 text-center py-4">Tidak ada benang aktif. Klik tambah benang.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Tips */}
+        <div className="bg-[#E5BA73]/5 border border-[#E5BA73]/10 rounded-xl p-4 flex gap-3">
+          <Info className="text-[#E5BA73] shrink-0" size={16} />
+          <p className="text-xs text-[#A3A19E] leading-relaxed">
+            Warna di atas diekstrak otomatis dari katalog kain referensi. Anda dapat memodifikasi ketebalannya secara bebas untuk mendapatkan ritme lurik baru.
+          </p>
+        </div>
+      </div>
+
+<div className="pt-4 mt-4 border-t border-white/5">
+  <button 
+    type="button"
+    onClick={onCheckoutCombo} 
+    disabled={activeItems.length === 0}
+    className="w-full py-4 bg-gradient-to-r from-[#E5BA73] to-[#cfa35c] text-[#0A1715] hover:from-[#F9F6F0] hover:to-[#F9F6F0] disabled:from-zinc-800 disabled:to-zinc-900 disabled:text-zinc-500 disabled:cursor-not-allowed transition-all duration-300 rounded-xl font-bold text-xs tracking-widest uppercase flex items-center justify-center gap-2 shadow-lg"
+  >
+  
+    {activeItems.length === 0 ? 'Proses...' : 'Masukkan Kain Kustom Ke Keranjang'}
+       <ChevronRight size={14} strokeWidth={2.5} />
+  </button>
+</div>
+
+    </div>
+  )
+}
