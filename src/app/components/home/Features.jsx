@@ -13,7 +13,7 @@ export default function Features() {
       <div className="max-w-3xl mx-auto mb-16 space-y-4 text-center">
         {/* Font disesuaikan menjadi lebih kokoh dan anggun */}
         <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#2D2219] font-sans">
-          Mengapa BIYO LURIK?
+          Mengapa DIBYO LURIK?
         </h2>
         <p className="text-base text-[#6E655C]/90 font-normal max-w-2xl mx-auto leading-relaxed">
           Filosofi kami adalah memangkas rantai pasokan yang tidak adil sambil merangkul masa depan wirausaha berkelanjutan.

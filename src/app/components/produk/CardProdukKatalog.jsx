@@ -27,11 +27,15 @@ export default function CardProdukKatalog({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.4 }}
-      className="bg-white border border-[#EBE7E0] rounded-2xl overflow-hidden shadow-sm group flex flex-col h-full hover:border-[#C49A6C]/40 hover:shadow-md transition-all duration-300"
+      className="bg-[#F5F2EB]/70 border border-[#2D2219]/5 rounded-2xl overflow-hidden shadow-md hover:shadow-xl group flex flex-col h-full transition-all duration-300 transform hover:-translate-y-1"
     >
       {/* ─── VISUAL GAMBAR PRODUK ─── */}
-      <div className="w-full aspect-[4/3] bg-[#F5F1E9] relative flex items-center justify-center overflow-hidden">
-        <span className="absolute top-3 left-3 text-[9px] font-bold tracking-widest bg-[#3E3431]/90 text-[#F5F1E9] px-2 py-1 rounded shadow-sm uppercase z-10">
+      <div className="w-full aspect-[4/3] bg-[#EFEBE3] relative flex items-center justify-center overflow-hidden">
+        <span
+          className={`absolute top-3 left-3 text-[9px] font-bold tracking-widest px-2 py-1 rounded shadow-sm uppercase z-10 text-white ${
+            totalStokSisa > 0 ? "bg-[#D48C45]" : "bg-[#6E655C]"
+          }`}
+        >
           {totalStokSisa > 0 ? `Tersedia: ${totalStokSisa} m` : "Stok Habis"}
         </span>
 
@@ -39,13 +43,14 @@ export default function CardProdukKatalog({
           <img
             src={product.gambar_url}
             alt={productTitle}
-            className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
+            className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
             loading="lazy"
           />
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#F5F1E9] to-[#EBE7E0]">
-            <span className="text-2xl opacity-60">🧵</span>
-            <span className="text-[10px] text-[#706965] mt-2 tracking-widest">{kodeProduk}</span>
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#E5E1D7] to-[#D8D3C5]">
+            <div className="absolute inset-0 opacity-5 bg-[linear-gradient(to_right,#2D2219_1px,transparent_1px)] bg-[size:6px]"></div>
+            <span className="text-2xl opacity-30">🧵</span>
+            <span className="text-[10px] text-[#6E655C] mt-2 tracking-widest font-mono">{kodeProduk}</span>
           </div>
         )}
       </div>
@@ -53,47 +58,47 @@ export default function CardProdukKatalog({
       {/* ─── DETAIL INFORMASI PRODUK ─── */}
       <div className="flex flex-col justify-between flex-1 p-5 space-y-4">
         <div className="space-y-1">
-          <div className="flex items-center justify-between text-[10px] font-bold tracking-wider uppercase text-[#706965]">
+          <div className="flex items-center justify-between text-[10px] font-bold tracking-wider uppercase text-[#6E655C]">
             <span>{namaKategori}</span>
-            <span className="font-mono text-[#B08354]">{kodeProduk}</span>
+            <span className="font-mono text-[#A67D45]">{kodeProduk}</span>
           </div>
 
-          <h3 className="font-bold text-base text-[#3E3431] line-clamp-1 group-hover:text-[#B08354] transition-colors">
+          <h3 className="font-bold text-base text-[#2D2219] tracking-tight line-clamp-1 group-hover:text-[#A67D45] transition-colors">
             {productTitle}
           </h3>
 
-          <div className="flex items-center justify-between pt-1">
-            <p className="text-sm text-[#B08354] font-bold">
-              {formatRupiah ? formatRupiah(hargaTermurah) : `Rp ${hargaTermurah.toLocaleString("id-ID")}`} 
-              <span className="text-[#706965]/70 font-light text-[11px]"> / meter</span>
+          <div className="flex items-center justify-between pt-0.5">
+            <p className="text-sm text-[#A67D45] font-bold">
+              {formatRupiah ? formatRupiah(hargaTermurah) : `Rp ${hargaTermurah.toLocaleString("id-ID")}`}
+              <span className="text-[#6E655C]/70 font-light text-xs"> / meter</span>
             </p>
-            <span className="text-[10px] text-[#706965] font-medium bg-[#F5F1E9] px-2 py-0.5 rounded capitalize">
+            <span className="text-[10px] font-medium text-[#6E655C] bg-[#2D2219]/5 px-2.5 py-0.5 rounded-md border border-[#2D2219]/5 capitalize">
               {product.jenis_pewarna ? `${product.jenis_pewarna}` : "ATBM"}
             </span>
           </div>
         </div>
 
-        {/* ─── 🛠️ REVISI STYLE TOMBOL: TEGAS, BOLD, DAN PENUH SESUAI REFERENSI ─── */}
-        <div className="grid grid-cols-2 gap-3 mt-auto pt-4 border-t border-[#EBE7E0]">
-          
-          {/* Button 1: Kombinasi (Gaya Border Outline Minimalis namun Tegas) */}
+        {/* ─── TOMBOL AKSI: KOMBINASI + BELI KAIN ─── */}
+        <div className="grid grid-cols-2 gap-3 mt-auto pt-4 border-t border-[#2D2219]/10">
+
+          {/* Kombinasi: outline, warna ikut palet home */}
           <button
             type="button"
             onClick={() => onKombinasiClick && onKombinasiClick(product)}
-            className="flex items-center justify-center gap-1.5 py-3 px-3 bg-white border-2 border-[#3E3431] hover:border-[#C49A6C] text-xs font-extrabold tracking-wide text-[#3E3431] hover:text-[#B08354] hover:bg-[#C49A6C]/5 rounded-xl transition-all duration-300 shadow-sm"
+            className="flex items-center justify-center gap-1.5 py-3 px-3 bg-white/50 border-2 border-[#2D2219]/15 hover:border-[#A67D45] text-xs font-bold tracking-wide text-[#2D2219] hover:text-[#A67D45] hover:bg-[#A67D45]/5 rounded-xl transition-all duration-300"
           >
             <Layers size={13} className="stroke-[2.5]" />
             Kombinasi
           </button>
 
-          {/* Button 2: Beli Kain (Gaya Solid Arang Pekat Bold Sesuai Referensi Gambar) */}
+          {/* Beli Kain: solid, warna disamakan dengan tombol Beli di card home */}
           <button
             type="button"
             onClick={() => onBuyClick && onBuyClick(product)}
-            className="flex items-center justify-center gap-1.5 py-3 px-3 bg-[#3E3431] border border-transparent hover:bg-[#C49A6C] text-xs font-extrabold tracking-wide text-white rounded-xl transition-all duration-300 shadow-md hover:shadow-lg"
+            className="flex items-center justify-center gap-1.5 py-3 px-3 bg-[#9e6d3c79] hover:bg-[#C59B5F] border border-transparent text-xs font-bold tracking-wide text-white rounded-xl shadow-sm transition-all duration-300"
           >
             <ShoppingBag size={13} className="stroke-[2.5]" />
-            Beli Kain
+            Beli
           </button>
 
         </div>

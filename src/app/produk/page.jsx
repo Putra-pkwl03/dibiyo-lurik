@@ -8,6 +8,8 @@ import ModalBeliKain from '@/app/components/produk/ModalBeliKain'
 import FloatingComboBar from '@/app/components/produk/FloatingComboBar'
 import { useComboStore } from '@/app/store/useComboStore'
 
+import Footer from '../components/home/Footer'
+
 export default function ProdukPage() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -93,6 +95,7 @@ export default function ProdukPage() {
   }
 
   return (
+    <>
     /* ✨ BACKGROUND UTAMA: Diubah menjadi warna gading soft cream khas kain Linen alami Biyo Lurik */
     <div className="min-h-screen bg-[#FDFCFA] text-[#3E3431] antialiased pt-24 pb-28 px-4 sm:px-6 lg:px-8">
       
@@ -192,5 +195,7 @@ export default function ProdukPage() {
       </AnimatePresence>
 
     </div>
+    <Footer />
+    </>
   )
 }

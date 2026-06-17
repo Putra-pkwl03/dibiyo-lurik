@@ -135,7 +135,7 @@ export default function Navbar() {
           {/* Logo */}
           <div className="flex-shrink-0">
             <Link href="/" className="text-xl font-bold tracking-widest text-[#C59B5F] hover:opacity-90 transition-opacity">
-              BIYO <span className="text-[#2D2219] font-light">LURIK</span>
+              DIBYO <span className="text-[#2D2219] font-light">LURIK</span>
             </Link>
           </div>
 

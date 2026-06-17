@@ -2,7 +2,8 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import ModalDetail from './catalog/ModalDetail' 
+import ModalDetail from './catalog/ModalDetail';
+import {ShoppingBag } from "lucide-react";
 
 export default function Catalog() {
   const [products, setProducts] = useState([])
@@ -153,8 +154,9 @@ export default function Catalog() {
                   */}
                   <button 
                     onClick={() => setSelectedProduct(prod)}
-                    className="w-full py-2.5 bg-[#9e6d3c79] hover:bg-[#C59B5F] text-white text-xs font-bold tracking-wider rounded-xl shadow-sm transition-all duration-300 mt-auto text-center"
+                    className="w-full py-2.5 bg-[#9e6d3c79] hover:bg-[#C59B5F] text-white text-xs font-bold tracking-wider rounded-xl shadow-sm transition-all duration-300 mt-auto flex items-center justify-center gap-1.5"
                   >
+                    <ShoppingBag size={13} className="stroke-[2.5]" />
                     Beli
                   </button>
                 </div>

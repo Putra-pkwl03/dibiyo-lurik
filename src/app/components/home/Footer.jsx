@@ -6,7 +6,7 @@ export default function Footer() {
       - text-[#5C534A] -> text-[#A3A19E] (Teks abu-abu lembut agar nyaman dibaca di latar gelap)
       - Border atas menggunakan warna keemasan redup tipis
     */
-    <footer className="bg-[#F5F2EB] text-[#A3A19E] text-xs font-light relative pt-20 pb-0 overflow-hidden shadow-[0_-20px_25px_-5px_rgba(0,0,0,0.1)]">
+    <footer className="bg-[#f3efe7] text-[#A3A19E] text-xs font-light relative pt-20 pb-0 overflow-hidden shadow-[0_-20px_25px_-5px_rgba(0,0,0,0.1)]">
       
       {/* Efek Garis Halus Tekstur Kain Premium (Opsional, memperkuat kesan tekstur seperti gambar) */}
       <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(to_right,#fff_1px,transparent_1px)] bg-[size:8px] pointer-events-none"></div>
@@ -17,16 +17,16 @@ export default function Footer() {
         <div className="space-y-4">
           {/* Warna judul brand menggunakan Emas Premium Muted */}
           <h3 className="text-sm font-bold text-[#E5BA73] tracking-widest font-sans">
-            BIYO LURIK
+            DIBYO LURIK
           </h3>
-          <p className="leading-relaxed text-[#A3A19E]/80 antialiased">
+          <p className="leading-relaxed text-[#000000] antialiased">
             Cultivating Heritage through Digital Craft. Digitalizing the soul of Indonesian textiles.
           </p>
         </div>
         
         {/* Kolom Navigasi Explore */}
         <div>
-          <h4 className="text-xs font-bold text-[#F9F6F0] mb-4 uppercase tracking-wider font-sans">
+          <h4 className="text-xs font-bold text-[#000000] mb-4 uppercase tracking-wider font-sans">
             Explore
           </h4>
           <ul className="space-y-2.5">
@@ -38,7 +38,7 @@ export default function Footer() {
         
         {/* Kolom Navigasi Support */}
         <div>
-          <h4 className="text-xs font-bold text-[#F9F6F0] mb-4 uppercase tracking-wider font-sans">
+          <h4 className="text-xs font-bold text-[#000000] mb-4 uppercase tracking-wider font-sans">
             Support
           </h4>
           <ul className="space-y-2.5">
@@ -50,7 +50,7 @@ export default function Footer() {
         
         {/* Kolom Newsletter (Keep In Touch) */}
         <div className="space-y-4">
-          <h4 className="text-xs font-bold text-[#F9F6F0] mb-4 uppercase tracking-wider font-sans">
+          <h4 className="text-xs font-bold text-[#000000] mb-4 uppercase tracking-wider font-sans">
             Keep In Touch
           </h4>
           <div className="flex gap-2">
@@ -76,8 +76,8 @@ export default function Footer() {
         - Menggunakan warna hitam arang murni pekat (`bg-[#0F0E0D]`) persis seperti lapisan terbawah di gambar referensi
       */}
       <div className="bg-[#0F0E0D] py-6 border-t border-white/[0.02]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between gap-4 text-[11px] text-[#A3A19E]/40">
-          <p>© 2026 BIYO LURIK. Cultivating Heritage through Digital Craft.</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between gap-4 text-[11px] text-[#c2c0bd]">
+          <p>© 2026 DIBYO LURIK. Cultivating Heritage through Digital Craft.</p>
           <p className="tracking-wide">Remade to Dark Theme — Powered by AI & Next.js</p>
         </div>
       </div>
