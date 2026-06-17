@@ -124,7 +124,6 @@ export default function Navbar() {
     return pathname.startsWith(url)
   }
 
-  // Perbaikan: Diubah agar mendeteksi rute /sejarah sesuai dengan href pada tautan menu dropdown Anda
   const isAboutActive = isActive('/sejarah') || isActive('/produksi')
 
   return (
@@ -258,6 +257,19 @@ export default function Navbar() {
                     <div className="px-4 py-2 border-b border-[#2D2219]/5">
                       <p className="text-sm font-semibold text-[#C59B5F] truncate">{user.nama}</p>
                     </div>
+
+                    {/* ✨ MENU BARU DESKTOP: Pesanan Saya */}
+                    <Link 
+                      href="/pesanan-saya" 
+                      className={`block px-4 py-2.5 text-xs transition-colors ${
+                        isActive('/pesanan-saya') 
+                          ? 'bg-[#C59B5F]/10 text-[#C59B5F] font-bold' 
+                          : 'text-[#7A7167] hover:bg-[#C59B5F]/5 hover:text-[#2D2219]'
+                      }`}
+                    >
+                      Pesanan Saya
+                    </Link>
+
                     {user.role !== 'customer' && (
                       <Link href="/dashboard" className="block px-4 py-2.5 text-xs text-[#7A7167] hover:bg-[#C59B5F]/5 hover:text-[#2D2219] transition-colors">
                         Dashboard Sistem
@@ -327,6 +339,20 @@ export default function Navbar() {
                     <p className="text-sm font-bold text-[#C59B5F]">{user.nama}</p>
                   </div>
                 </div>
+
+                {/* ✨ MENU BARU MOBILE: Pesanan Saya */}
+                <Link 
+                  href="/pesanan-saya" 
+                  className={`block w-full text-center py-2 font-medium rounded-lg text-sm transition-colors ${
+                    isActive('/pesanan-saya') 
+                      ? 'bg-[#C59B5F]/20 text-[#C59B5F]' 
+                      : 'bg-transparent border border-[#2D2219]/20 text-[#2D2219]'
+                  }`} 
+                  onClick={() => setIsOpen(false)}
+                >
+                  Pesanan Saya
+                </Link>
+
                 {user.role !== 'customer' && (
                   <Link href="/dashboard" className="block w-full text-center py-2 bg-transparent border border-[#2D2219]/20 text-[#2D2219] font-medium rounded-lg text-sm" onClick={() => setIsOpen(false)}>
                     Dashboard Sistem
