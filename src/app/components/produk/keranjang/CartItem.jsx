@@ -93,7 +93,7 @@ export default function CartItem({ item, onChange, onRemove }) {
   }
 
   return (
-    <div className="group bg-[#0A1715]/60 p-3 rounded-xl flex flex-col sm:flex-row items-center gap-4 shadow-md border border-white/5 transition-all hover:border-[#E5BA73]/20">
+    <div className="group bg-[#ffffff] p-3 rounded-xl flex flex-col sm:flex-row items-center gap-4 shadow-md border border-white/5 transition-all hover:border-[#E5BA73]/20">
       
       {/* AREA PRATINJAU VISUAL (Sesuai Ukuran Asli) */}
       <div className="relative flex items-center justify-center w-full h-24 overflow-hidden border rounded-lg shadow-inner sm:w-28 shrink-0 border-white/5 bg-zinc-900">
@@ -104,8 +104,8 @@ export default function CartItem({ item, onChange, onRemove }) {
         <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
           <span className={`text-[8px] font-extrabold tracking-wider uppercase px-1.5 py-0.5 rounded border shadow-sm ${
             isCustomItem 
-              ? "bg-[#12110F]/90 text-[#E5BA73] border-[#E5BA73]/20" 
-              : "bg-[#12110F]/90 text-[#E5BA73] border-[#E5BA73]/20"
+              ? "bg-[#F5F2EB] text-[#E5BA73] border-[#E5BA73]/20" 
+              : "bg-[#F5F2EB] text-[#E5BA73] border-[#E5BA73]/20"
           }`}>
             {isCustomItem ? "K" : `G-${nomorGulungan}`}
           </span>
@@ -159,7 +159,7 @@ export default function CartItem({ item, onChange, onRemove }) {
               max={isCustomItem ? 999 : panjangSisa} 
               value={item.input_panjang || ""}
               onChange={(e) => onChange("input_panjang", Number(e.target.value))}
-              className="w-full px-2 py-1 bg-[#12110F] border border-white/10 rounded-lg text-[#E5BA73] font-bold text-center focus:outline-none focus:border-[#E5BA73] focus:ring-1 focus:ring-[#E5BA73] text-xs"
+              className="w-full px-2 py-1 bg-[#F5F2EB] border border-white/10 rounded-lg text-[#E5BA73] font-bold text-center focus:outline-none focus:border-[#E5BA73] focus:ring-1 focus:ring-[#E5BA73] text-xs"
             />
             <span className="absolute right-2 text-[10px] text-[#A3A19E] font-medium pointer-events-none">
               m

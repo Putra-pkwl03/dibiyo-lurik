@@ -31,7 +31,7 @@ export default function CartPage() {
   // ====================================================================
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0A1715] text-[#F9F6F0] pt-28 pb-16 px-2 sm:px-4 lg:px-6">
+      <main className="min-h-screen bg-[#ffffff] text-[#8e8675] pt-28 pb-16 px-2 sm:px-4 lg:px-6">
         <div className="mx-auto space-y-8 max-w-7xl animate-pulse">
           {/* Breadcrumb Skeleton */}
           <div className="w-40 h-3 rounded bg-white/10"></div>
@@ -40,7 +40,7 @@ export default function CartPage() {
             {/* Bagian Kiri: List Item Skeleton */}
             <div className="space-y-4 lg:col-span-2">
               <div className="w-48 h-6 mb-4 rounded bg-white/10"></div>
-              <div className="space-y-3 bg-[#12110F] p-4 rounded-2xl border border-white/5">
+              <div className="space-y-3 bg-[#F5F2EB] p-4 rounded-2xl border border-white/5">
                 {[1, 2].map((i) => (
                   <div key={i} className="bg-[#0A1715]/60 p-3 rounded-xl flex flex-col sm:flex-row items-center gap-4 border border-white/5">
                     {/* Kotak Gambar */}
@@ -60,7 +60,7 @@ export default function CartPage() {
             </div>
 
             {/* Bagian Kanan: Summary Card Skeleton */}
-            <div className="h-fit space-y-5 p-5 bg-[#12110F] border border-white/5 rounded-2xl">
+            <div className="h-fit space-y-5 p-5 bg-[#F5F2EB] border border-white/5 rounded-2xl">
               <div className="h-4 rounded bg-white/10 w-28"></div>
               <div className="pt-4 space-y-4 border-t border-white/5">
                 <div className="flex justify-between"><div className="w-16 h-3 rounded bg-white/5"></div><div className="w-12 h-3 rounded bg-white/10"></div></div>
@@ -79,11 +79,11 @@ export default function CartPage() {
   // HALAMAN KETIKA DATA SUDAH SIAP LOAD
   // ====================================================================
   return (
-    <main className="min-h-screen bg-[#0A1715] text-[#F9F6F0] antialiased pt-28 pb-16 px-2 sm:px-4 lg:px-6">
+    <main className="min-h-screen bg-[#ffffff] text-[#f5d9a2] antialiased pt-28 pb-16 px-2 sm:px-4 lg:px-6">
       <div className="p-6 mx-auto max-w-7xl">
         
         {cartItems.length === 0 ? (
-          <div className="max-w-xl mx-auto text-center py-16 space-y-6 border border-white/5 bg-[#12110F] rounded-2xl shadow-xl">
+          <div className="max-w-xl mx-auto text-center py-16 space-y-6 border border-white/5 bg-[#F5F2EB] rounded-2xl shadow-xl">
             <div className="flex justify-center">
               <div className="p-4 rounded-full bg-[#E5BA73]/10 text-[#E5BA73]">
                 <ShoppingBag size={40} />
@@ -111,11 +111,11 @@ export default function CartPage() {
             </div>
 
             {!isCheckout ? (
-              <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
                 
                 {/* Bagian Kiri */}
                 <div className="space-y-4 lg:col-span-2">
-                  <div className="space-y-3 bg-[#12110F] p-4 rounded-2xl border border-white/5 shadow-xl">
+                  <div className="space-y-3 bg-[#F5F2EB] p-4 rounded-2xl border border-white/5 shadow-xl">
                     {cartItems.map((item) => (
                       <CartItem 
                         key={item.id}
@@ -128,19 +128,19 @@ export default function CartPage() {
                 </div>
 
                 {/* Bagian Rangkuman Kanan */}
-                <div className="h-fit space-y-4 p-5 bg-[#12110F] border border-[#E5BA73]/10 rounded-2xl shadow-xl">
+                <div className="h-fit space-y-4 p-5 bg-[#F5F2EB] border border-[#E5BA73]/10 rounded-2xl shadow-xl">
                   <h3 className="text-xs font-bold text-[#E5BA73] tracking-wide uppercase">Ringkasan Pesanan</h3>
                   <div className="pt-2 space-y-3 border-t border-white/5">
                     <div className="flex justify-between text-xs text-[#A3A19E]">
                       <span>Total Panjang</span>
-                      <span className="font-semibold text-white">{totalPanjangMeter} Meter</span>
+                      <span className="font-semibold text-black">{totalPanjangMeter} Meter</span>
                     </div>
                     <div className="flex justify-between text-xs text-[#A3A19E]">
                       <span>Jumlah Jenis Kain</span>
-                      <span className="font-semibold text-white">{cartItems.length} Item</span>
+                      <span className="font-semibold text-black">{cartItems.length} Item</span>
                     </div>
                     <div className="flex items-baseline justify-between pt-2 border-t border-white/5">
-                      <span className="text-xs text-[#A3A19E]">Subtotal</span>
+                      <span className="text-xs text-[#5e5d5b]">Subtotal</span>
                       <span className="text-xl font-black text-[#E5BA73]">Rp {totalHarga.toLocaleString('id-ID')}</span>
                     </div>
                   </div>
@@ -155,7 +155,7 @@ export default function CartPage() {
 
               </div>
             ) : (
-              <div className="bg-[#12110F] p-6 rounded-2xl border border-white/5 shadow-2xl">
+              <div className="bg-[#F5F2EB] p-6 rounded-2xl border border-white/5 shadow-2xl">
                 <CheckoutSection 
                   items={cartItems}
                   onBack={() => setIsCheckout(false)}

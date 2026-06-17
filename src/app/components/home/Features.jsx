@@ -8,13 +8,19 @@ export default function Features() {
   ]
 
   return (
-    <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-[#E5BA73]/10">
-      <div className="max-w-3xl mx-auto mb-16 space-y-3 text-center">
-        <h2 className="text-3xl font-bold tracking-tight text-[#F9F6F0]">Mengapa BIYO LURIK?</h2>
-        <p className="text-sm text-[#A3A19E] font-light">Filosofi kami adalah memangkas rantai pasokan yang tidak adil sambil merangkul masa depan wirausaha berkelanjutan.</p>
+    <section className="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-[#2D2219]/5">
+      
+      <div className="max-w-3xl mx-auto mb-16 space-y-4 text-center">
+        {/* Font disesuaikan menjadi lebih kokoh dan anggun */}
+        <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#2D2219] font-sans">
+          Mengapa BIYO LURIK?
+        </h2>
+        <p className="text-base text-[#6E655C]/90 font-normal max-w-2xl mx-auto leading-relaxed">
+          Filosofi kami adalah memangkas rantai pasokan yang tidak adil sambil merangkul masa depan wirausaha berkelanjutan.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-7">
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-7">
         {items.map((feat, idx) => {
           let colSpanClass = ""
           if (idx === 0 || idx === 3) {
@@ -26,20 +32,36 @@ export default function Features() {
           return (
             <div 
               key={idx} 
-              className={`${colSpanClass} bg-[#1A1917] border border-[#E5BA73]/5 hover:border-[#E5BA73]/20 p-8 rounded-2xl space-y-4 transition-all duration-300 group hover:-translate-y-1 flex flex-col justify-between`}
+              /* Penyempurnaan Sesuai Referensi Gambar:
+                - Menggunakan trik `border-transparent` + `bg-origin-border` untuk menghasilkan outline gradasi gold murni yang tipis dan presisi.
+                - Shadow ditingkatkan ke `shadow-xl` dengan tint warna umber/warm-grey (`shadow-[#2D2219]/5`).
+                - Background menggunakan warna off-white sutra murni (`bg-[#FBF9F6]`) agar kontras shadow keluar dengan sempurna.
+              */
+              className={`${colSpanClass} relative bg-[#FBF9F6] border border-transparent bg-clip-padding before:absolute before:inset-0 before:rounded-2xl before:border before:border-[#C59B5F]/30 before:pointer-events-none p-8 rounded-2xl space-y-5 transition-all duration-500 group hover:-translate-y-1.5 shadow-xl shadow-[#2D2219]/5 hover:shadow-2xl hover:shadow-[#C59B5F]/10 flex flex-col justify-between`}
             >
-              <div className="space-y-4">
-                <div className="text-2xl bg-[#E5BA73]/5 w-12 h-12 rounded-xl flex items-center justify-center group-hover:bg-[#E5BA73]/10 transition-colors">
-                  {feat.icon}
+              <div className="space-y-4 relative z-10">
+                {/* Lingkaran Ikon Gradasi Emas Mewah:
+                  Gradasi linear mengikuti style tombol dan aksen lingkaran kecil pada mockup gambar.
+                */}
+                <div className="text-xl bg-gradient-to-b from-[#E5C9A3] via-[#C59B5F] to-[#9E7A44] text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md border border-white/40 group-hover:scale-110 transition-transform duration-300">
+                  <span className="drop-shadow-sm">{feat.icon}</span>
                 </div>
-                <h3 className="text-lg font-bold text-[#F9F6F0]">{feat.title}</h3>
-                <p className="text-sm text-[#A3A19E] leading-relaxed font-light">{feat.desc}</p>
+                
+                {/* Judul dengan font sans-serif modern yang tebal dan clean */}
+                <h3 className="text-xl font-bold text-[#2D2219] tracking-tight font-sans pt-1">
+                  {feat.title}
+                </h3>
+                
+                {/* Deskripsi dengan keterbacaan tinggi di atas warna terang */}
+                <p className="text-[14px] text-[#5C534A] leading-relaxed font-normal antialiased">
+                  {feat.desc}
+                </p>
               </div>
               
-              {/* Tambahan dekorasi ikon kecil di pojok kanan bawah agar persis menyerupai mockup bento grid */}
-              <div className="self-end text-[#E5BA73]/20 group-hover:text-[#E5BA73]/40 transition-colors pt-4 md:pt-0">
+              {/* Ikon panah pojok kanan bawah menggunakan warna satin gold tipis */}
+              <div className="self-end text-[#C59B5F]/50 group-hover:text-[#9E7A44] group-hover:translate-x-1 transition-all duration-300 pt-4 md:pt-0 relative z-10">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
                 </svg>
               </div>
             </div>

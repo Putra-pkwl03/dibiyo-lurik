@@ -8,13 +8,14 @@ export default function CustomizerSidebar({
   onOpenCartModal 
 }) {
 
+  // 🎨 PALET WARNA LUXURY ETNIK (Disesuaikan berdasarkan UI Light Mode Biyo Lurik)
   const colorPalette = [
-    { hex: '#2B4C7E', name: 'Deep Indigo (Nila Tua)' },
+    { hex: '#1D2B24', name: 'Hijau Botol / Deep Forest' },
+    { hex: '#53593B', name: 'Hijau Zaitun / Olive Green' },
     { hex: '#8B5A2B', name: 'Sogan Earth (Cokelat Sogan)' },
+    { hex: '#C49A6C', name: 'Warm Gold / Bronze' },
     { hex: '#E5BA73', name: 'Golden Khaki (Emas Khaki)' },
-    { hex: '#F9F6F0', name: 'Off White (Putih Tulang)' },
-    { hex: '#1A2926', name: 'Teal Shadow (Hijau Gelap)' },
-    { hex: '#12110F', name: 'Deep Charcoal (Arang Hitam)' }
+    { hex: '#FAF7F2', name: 'Linen White (Putih Kain)' }
   ];
 
   const updateStripeThickness = (id, newThickness) => {
@@ -27,7 +28,7 @@ export default function CustomizerSidebar({
 
   const addStripe = () => {
     const newId = stripes.length > 0 ? Math.max(...stripes.map(s => s.id)) + 1 : 1;
-    setStripes([...stripes, { id: newId, thickness: 3, color: '#E5BA73' }]);
+    setStripes([...stripes, { id: newId, thickness: 3, color: '#C49A6C' }]);
   };
 
   const removeStripe = (id) => {
@@ -36,29 +37,35 @@ export default function CustomizerSidebar({
   };
 
   return (
-    <div className="w-full lg:w-[45%] bg-[#0A1715] flex flex-col justify-between p-2 lg:p-6 overflow-y-auto lg:h-[780px] custom-scrollbar">
+    /* ✨ BACKDROP UTAMA SIDEBAR: 
+      Menggunakan warna Putih Gading bersih murni (#FFFFFF atau #FDFCFA) 
+      agar kontras dengan komponen canvas utama.
+    */
+    <div className="w-full lg:w-[45%] bg-[#FDFCFA] border border-[#EBE7E0] flex flex-col justify-between p-4 lg:p-6 overflow-y-auto lg:h-[780px] rounded-2xl shadow-sm custom-scrollbar">
       
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl lg:text-3xl font-bold tracking-wide text-[#E5BA73]">
-            Kustomisasi Studio Lurik v2
+          {/* Judul menggunakan warna Cokelat Gelap Etnik Premium */}
+          <h2 className="text-2xl lg:text-3xl font-bold tracking-wide text-[#3E3431]">
+            Kustomisasi Studio Lurik v3
           </h2>
-          <p className="text-sm text-[#A3A19E] font-light mt-1 leading-relaxed">
+          <p className="text-sm text-[#706965] font-light mt-1 leading-relaxed">
             Kontrol penenunan tingkat lanjut. Sesuaikan warna dasar kain dan konfigurasikan dimensi anyaman tiap helai benang lungsin Anda secara presisi.
           </p>
         </div>
 
         {/* ================= BAGIAN A: KONTROL KAIN UTAMA ================= */}
-        <div className="bg-[#12110F] border border-white/5 rounded-2xl p-4 space-y-4">
+        {/* Mengubah card menjadi krem soft (#F5F1E9) dengan border halus */}
+        <div className="bg-[#F5F1E9] border border-[#E2DCD2] rounded-2xl p-5 space-y-5">
           <div className="space-y-2">
-            <span className="text-xs font-bold tracking-widest text-[#E5BA73] block">WARNA DASAR KAIN (LATAR BELAKANG)</span>
+            <span className="text-xs font-bold tracking-widest text-[#4A3F3B] block">WARNA DASAR KAIN (LATAR BELAKANG)</span>
             <div className="flex flex-wrap gap-2">
               {colorPalette.map((color, index) => (
                 <button
                   key={index}
                   onClick={() => setBgColor(color.hex)}
                   className={`w-7 h-7 rounded-lg border transition-all ${
-                    bgColor === color.hex ? 'border-[#E5BA73] scale-110 ring-2 ring-[#E5BA73]/30' : 'border-transparent opacity-60 hover:opacity-100'
+                    bgColor === color.hex ? 'border-[#C49A6C] scale-110 ring-2 ring-[#C49A6C]/30' : 'border-[#D1C9BC] opacity-80 hover:opacity-100'
                   }`}
                   style={{ backgroundColor: color.hex }}
                   title={color.name}
@@ -68,15 +75,15 @@ export default function CustomizerSidebar({
           </div>
 
           <div className="space-y-1">
-            <div className="flex justify-between items-center text-xs font-bold text-[#A3A19E]">
-              <span>SKALA KERAPATAN POLA TENUN</span>
-              <span className="text-[#E5BA73]">{patternDensity}%</span>
+            <div className="flex justify-between items-center text-xs font-bold text-[#4A3F3B]">
+              <span>SKALA KERAPATAN POLA 1LNUN</span>
+              <span className="text-[#C49A6C] font-extrabold">{patternDensity}%</span>
             </div>
             <input 
               type="range" min="30" max="250" 
               value={patternDensity}
               onChange={(e) => setPatternDensity(Number(e.target.value))}
-              className="w-full accent-[#E5BA73] h-1 bg-white/10 rounded-lg cursor-pointer"
+              className="w-full accent-[#C49A6C] h-1.5 bg-[#E2DCD2] rounded-lg cursor-pointer"
             />
           </div>
         </div>
@@ -84,53 +91,55 @@ export default function CustomizerSidebar({
         {/* ================= BAGIAN B: EDIT PER GARIS INDIVIDUAL ================= */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold tracking-widest text-[#E5BA73]">PENGATURAN HELAI BENANG</span>
+            <span className="text-xs font-bold tracking-widest text-[#4A3F3B]">PENGATURAN HELAI BENANG</span>
             <button 
               onClick={addStripe}
-              className="text-[10px] bg-[#E5BA73]/10 hover:bg-[#E5BA73] text-[#E5BA73] hover:text-[#0A1715] px-2.5 py-1 rounded-md font-bold transition-all border border-[#E5BA73]/20"
+              className="text-[10px] bg-[#C49A6C]/10 hover:bg-[#C49A6C] text-[#B08354] hover:text-white px-3 py-1 rounded-md font-bold transition-all border border-[#C49A6C]/30"
             >
-              + Tambah Garis
+              + 1 auddis Quick
             </button>
           </div>
 
-          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+          <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
             {stripes.map((stripe, idx) => (
-              <div key={stripe.id} className="bg-[#12110F] border border-white/5 rounded-xl p-3.5 space-y-3 relative group">
+              /* Card Helai Benang menggunakan warna putih bersih dengan garis tepi tipis */
+              <div key={stripe.id} className="bg-white border border-[#EBE7E0] rounded-xl p-4 space-y-3.5 relative group shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-[#A3A19E]">BENANG GARIS SILANG #{idx + 1}</span>
+                  <span className="text-[10px] font-bold text-[#706965] tracking-wider">DENANG GARIS SLANG #{idx + 1}</span>
                   {stripes.length > 1 && (
                     <button 
                       onClick={() => removeStripe(stripe.id)}
-                      className="text-[10px] text-red-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="text-[10px] text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity font-medium"
                     >
                       Hapus
                     </button>
                   )}
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="flex-1 space-y-1">
-                    <div className="flex justify-between text-[10px] text-[#A3A19E]/70 font-semibold">
-                      <span>Ketebalan Benang</span>
-                      <span>{stripe.thickness}px</span>
+                <div className="flex items-center gap-6">
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex justify-between text-[11px] text-[#706965] font-semibold">
+                      <span>Kebebohan Renang</span>
+                      <span className="font-bold text-[#3E3431]">{stripe.thickness}px</span>
                     </div>
                     <input 
                       type="range" min="1" max="30" 
                       value={stripe.thickness}
                       onChange={(e) => updateStripeThickness(stripe.id, e.target.value)}
-                      className="w-full accent-[#E5BA73] h-1 bg-white/5 rounded-lg cursor-pointer"
+                      className="w-full accent-[#C49A6C] h-1 bg-[#F0EAE1] rounded-lg cursor-pointer"
                     />
                   </div>
 
                   <div className="flex flex-col items-center space-y-1">
-                    <span className="text-[9px] text-[#A3A19E]/70 font-semibold">Warna</span>
-                    <div className="flex gap-1 p-1 border rounded-lg bg-black/40 border-white/5">
-                      {colorPalette.slice(0, 4).map((paletteColor, pIdx) => (
+                    <span className="text-[10px] text-[#706965] font-semibold">Warna</span>
+                    {/* Wadah lingkaran warna diubah menjadi soft krem transparan */}
+                    <div className="flex gap-1.5 p-1 border rounded-lg bg-[#FAF7F2] border-[#E2DCD2]">
+                      {colorPalette.slice(0, 5).map((paletteColor, pIdx) => (
                         <button
                           key={pIdx}
                           onClick={() => updateStripeColor(stripe.id, paletteColor.hex)}
-                          className={`w-4 h-4 rounded-full transition-transform ${
-                            stripe.color === paletteColor.hex ? 'scale-125 ring-1 ring-white' : 'opacity-50 hover:opacity-100'
+                          className={`w-3.5 h-3.5 rounded-full border border-black/5 transition-transform ${
+                            stripe.color === paletteColor.hex ? 'scale-125 ring-2 ring-[#C49A6C]' : 'opacity-60 hover:opacity-100'
                           }`}
                           style={{ backgroundColor: paletteColor.hex }}
                           title={paletteColor.name}
@@ -146,11 +155,11 @@ export default function CustomizerSidebar({
 
       </div>
 
-      {/* Section Bawah: CTA (SEKARANG MEMBUKA MODAL SPESIFIKASI) */}
-      <div className="pt-4 mt-4 border-t border-white/5">
+      {/* ================= SECTION BAWAH: CTA BUTTON ================= */}
+      <div className="pt-4 mt-4 border-t border-[#EBE7E0]">
         <button 
-          onClick={onOpenCartModal} // Eksekusi prop callback pembuka modal kustom di sini
-          className="w-full py-4 bg-[#E5BA73] text-[#0A1715] hover:bg-[#F9F6F0] transition-all duration-300 rounded-xl font-bold text-xs tracking-widest uppercase flex items-center justify-center gap-2 shadow-lg shadow-[#E5BA73]/5"
+          onClick={onOpenCartModal} 
+          className="w-full py-4 bg-[#C49A6C] text-white hover:bg-[#A87E53] transition-all duration-300 rounded-xl font-bold text-xs tracking-widest uppercase flex items-center justify-center gap-2 shadow-md shadow-[#C49A6C]/20"
         >
           Masukkan Kain Kustom Ke Keranjang
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

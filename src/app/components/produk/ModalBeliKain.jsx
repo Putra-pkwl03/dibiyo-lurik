@@ -1,278 +1,376 @@
-"use client";
+"use client"
 
-import React, { useEffect, useState } from "react";
-import { useCart } from "@/app/context/CartContext"; 
-import { useRouter } from "next/navigation"; 
-import { motion, AnimatePresence } from "framer-motion";
-import Swal from "sweetalert2";
+import { useState, useEffect } from "react"
+import { useCart } from "@/app/context/CartContext" 
+import { useRouter } from "next/navigation" 
+import { motion, AnimatePresence } from "framer-motion"
+import Swal from "sweetalert2" // Tetap diimport hanya jika terjadi error sistem pada catch block
 
 const formatRupiah = (angka) => {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     maximumFractionDigits: 0
-  }).format(angka);
-};
+  }).format(angka)
+}
 
-export default function ModalBeliKain({ isOpen, onClose, product, onConfirm }) {
-  const router = useRouter();
-  const { addToCart } = useCart();
+// ─── SKELETON INTERNAL UNTUK MODAL DETAIL ───
+function SkeletonModalDetail({ onClose }) {
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#F5F2EB] backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-[#1A1917] border border-[#E5BA73]/25 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl relative p-6 space-y-6 animate-pulse"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="absolute w-6 h-6 rounded top-4 right-4 bg-white/5" />
+        <div className="flex gap-4 p-5 border-b border-[#E5BA73]/10">
+          <div className="flex-shrink-0 w-20 h-20 rounded-xl bg-white/5" />
+          <div className="flex flex-col justify-center flex-1 gap-2">
+            <div className="w-24 h-5 rounded-full bg-white/10" />
+            <div className="w-3/4 h-6 rounded bg-white/10" />
+            <div className="w-1/2 h-4 rounded bg-white/5" />
+          </div>
+        </div>
+        <div className="p-5 space-y-6">
+          <div>
+            <div className="h-3 mb-3 rounded w-28 bg-white/5" />
+            <div className="grid grid-cols-2 gap-2">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="bg-white/[0.025] border border-white/5 rounded-lg px-3 py-3 h-14" />
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="w-32 h-3 mb-3 rounded bg-white/5" />
+            <div className="flex flex-wrap gap-2">
+              <div className="w-24 h-12 rounded-lg bg-white/5" />
+              <div className="w-24 h-12 rounded-lg bg-white/5" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="w-40 h-3 rounded bg-white/5" />
+            <div className="h-1.5 bg-white/5 rounded-full w-full" />
+          </div>
+          <div className="flex items-center gap-3 pt-2">
+            <div className="w-8 h-8 rounded-lg bg-white/5" />
+            <div className="w-12 h-6 rounded bg-white/5" />
+            <div className="w-8 h-8 rounded-lg bg-white/5" />
+          </div>
+          <div className="h-12 bg-white/[0.025] border border-white/5 rounded-xl" />
+        </div>
+        <div className="flex gap-2 px-5 pb-5">
+          <div className="flex-1 h-10 bg-white/5 rounded-xl" />
+          <div className="flex-[2] h-10 bg-white/10 rounded-xl" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
-  // State kuantitas berbentuk pasangan key-value: { [gulunganId]: kuantitas }
-  const [selectedRolls, setSelectedRolls] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [isCrumpling, setIsCrumpling] = useState(false);
+export default function ModalDetail({ isOpen, onClose, product }) {
+  const [qty, setQty] = useState(1) 
+  const [gulunganDipilih, setGulunganDipilih] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false) 
+  const [isCrumpling, setIsCrumpling] = useState(false)
+  const { addToCart } = useCart() 
+  const router = useRouter() 
 
   useEffect(() => {
-    if (!isOpen || !product) return;
-    setSelectedRolls({}); // Reset pilihan setiap modal dibuka baru
-  }, [isOpen, product]);
+    if (!isOpen || !product) return
+    setQty(1)
 
-  if (!isOpen || !product) return null;
+    const gulunganAktif = product.gulungan?.find(g => g.panjang_sisa > 0)
+    setGulunganDipilih(gulunganAktif ?? product.gulungan?.[0] ?? null)
+  }, [isOpen, product])
 
-  const productTitle = product.nama ?? "Lurik Premium";
-  const gulunganList = product.gulungan ?? [];
+  if (!isOpen) return null
+  if (!product) return <SkeletonModalDetail onClose={onClose} />
 
-  // Toggle pilihan gulungan (jika baru dipilih, set default ke 0 meter)
-  const handleToggleRoll = (rollId) => {
-    setSelectedRolls(prev => {
-      const next = { ...prev };
-      if (next[rollId] !== undefined) {
-        delete next[rollId];
-      } else {
-        next[rollId] = 0;
-      }
-      return next;
-    });
-  };
+  const productTitle = product.nama ?? "Lurik Premium"
+  const gulunganList = product.gulungan ?? []
+  
+  const lebar = gulunganDipilih?.lebar ?? product.lebar ?? "—"
+  const panjangSisa = gulunganDipilih?.panjang_sisa ?? 0
+  const panjangTotal = gulunganDipilih?.panjang_total ?? 1 
+  
+  const stokPersen = (panjangSisa / panjangTotal) * 100
+  const hargaPerMeter = gulunganDipilih?.harga_per_meter ?? gulunganDipilih?.harga ?? 0
+  const total = hargaPerMeter * qty
 
-  // Ubah kuantitas meteran per Gulungan ID
-  const handleUpdateQty = (rollId, amount, maxStock) => {
-    setSelectedRolls(prev => ({
-      ...prev,
-      [rollId]: Math.min(maxStock, Math.max(0, (prev[rollId] ?? 0) + amount))
-    }));
-  };
-
-  // Kalkulasi total meter dan total harga kumulatif
-  const totalQty = Object.values(selectedRolls).reduce((sum, q) => sum + q, 0);
-  const totalHarga = gulunganList.reduce((sum, g) => {
-    const qty = selectedRolls[g.id] || 0;
-    const harga = g.harga_per_meter ?? g.harga ?? product.harga ?? 0;
-    return sum + (qty * harga);
-  }, 0);
-
-  // Animasi Crumple (Meremas & Terbang)
+  // ─── VARIAN ANIMASI REMAS & TERBANG (MENUJU TOP-RIGHT / ICON NAVBAR) ───
   const modalVariants = {
     hidden: { scale: 0.95, opacity: 0 },
-    visible: { scale: 1, opacity: 1, x: 0, y: 0, rotate: 0, borderRadius: "16px", transition: { type: "spring", duration: 0.5 } },
+    visible: { 
+      scale: 1, 
+      opacity: 1,
+      borderRadius: "16px",
+      x: 0,
+      y: 0,
+      rotate: 0,
+      skewX: 0,
+      skewY: 0,
+      transition: { type: "spring", duration: 0.5 }
+    },
     crumpleAndFly: {
       scale: [1, 0.7, 0.4, 0.15, 0],
       borderRadius: ["16px", "24px", "60px", "100px", "100px"],
+      skewX: [0, 15, -10, 5, 0],
+      skewY: [0, -10, 15, -5, 0],
       rotate: [0, -35, 75, -360, -720], 
-      x: [0, 20, -15, 350, 680], 
+      x: [0, 20, -15, 350, 680], // Mengarah ke kanan atas (lokasi umum badge keranjang navbar)
       y: [0, -10, 30, -160, -380], 
       opacity: [1, 1, 0.9, 0.7, 0],
-      transition: { duration: 0.9, ease: "easeInOut" }
-    }
-  };
-
-  // Jalur Aksi: Masukkan ke Keranjang Belanja
-  const handleAddToCart = async () => {
-    if (totalQty <= 0) return;
-    setIsLoading(true);
-    try {
-      for (const g of gulunganList) {
-        const qty = selectedRolls[g.id];
-        if (qty && qty > 0 && addToCart) {
-          await addToCart(product, g, qty);
-        }
+      transition: {
+        duration: 0.9, 
+        times: [0, 0.2, 0.5, 0.75, 1],
+        ease: [
+          [0.36, 0.07, 0.19, 0.97], 
+          [0.36, 0.07, 0.19, 0.97],
+          [0.42, 0, 0.58, 1],       
+          [0.25, 1, 0.5, 1]       
+        ]
       }
-      
-      window.dispatchEvent(new CustomEvent("updateCartCount", { detail: { itemCount: 1 } }));
-      setIsCrumpling(true);
-      
-      setTimeout(() => {
-        if (onConfirm) onConfirm(1);
-        setIsCrumpling(false);
-        onClose();
-        router.refresh();
-      }, 900);
-    } catch (error) {
-      console.error(error);
-      Swal.fire({ title: 'Oops!', text: 'Gagal masuk keranjang.', icon: 'error', background: '#1A1917', color: '#F9F6F0' });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }
 
-  // Jalur Aksi: Konsultasi via WhatsApp (Selalu Aktif)
-  const handleWhatsAppChat = () => {
-    let pesan = "";
-    if (totalQty > 0) {
-      const rincian = gulunganList
-        .filter(g => selectedRolls[g.id] > 0)
-        .map(g => `Gulungan No. ${g.nomor_gulungan} (Lebar ${g.lebar_kain ?? g.lebar ?? product.lebar ?? '—'}cm) sepotong ${selectedRolls[g.id]}m`)
-        .join(", ");
-      pesan = `Halo Biyo Lurik, saya tertarik memesan "${productTitle}" dengan rincian: ${rincian}. Total Estimasi: ${formatRupiah(totalHarga)}`;
-    } else {
-      pesan = `Halo Biyo Lurik, saya tertarik dengan kain produk "${productTitle}" dan ingin berkonsultasi mengenai ketersediaan gulungannya.`;
+  const handleTambahKeranjang = async () => {
+    if (!gulunganDipilih || panjangSisa <= 0) return
+    
+    try {
+      setIsSubmitting(true)
+
+      // WAJIB menggunakan await agar Next.js menyelesaikan request POST ke database terlebih dahulu
+      if (addToCart) {
+        await addToCart(product, gulunganDipilih, qty)
+      }
+
+      // Memicu animasi setelah dipastikan proses await di atas selesai/sukses
+      setIsCrumpling(true)
+
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("updateCartCount", { detail: { itemCount: 1 } }))
+        setIsCrumpling(false)
+        onClose()
+        router.refresh() // Sekarang aman di-refresh karena request POST sudah selesai sepenuhnya
+      }, 900)
+
+    } catch (err) {
+      console.error("Gagal menambahkan ke keranjang:", err)
+      setIsCrumpling(false)
+      Swal.fire({
+        title: 'Oops!',
+        text: 'Terjadi kesalahan saat menambahkan ke keranjang.',
+        icon: 'error',
+        background: '#1A1917',
+        color: '#F9F6F0',
+        confirmButtonColor: '#d33'
+      })
+    } finally {
+      setIsSubmitting(false)
     }
-    window.open(`https://wa.me/6281234567890?text=${encodeURIComponent(pesan)}`, "_blank");
-  };
+  }
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-        <motion.div
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+        onClick={() => !isCrumpling && onClose()} 
+      >
+        <motion.div 
           variants={modalVariants}
           initial="hidden"
           animate={isCrumpling ? "crumpleAndFly" : "visible"}
           exit="hidden"
-          className="w-full max-w-2xl text-[#F9F6F0] bg-[#1A1917] border border-[#E5BA73]/25 shadow-2xl rounded-2xl overflow-hidden relative will-change-transform"
+          className="bg-[#F5F2EB] border border-[#E5BA73]/25 w-full max-w-4xl rounded-2xl overflow-hidden shadow-2xl relative flex flex-col md:flex-row max-h-[90vh]" // max-w diperbesar & flex-row
+          onClick={(e) => e.stopPropagation()} 
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5BA73]/10 bg-[#12110F]/50">
-            <h3 className="text-sm font-bold text-[#E5BA73] tracking-wide">Pilih Gulungan Kain</h3>
-            <button onClick={onClose} disabled={isCrumpling} className="text-[#A3A19E] hover:text-[#E5BA73]">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
-
-          {/* Banner Info Utama Produk */}
-          <div className="p-5 pb-2">
-            <div className="flex items-center gap-4 p-4 bg-[#0A1715] rounded-xl border border-[#E5BA73]/10 text-xs">
-              <div className="w-14 h-14 rounded-lg bg-[#252220] border border-[#E5BA73]/15 flex items-center justify-center overflow-hidden shrink-0">
-                {product.gambar_url ? <img src={product.gambar_url} alt={productTitle} className="object-cover w-full h-full" /> : <span className="text-[#E5BA73]/30 text-xl">◈</span>}
-              </div>
-              <div>
-                <span className="text-[9px] font-bold text-[#E5BA73] uppercase bg-[#E5BA73]/5 px-2 py-0.5 rounded-full border border-[#E5BA73]/10">{product.kategori?.nama ?? product.kategori ?? "Lurik"}</span>
-                <h2 className="text-sm font-bold text-[#F9F6F0] mt-0.5">{productTitle}</h2>
-                <p className="text-[11px] text-[#706E6B]">Kode: {product.kode_produk?.nama ?? product.kode_produk ?? "—"} · Motif: {product.motif?.nama ?? product.motif ?? "—"}</p>
-              </div>
+          
+          {/* KOLOM KIRI: GAMBAR BESAR — FULL TAMPIL DENGAN PADDING */}
+          <div className="w-full md:w-5/12 bg-[#EAE7E0] md:border-r border-b md:border-b-0 border-[#E5BA73]/10 min-h-[280px] md:min-h-full p-4">
+            <div className="relative w-full h-full">
+              {product.gambar_url
+                ? (
+                  <img 
+                    src={product.gambar_url} 
+                    alt={productTitle} 
+                    className="absolute inset-0 w-full h-full object-cover rounded-lg"
+                  />
+                )
+                : (
+                  <div className="flex items-center justify-center w-full h-full">
+                    <span className="text-[#E5BA73]/30 text-6xl">◈</span>
+                  </div>
+                )
+              }
             </div>
           </div>
 
-          {/* Konten Utama dengan Custom Scrollbar Tipis */}
-          <div className="p-5 pt-2 space-y-4 max-h-[330px] overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[#E5BA73]/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+          {/* KOLOM KANAN: INFORMASI & INTERAKSI */}
+          <div className="w-full md:w-7/12 flex flex-col overflow-y-auto">
             
-            {/* Step 1: Grid Pilihan Gulungan + Info Lebar */}
-            <div>
-              <p className="text-[10px] font-bold tracking-widest uppercase text-[#706E6B] mb-2">Step 1: Pilih Satu atau Beberapa Gulungan Kain</p>
-              <div className="grid grid-cols-3 gap-2">
-                {gulunganList.map((g) => {
-                  const habis = (g.panjang_sisa ?? 0) <= 0;
-                  const isSelected = selectedRolls[g.id] !== undefined;
-                  const lebarRoll = g.lebar_kain ?? g.lebar ?? product.lebar ?? "—";
-                  return (
-                    <button
-                      key={g.id}
-                      type="button"
-                      disabled={habis || isCrumpling}
-                      onClick={() => handleToggleRoll(g.id)}
-                      className={`p-2.5 rounded-xl border text-xs font-semibold transition-all text-left flex flex-col justify-center min-h-[64px] relative overflow-hidden
-                        ${habis ? "border-[#3a3835] text-[#4a4845] bg-white/[0.01] cursor-not-allowed" : isSelected ? "border-[#E5BA73] bg-[#E5BA73]/10 text-[#E5BA73]" : "border-white/5 bg-[#12110F] text-[#A3A19E] hover:border-white/10"}`}
-                    >
-                      <span className="font-bold">Gulungan {g.nomor_gulungan || '01'}</span>
-                      <span className="text-[10px] font-normal opacity-75 mt-0.5">
-                        {habis ? "Stok Habis" : `Lebar: ${lebarRoll} cm`}
-                      </span>
-                      {!habis && <span className="text-[9px] font-normal opacity-50">Sisa: {g.panjang_sisa}m</span>}
-                      {isSelected && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#E5BA73]" />}
-                    </button>
-                  );
-                })}
+            {/* Header Internal */}
+            <div className="p-6 border-b border-[#E5BA73]/10 flex justify-between items-start">
+              <div>
+                <span className="text-[10px] font-bold tracking-widest text-[#E5BA73] uppercase bg-[#E5BA73]/5 px-3 py-1 rounded-full border border-[#E5BA73]/10 w-fit">
+                  {product.kategori?.nama ?? "Lurik Premium"}
+                </span>
+                <h2 className="text-xl font-semibold text-[#000000] mt-2">{productTitle}</h2>
+                <p className="text-xs text-[#706E6B] mt-1">Kode: {product.kode_produk ?? "—"} · Motif: {product.motif?.nama ?? "—"}</p>
               </div>
+              <button onClick={onClose} disabled={isCrumpling} className="text-[#A3A19E] hover:text-[#E5BA73]">✕</button>
             </div>
 
-            {/* Step 2: List Meteran Pembelian Dinamis */}
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold tracking-widest uppercase text-[#706E6B]">Step 2: Tentukan Panjang Potong (Default 0m)</p>
-              
-              {Object.keys(selectedRolls).length === 0 ? (
-                <div className="text-center py-6 border border-dashed border-white/5 rounded-xl bg-white/[0.01]">
-                  <p className="text-xs text-[#706E6B]">Pilih salah satu nomor gulungan di atas untuk mengatur panjang kain</p>
+            <div className="p-5 space-y-5">
+              {/* SPESIFIKASI */}
+              <div>
+                <p className="text-[11px] font-medium tracking-widest uppercase text-[#171717] mb-2">Spesifikasi Kain</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "Lebar Kain", value: lebar ? `${lebar} cm` : "—" },
+                    { label: "Sisa di Gulungan Ini", value: panjangSisa > 0 ? `${panjangSisa} meter` : "Habis" },
+                    { label: "Jenis Pewarna", value: product.jenis_pewarna ? product.jenis_pewarna.charAt(0).toUpperCase() + product.jenis_pewarna.slice(1) : "—" }
+                  ].map(({ label, value }) => (
+                    <div key={label} className="bg-white/[0.025] border border-[#E5BA73]/20 rounded-lg px-3 py-2">
+                      <p className="text-[11px] text-[#000000]">{label}</p>
+                      <p className="text-[13px] font-medium text-[#000000] mt-0.5">{value}</p>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <div className="space-y-1.5">
-                  {gulunganList.filter(g => selectedRolls[g.id] !== undefined).map((g) => {
-                    const currentQty = selectedRolls[g.id] ?? 0;
-                    const lebarRoll = g.lebar_kain ?? g.lebar ?? product.lebar ?? "—";
-                    return (
-                      <div key={g.id} className="flex items-center justify-between p-3 bg-white/[0.02] border border-white/5 rounded-xl">
-                        <div>
-                          <p className="text-xs font-bold text-[#C8C4BC]">Gulungan No. {g.nomor_gulungan} <span className="text-[11px] font-normal text-[#8a8780] ml-1">({lebarRoll} cm)</span></p>
-                          <p className="text-[10px] text-[#706E6B]">Batas maksimal: {g.panjang_sisa} meter</p>
-                        </div>
-                        
-                        {/* Selector Meter */}
-                        <div className="flex items-center gap-3">
-                          <button 
-                            type="button" 
-                            disabled={currentQty <= 0 || isCrumpling} 
-                            onClick={() => handleUpdateQty(g.id, -1, g.panjang_sisa)} 
-                            className="w-7 h-7 rounded border border-[#E5BA73]/25 text-[#E5BA73] flex items-center justify-center disabled:opacity-20 text-xs transition-colors hover:bg-[#E5BA73]/5"
-                          >
-                            −
-                          </button>
-                          <span className={`text-xs font-bold min-w-[2.5rem] text-center ${currentQty > 0 ? 'text-[#E5BA73]' : 'text-[#706E6B]'}`}>
-                            {currentQty} <span className="text-[10px] font-normal opacity-70">m</span>
+              </div>
+
+              {/* PILIH GULUNGAN */}
+              {gulunganList.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-medium tracking-widest uppercase text-[#706E6B] mb-2">Pilih Gulungan Kain</p>
+                  <div className="flex flex-wrap gap-2">
+                    {gulunganList.map((g) => {
+                      const habis = g.panjang_sisa <= 0
+                      const dipilih = gulunganDipilih?.id === g.id
+                      return (
+                        <button
+                          key={g.id}
+                          disabled={habis || isCrumpling}
+                          onClick={() => { setGulunganDipilih(g); setQty(1) }}
+                          className={`px-3 py-2 rounded-lg border text-xs font-medium transition-colors text-left
+                            ${habis
+                              ? "border-[#3a3835] text-[#4a4845] cursor-not-allowed"
+                              : dipilih
+                                ? "border-[#E5BA73] bg-[#E5BA73]/10 text-[#5a3e10]"
+                                : "border-[#A3A19E]/20 text-[#A3A19E] hover:border-[#E5BA73]/50"
+                            }`}
+                        >
+                          Gulungan {g.nomor_gulungan}
+                          <span className="block text-[10px] mt-0.5 opacity-70">
+                            {habis ? "Habis" : `L: ${g.lebar}cm · Sisa: ${g.panjang_sisa}m`}
                           </span>
-                          <button 
-                            type="button" 
-                            disabled={currentQty >= g.panjang_sisa || isCrumpling} 
-                            onClick={() => handleUpdateQty(g.id, 1, g.panjang_sisa)} 
-                            className="w-7 h-7 rounded border border-[#E5BA73]/25 text-[#E5BA73] flex items-center justify-center disabled:opacity-20 text-xs transition-colors hover:bg-[#E5BA73]/5"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
-            </div>
 
-            {/* Total Akumulasi Biaya */}
-            <div className="flex items-center justify-between bg-[#E5BA73]/5 border border-[#E5BA73]/15 rounded-xl px-4 py-2.5">
+              {/* STATUS SISA KAIN */}
               <div>
-                <p className="text-[10px] text-[#8a8780] font-medium">Panjang Kumulatif</p>
-                <p className="text-xs font-bold text-[#F9F6F0] mt-0.5">{totalQty} meter terpilih</p>
+                <p className="text-[11px] font-medium tracking-widest uppercase text-[#706E6B] mb-2">Ketersediaan Panjang Kain</p>
+                <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full bg-[#E5BA73] rounded-full transition-all" style={{ width: `${stokPersen}%` }} />
+                </div>
+                <p className="text-xs text-[#706E6B] mt-1.5">
+                  Tersisa {panjangSisa} meter pada Gulungan No. {gulunganDipilih?.nomor_gulungan ?? "—"}
+                </p>
               </div>
-              <div className="text-right">
-                <p className="text-[10px] text-[#8a8780] font-medium">Total Estimasi</p>
-                <p className="text-base font-bold text-[#E5BA73] mt-0.5">{totalHarga > 0 ? formatRupiah(totalHarga) : "Rp 0"}</p>
+
+              {/* JUMLAH METER */}
+              <div>
+                <p className="text-[11px] font-medium tracking-widest uppercase text-[#000000] mb-2">Jumlah Panjang Pesanan (Meter)</p>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={isCrumpling}
+                    onClick={() => setQty((q) => Math.max(1, q - 1))}
+                    className="w-8 h-8 rounded-lg border border-[#E5BA73]/25 text-[#E5BA73] text-xl flex items-center justify-center hover:bg-[#E5BA73]/10 transition-colors disabled:opacity-30"
+                  >
+                    −
+                  </button>
+                  <span className="text-lg font-semibold text-[#000000] min-w-[2.5rem] text-center">
+                    {qty} <span className="text-xs font-normal text-[#706E6B]">m</span>
+                  </span>
+                  <button
+                    type="button"
+                    disabled={qty >= panjangSisa || isCrumpling}
+                    onClick={() => setQty((q) => Math.min(panjangSisa, q + 1))}
+                    className={`w-8 h-8 rounded-lg border text-xl flex items-center justify-center transition-colors
+                      ${qty >= panjangSisa 
+                        ? "border-[#3a3835] text-[#4a4845] cursor-not-allowed" 
+                        : "border-[#E5BA73]/25 text-[#E5BA73] hover:bg-[#E5BA73]/10"
+                      }`}
+                  >
+                    +
+                  </button>
+                  <span className="text-xs text-[#706E6B]">maksimal pembelian {panjangSisa} meter</span>
+                </div>
+              </div>
+
+              {/* RINGKASAN HARGA */}
+              <div className="flex justify-between items-baseline bg-[#E5BA73]/5 border border-[#E5BA73]/20 rounded-xl px-4 py-3">
+                {gulunganDipilih && panjangSisa > 0 ? (
+                  <>
+                    <span className="text-xs text-[#8a8780]">
+                      {formatRupiah(hargaPerMeter)} × {qty} meter
+                    </span>
+                    <span className="text-xl font-semibold text-[#E5BA73]">
+                      {formatRupiah(total)}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-xs text-[#706E6B] w-full text-center">
+                    Gulungan ini telah habis atau tidak tersedia
+                  </span>
+                )}
               </div>
             </div>
 
-          </div>
-
-          {/* Footer Navigasi & Aksi */}
-          <div className="flex gap-2 px-5 py-4 border-t border-white/5 bg-[#12110F]/30">
-            {/* Button WhatsApp (Selalu Aktif) */}
-            <button
-              type="button"
-              onClick={handleWhatsAppChat}
-              className="flex-1 py-2 rounded-xl border border-white/10 text-xs font-semibold text-[#A3A19E] hover:text-[#E5BA73] bg-white/[0.01] hover:bg-white/[0.03] transition-colors"
-            >
-              WhatsApp
-            </button>
-
-            {/* Button Masukkan Keranjang (Disabled jika total qty masih 0) */}
-            <button
-              type="button"
-              disabled={totalQty <= 0 || isLoading || isCrumpling}
-              onClick={handleAddToCart}
-              className="flex-[2] py-2 bg-[#E5BA73] text-[#1A1917] text-xs font-bold rounded-xl transition-all disabled:bg-[#2a2825] disabled:text-[#4a4845] disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Memproses..." : totalQty <= 0 ? "Masukkan Keranjang (0m)" : `Masukkan Keranjang (${totalQty}m)`}
-            </button>
+            {/* FOOTER TOMBOL AKSI */}
+            <div className="flex gap-2 px-5 pb-5">
+              <button
+                type="button"
+                disabled={panjangSisa <= 0 || isCrumpling}
+                onClick={() => {
+                  if (panjangSisa <= 0) return
+                  const pesan = encodeURIComponent(
+                    `Halo Biyo Lurik, saya tertarik memesan kain "${productTitle}" (Lebar ${lebar}cm) dari Gulungan No. ${gulunganDipilih?.nomor_gulungan} sepanjang ${qty} meter. Total: ${formatRupiah(total)}`
+                  )
+                  window.open(`https://wa.me/6281234567890?text=${pesan}`, "_blank")
+                }}
+                className={`flex-1 py-2.5 text-center rounded-xl border text-xs font-semibold tracking-wider transition-colors
+                  ${panjangSisa > 0 
+                    ? "border-[#A3A19E]/20 text-[#A3A19E] hover:text-[#E5BA73] hover:border-[#E5BA73] cursor-pointer" 
+                    : "border-[#3a3835] text-[#4a4845] cursor-not-allowed"
+                  }`}
+              >
+                WhatsApp
+              </button>
+              
+              <button
+                type="button"
+                disabled={!gulunganDipilih || panjangSisa <= 0 || isSubmitting || isCrumpling}
+                onClick={handleTambahKeranjang}
+                className={`flex-[2] py-2.5 rounded-xl text-xs font-bold tracking-wider transition-all
+                  ${gulunganDipilih && panjangSisa > 0 && !isSubmitting
+                    ? "bg-[#E5BA73] text-[#1A1917] hover:opacity-90 cursor-pointer"
+                    : "bg-[#2a2825] text-[#4a4845] cursor-not-allowed"
+                  }`}
+              >
+                {isSubmitting ? "Memproses..." : panjangSisa <= 0 ? "Stok Habis" : "Tambah ke Keranjang"}
+              </button>
+            </div>
           </div>
         </motion.div>
       </div>
     </AnimatePresence>
-  );
+  )
 }

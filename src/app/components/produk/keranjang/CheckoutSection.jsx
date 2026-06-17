@@ -167,7 +167,7 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
       />
 
       <div className="flex items-center justify-between pb-4 border-b border-[#E5BA73]/10">
-        <h2 className="text-lg font-bold text-[#E5BA73] tracking-wide">Ringkasan Pembayaran (Check-out)</h2>
+        <h2 className="text-lg font-bold text-[#ba9354] tracking-wide">Ringkasan Pembayaran (Check-out)</h2>
         <button 
           onClick={onBack} 
           disabled={loading}
@@ -244,7 +244,7 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
           }
 
           return (
-            <div key={item.id} className="flex items-center gap-4 p-3 border bg-[#0A1715]/40 border-white/5 rounded-xl shadow-md text-xs">
+            <div key={item.id} className="flex items-center gap-4 p-3 border bg-[#fefefe] border-white/5 rounded-xl shadow-md text-xs">
               {/* Tempat Mini Visual */}
               <div className="relative w-24 h-24 overflow-hidden border rounded-lg bg-zinc-900 border-white/5 shrink-0">
                 {miniVisual}
@@ -257,21 +257,21 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
 
               <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
                 <div>
-                  <p className="text-[12px] text-[#A3A19E] uppercase tracking-wider">Kode Kain</p>
+                  <p className="text-[12px] text-[#000000] uppercase tracking-wider">Kode Kain</p>
                   <p className="font-bold text-[#F9F6F0] truncate text-[10px]">{kodeProduk}</p>
                 </div>
                 <div>
-                  <p className="text-[12px] text-[#A3A19E] uppercase tracking-wider">No Gulungan</p>
+                  <p className="text-[12px] text-[#000000] uppercase tracking-wider">No Gulungan</p>
                   <p className="font-semibold text-[#E5BA73] text-[12px]">
                     {isCustomItem ? "-" : `G-${item.gulungan?.nomor_gulungan || '-'}`}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[12px] text-[#A3A19E] uppercase tracking-wider">Panjang Potong</p>
+                  <p className="text-[12px] text-[#000000] uppercase tracking-wider">Panjang Potong</p>
                   <p className="font-bold text-[#F9F6F0]/90 text-[12px]">{meteran} meter</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[12px] text-[#A3A19E] uppercase tracking-wider">Subtotal</p>
+                  <p className="text-[12px] text-[#050505] uppercase tracking-wider">Subtotal</p>
                   <p className="font-black text-[#E5BA73] text-[12px]">Rp{(meteran * hargaKain).toLocaleString('id-ID')}</p>
                 </div>
               </div>
@@ -281,12 +281,12 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
       </div>
 
       {/* Invoice Box Nominal */}
-      <div className="p-4 border bg-[#12110F] border-[#E5BA73]/10 rounded-xl shadow-lg space-y-2">
-        <div className="flex justify-between text-xs text-[#A3A19E]">
+      <div className="p-4 border bg-[#d3b472] border-[#E5BA73]/10 rounded-xl shadow-lg space-y-2">
+        <div className="flex justify-between text-xs text-[#000000]">
           <span>Total Sebelum Pembayaran</span>
           <span>Rp {subTotal.toLocaleString('id-ID')}</span>
         </div>
-        <div className="flex justify-between pt-3 text-base font-bold border-t border-white/5 text-[#E5BA73]">
+        <div className="flex justify-between pt-3 text-base font-bold border-t border-white/5 text-[#080500]">
           <span>Total Pembayaran Net</span>
           <span className="text-lg font-black">Rp {total.toLocaleString('id-ID')}</span>
         </div>
@@ -295,7 +295,7 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
       <button 
         onClick={handleBayarMidtrans}
         disabled={loading || items.length === 0}
-        className="flex items-center justify-center w-full gap-2 py-3.5 text-xs font-bold uppercase tracking-wider transition-all text-[#12110F] bg-[#E5BA73] hover:bg-[#f3cb85] rounded-xl shadow-xl disabled:bg-white/5 disabled:text-white/20 disabled:cursor-not-allowed"
+        className="flex items-center justify-center w-full gap-2 py-3.5 text-xs font-bold uppercase tracking-wider transition-all text-[#ffffff] bg-[#7a6037] hover:bg-[#f3cb85] rounded-xl shadow-xl disabled:bg-white/5 disabled:text-white/20 disabled:cursor-not-allowed"
       >
         {loading ? (
           <>

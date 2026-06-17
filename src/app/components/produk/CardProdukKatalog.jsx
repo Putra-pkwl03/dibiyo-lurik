@@ -10,17 +10,12 @@ export default function CardProdukKatalog({
   onBuyClick, 
   onKombinasiClick 
 }) {
-  // Safe Guard jika data produk dari parent belum termuat
   if (!product) return null;
 
-  // Akumulasi total sisa kain dari seluruh gulungan yang tersedia
   const totalStokSisa = product.gulungan?.reduce((acc, curr) => acc + (curr.panjang_sisa || 0), 0) || 0;
-  
-  // Ambil rentang harga termurah untuk penampilan awal di katalog
   const daftarHarga = product.gulungan?.map(g => g.harga || g.harga_per_meter).filter(Boolean) || [];
   const hargaTermurah = daftarHarga.length > 0 ? Math.min(...daftarHarga) : 0;
 
-  // Normalisasi parsing data objek/string data teks
   const namaKategori = typeof product.kategori === 'object' ? product.kategori?.nama : (product.kategori || "Kain");
   const kodeProduk = typeof product.kode_produk === 'object' ? product.kode_produk?.nama : (product.kode_produk || "-");
   const namaMotif = typeof product.motif === 'object' ? product.motif?.nama : (product.motif || "Polos");
@@ -32,12 +27,11 @@ export default function CardProdukKatalog({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.4 }}
-      className="bg-[#1A1917] border border-[#E5BA73]/5 rounded-2xl overflow-hidden shadow-lg group flex flex-col h-full hover:border-[#E5BA73]/20 transition-all duration-300"
+      className="bg-white border border-[#EBE7E0] rounded-2xl overflow-hidden shadow-sm group flex flex-col h-full hover:border-[#C49A6C]/40 hover:shadow-md transition-all duration-300"
     >
-      {/* ─── VISUAL GAMBAR PRODUK (SAMA DENGAN CATALOG.JSX) ─── */}
-      <div className="w-full aspect-[4/3] bg-[#12110F] relative flex items-center justify-center overflow-hidden">
-        {/* Badge Ketersediaan Akumulasi Sisa Meteran */}
-        <span className="absolute top-3 left-3 text-[9px] font-bold tracking-widest bg-[#12110F]/80 text-[#E5BA73] px-2 py-1 rounded border border-[#E5BA73]/20 uppercase z-10">
+      {/* ─── VISUAL GAMBAR PRODUK ─── */}
+      <div className="w-full aspect-[4/3] bg-[#F5F1E9] relative flex items-center justify-center overflow-hidden">
+        <span className="absolute top-3 left-3 text-[9px] font-bold tracking-widest bg-[#3E3431]/90 text-[#F5F1E9] px-2 py-1 rounded shadow-sm uppercase z-10">
           {totalStokSisa > 0 ? `Tersedia: ${totalStokSisa} m` : "Stok Habis"}
         </span>
 
@@ -49,9 +43,9 @@ export default function CardProdukKatalog({
             loading="lazy"
           />
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#1E293B] to-[#0F172A]">
-            <span className="text-2xl opacity-40">🧵</span>
-            <span className="text-[10px] text-[#A3A19E] mt-2 tracking-widest">{kodeProduk}</span>
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#F5F1E9] to-[#EBE7E0]">
+            <span className="text-2xl opacity-60">🧵</span>
+            <span className="text-[10px] text-[#706965] mt-2 tracking-widest">{kodeProduk}</span>
           </div>
         )}
       </div>
@@ -59,50 +53,49 @@ export default function CardProdukKatalog({
       {/* ─── DETAIL INFORMASI PRODUK ─── */}
       <div className="flex flex-col justify-between flex-1 p-5 space-y-4">
         <div className="space-y-1">
-          {/* Sub-Header Metadata (Kategori & Kode Produk Sejajar) */}
-          <div className="flex items-center justify-between text-[10px] font-bold tracking-wider uppercase text-[#A3A19E]">
+          <div className="flex items-center justify-between text-[10px] font-bold tracking-wider uppercase text-[#706965]">
             <span>{namaKategori}</span>
-            <span className="font-mono text-[#E5BA73]/70">{kodeProduk}</span>
+            <span className="font-mono text-[#B08354]">{kodeProduk}</span>
           </div>
 
-          {/* Judul Utama Kain */}
-          <h3 className="font-bold text-base text-[#F9F6F0] line-clamp-1 group-hover:text-[#E5BA73] transition-colors">
+          <h3 className="font-bold text-base text-[#3E3431] line-clamp-1 group-hover:text-[#B08354] transition-colors">
             {productTitle}
           </h3>
 
-          {/* Info Harga Per Meter & Jenis Pewarnaan */}
           <div className="flex items-center justify-between pt-1">
-            <p className="text-xs text-[#E5BA73] font-semibold">
+            <p className="text-sm text-[#B08354] font-bold">
               {formatRupiah ? formatRupiah(hargaTermurah) : `Rp ${hargaTermurah.toLocaleString("id-ID")}`} 
-              <span className="text-[#A3A19E]/60 font-light text-[11px]"> / meter</span>
+              <span className="text-[#706965]/70 font-light text-[11px]"> / meter</span>
             </p>
-            <span className="text-[10px] text-[#706E6B] capitalize">
+            <span className="text-[10px] text-[#706965] font-medium bg-[#F5F1E9] px-2 py-0.5 rounded capitalize">
               {product.jenis_pewarna ? `${product.jenis_pewarna}` : "ATBM"}
             </span>
           </div>
         </div>
 
-        {/* ─── TOMBOL AKSI UTAMA DI FOOTER ─── */}
-        <div className="grid grid-cols-2 gap-2 mt-auto pt-2 border-t border-white/5">
-          {/* Button 1: Kombinasi (Padu Padan Desain Ke Store/Page) */}
+        {/* ─── 🛠️ REVISI STYLE TOMBOL: TEGAS, BOLD, DAN PENUH SESUAI REFERENSI ─── */}
+        <div className="grid grid-cols-2 gap-3 mt-auto pt-4 border-t border-[#EBE7E0]">
+          
+          {/* Button 1: Kombinasi (Gaya Border Outline Minimalis namun Tegas) */}
           <button
             type="button"
             onClick={() => onKombinasiClick && onKombinasiClick(product)}
-            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-white/[0.02] border border-[#A3A19E]/10 hover:border-[#E5BA73]/40 text-[11px] font-bold tracking-wide text-[#A3A19E] hover:text-[#E5BA73] hover:bg-[#E5BA73]/5 rounded-lg transition-all duration-300"
+            className="flex items-center justify-center gap-1.5 py-3 px-3 bg-white border-2 border-[#3E3431] hover:border-[#C49A6C] text-xs font-extrabold tracking-wide text-[#3E3431] hover:text-[#B08354] hover:bg-[#C49A6C]/5 rounded-xl transition-all duration-300 shadow-sm"
           >
-            <Layers size={12} />
+            <Layers size={13} className="stroke-[2.5]" />
             Kombinasi
           </button>
 
-          {/* Button 2: Beli Kain (Membuka Multi-Select Modal dari Parent) */}
+          {/* Button 2: Beli Kain (Gaya Solid Arang Pekat Bold Sesuai Referensi Gambar) */}
           <button
             type="button"
             onClick={() => onBuyClick && onBuyClick(product)}
-            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-transparent border border-[#E5BA73]/20 hover:border-[#E5BA73] hover:bg-[#E5BA73] text-[11px] font-bold tracking-wide text-[#E5BA73] hover:text-[#12110F] rounded-lg transition-all duration-300"
+            className="flex items-center justify-center gap-1.5 py-3 px-3 bg-[#3E3431] border border-transparent hover:bg-[#C49A6C] text-xs font-extrabold tracking-wide text-white rounded-xl transition-all duration-300 shadow-md hover:shadow-lg"
           >
-            <ShoppingBag size={12} />
+            <ShoppingBag size={13} className="stroke-[2.5]" />
             Beli Kain
           </button>
+
         </div>
       </div>
     </motion.div>

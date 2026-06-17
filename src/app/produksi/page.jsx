@@ -43,7 +43,7 @@ const DATA_PRODUKSI = [
 export default function ProduksiPage() {
   return (
     <>
-    <div className="bg-[#0b1311] text-[#f3f4f6] min-h-screen py-40 px-4 sm:px-6 lg:px-8">
+    <div className="bg-[#ffffff] text-[#000000] min-h-screen py-40 px-4 sm:px-6 lg:px-8">
       {/* 1. Header Section */}
       <div className="max-w-4xl mx-auto text-center mb-24">
         <h1 className="text-3xl sm:text-4xl font-bold text-[#d9a05b] mb-4 uppercase tracking-wider">
@@ -76,7 +76,7 @@ export default function ProduksiPage() {
 
               {/* Bagian Gambar */}
               <div className="w-full md:w-1/2 group">
-                <div className="overflow-hidden rounded-xl border border-gray-800 bg-[#111c19] shadow-2xl transition-all duration-300 group-hover:border-[#d9a05b]/40">
+                <div className="overflow-hidden rounded-xl border border-gray-800 bg-[#ffffff] shadow-2xl transition-all duration-300 group-hover:border-[#d9a05b]/40">
                   <Image
                     src={proses.imageSrc}
                     alt={proses.alt}
@@ -95,10 +95,10 @@ export default function ProduksiPage() {
                     Langkah {proses.step}
                   </span>
                 </div>
-                <h2 className="text-2xl font-semibold text-white tracking-wide">
+                <h2 className="text-2xl font-semibold text-black tracking-wide">
                   {proses.title}
                 </h2>
-                <p className="text-[#9ca3af] leading-relaxed text-sm sm:text-base">
+                <p className="text-[#000000] leading-relaxed text-sm sm:text-base">
                   {proses.description}
                 </p>
               </div>
