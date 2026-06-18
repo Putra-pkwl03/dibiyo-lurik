@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '../../../context/CartContext'; 
 import ModalMidtrans from './ModalMidtrans'; 
 
-// Generator gradien lurik live-vector (Sudah diperbaiki untuk mendukung format RGB & HEX)
+// Generator gradien lurik live-vector
 const generateLurikGradient = (stripes) => {
   let gradientString = '';
   let currentOffset = 0;
@@ -19,14 +19,12 @@ const generateLurikGradient = (stripes) => {
     const startPoint = currentOffset;
     const endPoint = currentOffset + thickness;
     
-    // Gunakan format standar CSS yang aman dari tabrakan koma RGB
     gradientString += `${stripe.color} ${startPoint}px, ${stripe.color} ${endPoint}px, `;
     gradientString += `transparent ${endPoint}px, transparent ${endPoint + 2}px, `;
     
     currentOffset = endPoint + 2; 
   });
   
-  // Deteksi jika string berakhiran koma dan spasi, lalu potong bersih
   const cleanGradient = gradientString.trim().replace(/,$/, '');
   
   return {
@@ -42,7 +40,9 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
   const [isLoadingToken, setIsLoadingToken] = useState(false); 
   
   const router = useRouter();
-  const { user } = useCart(); 
+  
+  // 🌟 AMBIL KEDUA STATE & FUNGSI DARI CONTEXT UNTUK CSR GLOBAL
+  const { user, clearCartState } = useCart(); 
 
   const subTotal = useMemo(() => {
     return items.reduce((acc, item) => {
@@ -102,11 +102,23 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
     const targetUserId = currentUser.id || currentUser.user?.id || currentUser.data?.id;
 
     try {
+      const normalizedItems = items.map((item) => {
+        const meteran = item.input_panjang || item.gulungan?.panjang_sisa || 0;
+        const harga = item.gulungan?.harga_per_meter || item.gulungan?.harga || 0;
+        return {
+          id: item.id,
+          gulungan_id: item.gulungan_id || item.gulungan?.id,
+          panjang_dibeli: Number(meteran), 
+          harga_per_meter: Number(harga), 
+          subtotal: Number(meteran * harga)
+        };
+      });
+
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items,
+          items: normalizedItems, 
           totalNet: total,
           user_id: targetUserId, 
         }),
@@ -146,13 +158,12 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
         </button>
       </div>
 
-      {/* List Tinjauan Kain — satu kartu, bersambung, tanpa scrollbar */}
+      {/* List Tinjauan Kain */}
       <div className="border border-[#2D2219]/10 rounded-2xl overflow-hidden divide-y divide-[#2D2219]/10 bg-white shadow-md">
         {items.map((item) => {
           const hargaKain = item.gulungan?.harga_per_meter || item.gulungan?.harga || 0;
           const meteran = item.input_panjang || item.gulungan?.panjang_sisa || 0;
           
-          // 1. Validasi status item kustom (Mendukung CUSTOM & COMBO-STUDIO)
           const isCustomItem = 
             item.isCustom === true || 
             item.product?.isCustom === true || 
@@ -160,13 +171,10 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
             item.gulungan?.nomor_gulungan === "COMBO-STUDIO";
 
           const kodeProduk = item.kode_produk || item.product?.kode_produk || item.produk?.kode_produk || item.gulungan?.produk?.kode_produk || (isCustomItem ? "Lurik Kustom" : "Lurik Premium");
-
-          // 2. Mengambil objek konfigurasi baik yang ditulis dengan 'c' atau 'g'
           const configurasi = item.gulungan?.configurasi || item.gulungan?.configuration;
 
           let miniVisual;
           
-          // 3. Render anyaman lurik dinamis jika datanya valid
           if (isCustomItem && configurasi && configurasi.stripes) {
             const { bgColor, patternDensity, stripes } = configurasi;
             const { gradient, totalWidth } = generateLurikGradient(stripes);
@@ -201,8 +209,8 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
           }
 
           return (
-            <div key={item.id} className="flex items-center gap-4 p-3 text-xs">
-              <div className="relative w-24 h-24 overflow-hidden border rounded-lg bg-[#EFEBE3] border-[#2D2219]/10 shrink-0">
+            <div key={item.id} className="flex items-center gap-4 p-3 border bg-[#ffffff] border-white/5 rounded-xl shadow-md text-xs">
+              <div className="relative w-24 h-24 overflow-hidden border rounded-lg bg-zinc-900 border-white/5 shrink-0">
                 {miniVisual}
               </div>
               <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
@@ -234,14 +242,8 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
 
       {/* Invoice Box */}
       <div className="p-4 border bg-[#d7b46d] border-[#E5BA73]/10 rounded-xl shadow-lg space-y-2">
-        <div className="flex justify-between text-xs text-[#2a2826]">
-          <span>Total Sebelum Pembayaran</span>
-          <span>Rp {subTotal.toLocaleString('id-ID')}</span>
-        </div>
-        <div className="flex justify-between pt-3 text-base font-bold border-t border-white/5 text-[#000000]">
-          <span>Total Pembayaran Net</span>
-          <span className="text-lg font-black">Rp {total.toLocaleString('id-ID')}</span>
-        </div>
+        <div className="flex justify-between text-xs text-[#2a2826]"><span>Total Sebelum Pembayaran</span><span>Rp {subTotal.toLocaleString('id-ID')}</span></div>
+        <div className="flex justify-between pt-3 text-base font-bold border-t border-white/5 text-[#000000]"><span>Total Pembayaran Net</span><span className="text-lg font-black">Rp {total.toLocaleString('id-ID')}</span></div>
       </div>
 
       <button 
@@ -264,8 +266,16 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
         onSuccess={async (result) => {
           setIsModalOpen(false);
           try {
+            // 1. Eksekusi hapus data dari API backend
             await Promise.all(items.map(item => fetch(`/api/keranjang?id=${item.id}`, { method: 'DELETE' })));
-          } catch (err) { console.error(err); }
+            
+            // 🌟 2. CALLBACK CSR: Langsung bersihkan state keranjang di browser tanpa refresh halaman
+            if (clearCartState) clearCartState();
+            
+          } catch (err) { 
+            console.error("Gagal sinkronisasi data keranjang:", err); 
+          }
+          
           window.dispatchEvent(new CustomEvent("updateCartCount", { detail: { count: -items.length } }));
           
           Swal.fire({
@@ -277,7 +287,8 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
             confirmButtonColor: '#E5BA73'
           }).then(() => {
             if (onOrderSuccess) onOrderSuccess();
-            router.push('/produk'); 
+            // 🌟 3. REDIRECT: Alihkan navigasi CSR ke halaman pesanan saya
+            router.push('/pesanan-saya'); 
           });
         }}
         onPending={() => {

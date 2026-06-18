@@ -6,7 +6,6 @@ export async function POST(request) {
   try {
     const body = await request.json();
     
-    // Properti bawaan dari payload Webhook Midtrans
     const { 
       order_id, 
       status_code, 
@@ -16,8 +15,7 @@ export async function POST(request) {
       fraud_status 
     } = body;
 
-    // 1. VERIFIKASI KEAMANAN: Validasi Signature Key dari Midtrans
-    // Langkah ini wajib agar endpoint Anda tidak bisa ditembak sembarangan oleh robot/pihak luar.
+    // 1. VERIFIKASI KEAMANAN
     const rawServerKey = process.env.MIDTRANS_SERVER_KEY;
     const serverKey = rawServerKey ? rawServerKey.trim() : '';
     
@@ -33,10 +31,10 @@ export async function POST(request) {
 
     console.log(`=== WEBHOOK MIDTRANS MASUK: ${order_id} [Status: ${transaction_status}] ===`);
 
-    // 2. AMBIL DATA TRANSAKSI: Cari data pesanan di tabel Anda saat ini
+    // 2. AMBIL DATA TRANSAKSI
     const { data: transaksiSaatIni, error: txError } = await supabaseAdmin
       .from('transaksi')
-      .select('status_transaksi, items_transaksi')
+      .select('status_transaksi')
       .eq('order_id', order_id)
       .single();
 
@@ -45,91 +43,99 @@ export async function POST(request) {
       return NextResponse.json({ message: "Data transaksi tidak terdaftar" }, { status: 404 });
     }
 
-    // 3. PEMETAAN STATUS: Terjemahkan status Midtrans ke sistem Anda
+    // 3. PEMETAAN STATUS
     let statusBaru = 'pending';
+    let statusKirimBaru = 'diproses'; 
+
     if (transaction_status === 'settlement' || (transaction_status === 'capture' && fraud_status === 'accept')) {
-      statusBaru = 'settlement'; // Pembayaran Sukses Berhasil
+      statusBaru = 'settlement';
+      statusKirimBaru = 'diproses'; 
     } else if (transaction_status === 'cancel' || transaction_status === 'deny' || transaction_status === 'expire') {
-      statusBaru = 'batal';      // Pembayaran Gagal / Kedaluwarsa
+      statusBaru = 'batal';
+      statusKirimBaru = 'batal';   
     } else if (transaction_status === 'pending') {
       statusBaru = 'pending';
     }
 
-    // 4. LOGIKA UPDATE STOK & TERJUAL (Hanya jika status berubah dari PENDING ke SETTLEMENT)
-    // Pengaman: Cek jika status di DB Anda sebelumnya memang belum sukses (agar tidak terjadi double reduction jika webhook memanggil ulang)
+    // 4. LOGIKA MUTASI POTONG PANJANG KAIN
     const statusLamaSukses = ['settlement', 'capture', 'success'].includes(transaksiSaatIni.status_transaksi?.toLowerCase());
     const statusBaruSukses = statusBaru === 'settlement';
 
     if (statusBaruSukses && !statusLamaSukses) {
-      console.log(`[PROSES STOK] Mengurangi stok kain untuk Order ID: ${order_id}`);
+      console.log(`[PROSES STOK] Menghitung pemotongan sisa kain untuk Order ID: ${order_id}`);
       
-      const daftarItem = transaksiSaatIni.items_transaksi || [];
-      
-      for (const item of daftarItem) {
-        // Ekstraksi ID produk secara cerdas (baik format mentah cart ataupun format ringkas checkout)
-        let produkId = item.produk_id || item.produk?.id || item.gulungan?.produk_id || item.gulungan?.produk?.id;
-        const kuantitasBeli = Number(item.quantity) || 1;
+      const { data: daftarItem, error: itemError } = await supabaseAdmin
+        .from('item_transaksi')
+        .select('gulungan_id, panjang_dibeli')
+        .eq('order_id', order_id);
 
-        // Jembatan Otomatis: Jika item hanya membawa gulungan_id (pada properti item.id), kita cari produk_id lewat tabel gulungan
-        if (!produkId && item.id) {
-          const { data: dataGulungan } = await supabaseAdmin
+      if (itemError) {
+        console.error(`[STOK ERROR] Gagal mengambil item_transaksi untuk ${order_id}:`, itemError.message);
+      } else if (daftarItem && daftarItem.length > 0) {
+        
+        for (const item of daftarItem) {
+          const { gulungan_id, panjang_dibeli } = item;
+          if (!gulungan_id) continue;
+
+          const { data: dataGulungan, error: gulunganFetchError } = await supabaseAdmin
             .from('gulungan')
-            .select('produk_id')
-            .eq('id', item.id)
+            .select('panjang_sisa, produk_id')
+            .eq('id', gulungan_id)
             .single();
-          
-          if (dataGulungan) {
-            produkId = dataGulungan.produk_id;
+
+          if (gulunganFetchError || !dataGulungan) {
+            console.error(`[STOK ERROR] Gulungan ID ${gulungan_id} tidak ditemukan di database.`);
+            continue;
           }
-        }
 
-        // Jika produkId berhasil diidentifikasi, lakukan mutasi data stok & terjual
-        if (produkId) {
-          const { data: produkDB } = await supabaseAdmin
-            .from('produk')
-            .select('stok, terjual')
-            .eq('id', produkId)
-            .single();
+          const panjangSisaLama = Number(dataGulungan.panjang_sisa) || 0;
+          const panjangSisaBaru = Math.max(0, panjangSisaLama - Number(panjang_dibeli));
 
-          if (produkDB) {
-            const stokLama = Number(produkDB.stok) || 0;
-            const terjualLama = Number(produkDB.terjual) || 0;
+          const { error: gulunganUpdateError } = await supabaseAdmin
+            .from('gulungan')
+            .update({ panjang_sisa: panjangSisaBaru })
+            .eq('id', gulungan_id);
 
-            // Kalkulasi nilai baru
-            const stokBaru = Math.max(0, stokLama - kuantitasBeli);
-            const terjualBaru = terjualLama + kuantitasBeli;
-            
-            // Sinkronisasi dengan constraint CHECK status produk Anda ('ready' atau 'sold')
-            const statusStokBaru = stokBaru === 0 ? 'sold' : 'ready';
+          if (gulunganUpdateError) {
+            console.error(`[STOK ERROR] Gagal memotong panjang gulungan ${gulungan_id}:`, gulunganUpdateError.message);
+          } else {
+            console.log(`[STOK OK] Gulungan ${gulungan_id} dipotong ${panjang_dibeli}m. Sisa gudang: ${panjangSisaLama}m -> ${panjangSisaBaru}m`);
+          }
 
-            // Eksekusi pembaruan ke tabel produk Anda
-            await supabaseAdmin
+          const produkId = dataGulungan.produk_id;
+          if (produkId) {
+            const { data: produkDB } = await supabaseAdmin
               .from('produk')
-              .update({
-                stok: stokBaru,
-                terjual: terjualBaru,
-                status: statusStokBaru,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', produkId);
-            
-            console.log(`[STOK OK] Produk ${produkId} berhasil diupdate. Stok: ${stokLama} -> ${stokBaru} (${statusStokBaru})`);
+              .select('terjual')
+              .eq('id', produkId)
+              .single();
+
+            if (produkDB) {
+              const terjualLama = Number(produkDB.terjual) || 0;
+              await supabaseAdmin
+                .from('produk')
+                .update({
+                  terjual: terjualLama + Number(panjang_dibeli),
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', produkId);
+            }
           }
-        } else {
-          console.warn(`[STOK WARNING] Gagal mendeteksi referensi produk_id untuk item:`, item);
         }
       }
     }
 
-    // 5. UPDATE TABEL TRANSAKSI: Simpan status_transaksi terbaru Anda
+    // 5. UPDATE TABEL TRANSAKSI KESELURUHAN
     const { error: updateError } = await supabaseAdmin
       .from('transaksi')
-      .update({ status_transaksi: statusBaru })
+      .update({ 
+        status_transaksi: statusBaru,
+        status_pengiriman: statusKirimBaru 
+      })
       .eq('order_id', order_id);
 
     if (updateError) throw updateError;
 
-    // Berikan respons status 200 OK ke server Midtrans sebagai tanda webhook berhasil diterima
     return NextResponse.json({ message: "Webhook Midtrans berhasil diproses", status: statusBaru }, { status: 200 });
 
   } catch (err) {
