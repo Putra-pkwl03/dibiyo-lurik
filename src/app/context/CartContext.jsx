@@ -148,6 +148,12 @@ export function CartProvider({ children }) {
     }
   }
 
+  // 🌟 SINKRONISASI: Fungsi untuk membersihkan state lokal setelah checkout berhasil
+  const clearCartState = () => {
+    setCartItems([])
+    localStorage.removeItem("biyo_guest_cart")
+  }
+
   // ─── AMANKAN TOTAL HARGA DENGAN USEMEMO ───
   const totalHarga = useMemo(() => {
     return cartItems.reduce((acc, item) => {
@@ -158,7 +164,7 @@ export function CartProvider({ children }) {
   }, [cartItems]);
 
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, updateQty, isLoggedIn, loading, totalHarga }}>
+    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, updateQty, isLoggedIn, loading, totalHarga, clearCartState }}>
       {children}
     </CartContext.Provider>
   )
