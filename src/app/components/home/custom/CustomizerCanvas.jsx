@@ -120,11 +120,10 @@ export default function CustomizerCanvas({
   };
 
   return (
-    <div className="w-full lg:w-[55%] flex flex-col justify-between items-center bg-[#F5F2EB] border border-[#E5BA73]/10 rounded-3xl p-6 relative aspect-square lg:aspect-auto lg:h-[750px]">
-      
+     <div className="w-full lg:w-[55%] flex flex-col justify-between items-center bg-[#F5F2EB] border border-[#E5BA73]/10 rounded-3xl p-6 relative aspect-square lg:aspect-auto lg:h-[750px]">
+            
       {/* 1. TOMBOL UTAMA SWITCH PREVIEW MODEL */}
-      <div className="absolute top-6 right-6 bg-[#aa9e84] backdrop-blur-md border border-[#E5BA73]/20 rounded-xl p-1 flex gap-1 z-20">
-        {[
+      <div className="absolute top-6 right-6 bg-[#aa9e84] backdrop-blur-md border border-[#E5BA73]/20 rounded-xl p-1 flex gap-1 z-20">        {[
           { id: 'fabric', label: 'Kain', icon: <Scissors size={13} /> },
           { id: 'shirt', label: 'Baju', icon: <Shirt size={13} /> },
           { id: 'outfit', label: 'Setelan', icon: <Layers size={13} /> }
@@ -152,9 +151,8 @@ export default function CustomizerCanvas({
         </span>
       </div>
 
-      
       {/* 2. AREA PREVIEW KANVAS UTAMA */}
-      <div ref={canvasRef} className="w-full h-full mt-10 rounded-2xl shadow-inner relative overflow-hidden flex items-center justify-center border border-white/5 bg-[#9e9d9b44]">
+        <div ref={canvasRef} className="w-full h-full mt-10 rounded-2xl shadow-inner relative overflow-hidden flex items-center justify-center border border-white/5 bg-[#9e9d9b44]">
         
         {/* JIKA MODE KAIN */}
         {previewMode === 'fabric' && (
@@ -196,33 +194,16 @@ export default function CustomizerCanvas({
                   return (
                     <>
                       {/* AREA BAWAHAN MODEL */}
-                      <div 
-                        className="absolute inset-0 z-0 transform transition-all duration-300 scale-[1.05]"
-                        style={{ transform: `translate(${posisiSetelan.bawahan.X}, ${posisiSetelan.bawahan.Y})` }}
-                      >
-                        {subBawahan === 'celana' ? (
-                          <img 
-                            src="/mockups/pants-black-fixture.png" 
-                            alt="Celana Hitam Pasangan Kemeja" 
-                            className="object-contain w-full h-full pointer-events-none"
-                          />
-                        ) : (
-                          <div className="relative w-full h-full">
-                            <div 
-                              style={{
-                                ...patternStyle,
-                                maskImage: "url('/mockups/outfit-kain-mask.png')",
-                                WebkitMaskImage: "url('/mockups/outfit-kain-mask.png')",
-                                maskSize: 'contain',
-                                WebkitMaskSize: 'contain',
-                                maskRepeat: 'no-repeat',
-                                maskPosition: 'center'
-                              }}
-                              className="absolute inset-0 w-full h-full transition-all duration-300"
-                            />
-                          </div>
-                        )}
-                      </div>
+<div 
+  className="absolute inset-0 z-0 transform transition-all duration-300 scale-[1.05]"
+  style={{ transform: `translate(${posisiSetelan.bawahan.X}, ${posisiSetelan.bawahan.Y})` }}
+>
+  <img 
+    src="/mockups/pants-black-fixture.png" 
+    alt="Celana Hitam Pasangan Kemeja" 
+    className="object-contain w-full h-full pointer-events-none"
+  />
+</div>
 
                       {/* AREA ATASAN (KEMEJA) */}
                       <div 
@@ -241,7 +222,11 @@ export default function CustomizerCanvas({
                           }} 
                           className="absolute inset-0 w-full h-full transition-all duration-300"
                         />
-                       
+                        <img 
+                          src="/mockups/shirt-long-front-mask.png" 
+                          alt="Tekstur Atasan" 
+                          className="object-contain w-full h-full pointer-events-none mix-blend-multiply opacity-60" 
+                        />
                       </div>
                     </>
                   );
@@ -250,7 +235,7 @@ export default function CustomizerCanvas({
 
               {/* ================= BARIS KANAN: DISPLAY MOCKUP KAIN GANTUNG BARU (REPRESENTATIF CUSTOM) ================= */}
               <div className="relative w-[32%] h-[55%] flex flex-col items-center justify-between bg-[#12110F]/40 backdrop-blur-sm border border-white/5 rounded-2xl p-3 animate-fade-in shadow-xl">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#f6f6f6] mb-2 block text-center w-full border-b border-white/5 pb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#E5BA73]/80 mb-2 block text-center w-full border-b border-white/5 pb-1.5">
                   Detail Tekstur
                 </span>
                 
@@ -280,9 +265,11 @@ export default function CustomizerCanvas({
           </div>
         )}
 
+        {/* Efek Tekstur Serat Kain Kedalaman Gradasi Global */}
         <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_center,transparent_30%,rgba(0,0,0,0.6)_100%)] pointer-events-none" />
       </div>
 
+      {/* Floating Action Menu Bawah */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#12110F]/80 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 flex items-center gap-8 shadow-2xl z-10">
         <button 
           onClick={handleResetDesain} 

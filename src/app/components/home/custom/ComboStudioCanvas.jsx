@@ -35,7 +35,7 @@ export default function ComboStudioCanvas({
   patternDensity,   
   stripes,          
   setStripes,
-
+  onReset // Ditambahkan prop onReset jika disuplai dari parent page
 }) {
   const canvasRef = useRef(null)
   const containerRef = useRef(null) // Tambahan Ref untuk menembak html2canvas pada area mockup
@@ -267,7 +267,7 @@ export default function ComboStudioCanvas({
   };
 
   return (
-    <div className="w-full lg:w-[55%] flex flex-col bg-[#F5F2EB] border border-[#E5BA73]/10 rounded-3xl p-6 relative h-[600px] lg:h-[750px]">
+       <div className="w-full lg:w-[55%] flex flex-col bg-[#F5F2EB] border border-[#E5BA73]/10 rounded-3xl p-6 relative h-[600px] lg:h-[750px]">
       
       <div className="absolute z-20 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center top-6 left-6 right-6">
         <div className="flex items-center gap-2">
@@ -277,8 +277,8 @@ export default function ComboStudioCanvas({
           </span>
         </div>
 
-        <div className="flex gap-1 p-1 border bg-[#aa9e84] backdrop-blur-md border-white/10 rounded-xl">
-          <button
+         <div className="flex gap-1 p-1 border bg-[#aa9e84] backdrop-blur-md border-white/10 rounded-xl">
+           <button
             type="button"
             onClick={() => setPreviewView('kain')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
@@ -316,7 +316,7 @@ export default function ComboStudioCanvas({
       )}
 
       {/* Ditambahkan containerRef di elemen pembungkus ini agar html2canvas merekam aset canvas/baju/outfit secara utuh */}
-      <div ref={containerRef} className="w-full h-full mt-10 rounded-2xl shadow-2xl relative overflow-hidden border border-white/5  bg-[#9e9d9b44] backdrop-blur-sm flex items-center justify-center">
+      <div ref={containerRef} className="w-full h-full mt-10 rounded-2xl shadow-2xl relative overflow-hidden border border-white/5 bg-[#12110F]/40 backdrop-blur-sm flex items-center justify-center">
         {activeImageUrls.length === 0 && stripes.length === 0 ? (
           <div className="flex flex-col items-center gap-2 p-6 text-center">
             <Layers className="text-zinc-600" size={32} />
@@ -354,25 +354,12 @@ export default function ComboStudioCanvas({
                 <div className="relative w-full h-full max-w-3xl max-h-[600px] flex justify-between items-center">
                   <div className="relative w-[65%] h-full">
                     <div className="absolute inset-0 z-0 transform transition-all duration-300 scale-[1.05] translate-x-[-29%] translate-y-[9%]">
-                      {subBawahan === 'celana' ? (
-                        <img src="/mockups/pants-black-fixture.png" alt="Celana Hitam" className="object-contain w-full h-full pointer-events-none" />
-                      ) : (
-                        <div className="relative w-full h-full">
-                          <div 
-                            style={{
-                              ...baseCanvasPatternStyle,
-                              maskImage: "url('/mockups/outfit-kain-mask.png')",
-                              WebkitMaskImage: "url('/mockups/outfit-kain-mask.png')",
-                              maskSize: 'contain',
-                              WebkitMaskSize: 'contain',
-                              maskRepeat: 'no-repeat',
-                              maskPosition: 'center'
-                            }}
-                            className="absolute inset-0 w-full h-full transition-all duration-300"
-                          />
-                        </div>
-                      )}
-                    </div>
+  <img 
+    src="/mockups/pants-black-fixture.png" 
+    alt="Celana Hitam" 
+    className="object-contain w-full h-full pointer-events-none" 
+  />
+</div>
 
                     <div className="absolute inset-0 z-10 transition-all duration-300 transform translate-y-[-15%]">
                       <div 
@@ -391,9 +378,9 @@ export default function ComboStudioCanvas({
                     </div>
                   </div>
 
-                  <div className="relative w-[32%] h-[55%] flex flex-col items-center justify-between bg-[#12110F]/40 backdrop-blur-sm border border-white/5 rounded-2xl p-3 shadow-xl">
+                   <div className="relative w-[32%] h-[55%] flex flex-col items-center justify-between bg-[#12110F]/40 backdrop-blur-sm border border-white/5 rounded-2xl p-3 shadow-xl">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-[#E5BA73]/80 mb-2 block text-center w-full border-b border-white/5 pb-1.5">
-                      Detail Tekstur
+                        Detail Tekstur
                     </span>
                     <div className="relative flex items-center justify-center w-full h-full overflow-hidden">
                       <div 
@@ -415,14 +402,14 @@ export default function ComboStudioCanvas({
               </div>
             )}
 
-            <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm border border-white/5 px-2.5 py-1 rounded-md text-[9px] uppercase tracking-widest text-[#E5BA73] font-medium pointer-events-none z-10">
+              <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm border border-white/5 px-2.5 py-1 rounded-md text-[9px] uppercase tracking-widest text-[#E5BA73] font-medium pointer-events-none z-10">
               Mode: {previewView}
             </div>
           </div>
         )}
       </div>
 
-      {/* Floating Action Menu Bagian Bawah (Reset & Unduh ZIP) */}
+       {/* Floating Action Menu Bagian Bawah (Reset & Unduh ZIP) */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#12110F]/80 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 flex items-center gap-8 shadow-2xl z-10">
         <button 
           type="button"

@@ -4,11 +4,10 @@ export default function Features() {
     { title: "Pemberdayaan Perajin", desc: "Sistem transaksi digital kami berdampak langsung pada kesejahteraan perajin tenun bukan mesin (ATBM) di desa binaan.", icon: "🧵" },
     { title: "Simulasi Real-Time", desc: "Visualisasikan kombinasi motif secara akurat dan presisi sebelum proses tenun kustom dimulai.", icon: "⚡" },
     { title: "Eco-Conscious", desc: "Hanya menggunakan pewarna alami dari tanaman lokal serta serat organik murni demi menjaga ekosistem bumi.", icon: "🌱" },
-    { title: "Digital Artifacts", desc: "Dapatkan sertifikat keaslian digital berbasis blockchain terenkripsi untuk setiap pesanan eksklusif Anda.", icon: "🔒" },
-  ]
+    { title: "Sertifikat Eksklusif", desc: "Dapatkan tanda bukti autentik khusus untuk setiap lembar kain premium Anda, memastikan produk yang Anda miliki adalah karya seni asli.", icon: "📜" }  ]
 
   return (
-    <section className="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-[#2D2219]/5">
+    <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-[#2D2219]/5">
       
       <div className="max-w-3xl mx-auto mb-16 space-y-4 text-center">
         {/* Font disesuaikan menjadi lebih kokoh dan anggun */}
@@ -39,7 +38,7 @@ export default function Features() {
               */
               className={`${colSpanClass} relative bg-[#FBF9F6] border border-transparent bg-clip-padding before:absolute before:inset-0 before:rounded-2xl before:border before:border-[#C59B5F]/30 before:pointer-events-none p-8 rounded-2xl space-y-5 transition-all duration-500 group hover:-translate-y-1.5 shadow-xl shadow-[#2D2219]/5 hover:shadow-2xl hover:shadow-[#C59B5F]/10 flex flex-col justify-between`}
             >
-              <div className="space-y-4 relative z-10">
+              <div className="relative z-10 space-y-4">
                 {/* Lingkaran Ikon Gradasi Emas Mewah:
                   Gradasi linear mengikuti style tombol dan aksen lingkaran kecil pada mockup gambar.
                 */}

@@ -33,7 +33,7 @@ export default function ComboStudioSidebar({
   };
 
   return (
-    <div className="w-full lg:w-[45%] bg-[#F5F2EB] flex flex-col justify-between p-2 lg:p-6 lg:h-[750px] overflow-y-auto custom-scrollbar">
+    <div className="w-full lg:w-[45%] bg-[#F5F2EB] flex flex-col justify-between p-2 lg:p-6 lg:h-[750px] overflow-y-auto custom-scrollbar rounded-2xl">
       
       <div className="space-y-6">
         {/* Header */}
