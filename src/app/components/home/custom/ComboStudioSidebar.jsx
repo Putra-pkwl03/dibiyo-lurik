@@ -126,7 +126,7 @@ export default function ComboStudioSidebar({
                 <button 
                   type="button"
                   onClick={() => handleRemoveStripe(stripe.id)}
-                  className="p-1 transition-colors text-black hover:text-red-400"
+                  className="p-1 text-black transition-colors hover:text-red-400"
                   title="Hapus baris benang"
                 >
                   <Trash2 size={12} />
