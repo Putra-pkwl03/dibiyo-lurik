@@ -46,15 +46,24 @@ export async function GET(request) {
 
     let finalRole = 'customer';
 
-    if (!profile) {
-      // 3. ✨ PERBAIKAN: Gunakan supabaseAdmin untuk membuat baris baru agar bebas dari hadangan RLS
+      if (!profile) {
+      // 🌟 KUNCI SYNC: Ambil teks sebelum '@' dari email Google, bersihkan dari karakter aneh
+      const emailPrefix = user.email 
+        ? user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') 
+        : 'user';
+      
+      // Tambahkan 4 digit angka acak di belakang agar username selalu unik di database
+      const randomDigits = Math.floor(1000 + Math.random() * 9000);
+      const generatedUsername = `${emailPrefix}${randomDigits}`;
+
+      // 3. Gunakan supabaseAdmin untuk membuat baris baru
       const { error: insertError } = await supabaseAdmin
         .from('profiles')
         .insert({
           id: user.id,
-          username: null, // Diizinkan NULL sesuai rancangan tabel baru
-          nama: user.user_metadata.full_name || user.user_metadata.name || 'Customer Google',
-          role: 'customer', // Mengunci default role sebagai customer
+          username: generatedUsername, // 🌟 SEKARANG SUDAH TERISI OTOMATIS (Contoh: csdibyo4829)
+          nama: user.user_metadata.full_name || user.user_metadata.name || 'Customer Google', // Nama asli Google
+          role: 'customer',
           email: user.email,
           avatar_url: user.user_metadata.avatar_url || user.user_metadata.picture || null,
         });

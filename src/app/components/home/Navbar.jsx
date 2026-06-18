@@ -230,26 +230,30 @@ export default function Navbar() {
                 </span>
               )}
             </Link>
-            
+
             {loadingUser ? (
-              <div className="w-20 h-8 rounded-lg bg-gray-300/50 animate-pulse"></div>
-            ) : user ? (
-              <div 
-                className="relative py-2"
-                onMouseEnter={() => setShowUserDropdown(true)}
-                onMouseLeave={() => setShowUserDropdown(false)}
-              >
-                <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#2D2219]/20 hover:border-[#C59B5F] transition-all bg-transparent text-[#2D2219]">
-                  <div className="w-6 h-6 rounded-full bg-[#C59B5F] text-[#F5F2EB] flex items-center justify-center font-bold text-xs">
-                    {user.username?.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="text-xs font-semibold tracking-wide truncate max-w-[100px]">
-                    {user.username}
-                  </span>
-                  <svg className={`w-3 h-3 text-[#7A7167] transition-transform duration-200 ${showUserDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/>
-                  </svg>
-                </button>
+  <div className="w-20 h-8 rounded-lg bg-gray-300/50 animate-pulse"></div>
+) : user ? (
+  <div 
+    className="relative py-2"
+    onMouseEnter={() => setShowUserDropdown(true)}
+    onMouseLeave={() => setShowUserDropdown(false)}
+  >
+    <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#2D2219]/20 hover:border-[#C59B5F] transition-all bg-transparent text-[#2D2219]">
+      {/* 🌟 Cadangan: Jika username null, gunakan inisial dari Nama */}
+      <div className="w-6 h-6 rounded-full bg-[#C59B5F] text-[#F5F2EB] flex items-center justify-center font-bold text-xs">
+        {(user.username || user.nama || 'U').charAt(0).toUpperCase()}
+      </div>
+      
+      {/* 🌟 Cadangan: Jika username null, tampilkan nama panggilannya */}
+      <span className="text-xs font-semibold tracking-wide truncate max-w-[100px]">
+        {user.username ? `@${user.username}` : user.nama.split(' ')[0]}
+      </span>
+      
+      <svg className={`w-3 h-3 text-[#7A7167] transition-transform duration-200 ${showUserDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/>
+      </svg>
+    </button>
 
                 {showUserDropdown && (
                   <div className="absolute right-0 top-full mt-1 w-48 bg-[#EFEBE3] border border-[#2D2219]/10 rounded-xl shadow-xl overflow-hidden py-1 z-50">
