@@ -7,7 +7,7 @@ export default function Features() {
     { title: "Sertifikat Eksklusif", desc: "Dapatkan tanda bukti autentik khusus untuk setiap lembar kain premium Anda, memastikan produk yang Anda miliki adalah karya seni asli.", icon: "📜" }  ]
 
   return (
-    <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-[#2D2219]/5">
+    <section className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-[#2D2219]/5">
       
       <div className="max-w-3xl mx-auto mb-16 space-y-4 text-center">
         {/* Font disesuaikan menjadi lebih kokoh dan anggun */}
