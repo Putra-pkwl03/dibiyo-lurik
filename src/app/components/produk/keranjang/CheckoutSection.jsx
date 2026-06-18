@@ -58,7 +58,6 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
         const profileRes = await fetch('/api/auth/profile');
         if (profileRes.ok) {
           const profileData = await profileRes.json();
-          // ✨ PERBAIKAN 1: Tambahkan profileData.data agar cocok dengan respon API profile terbaru
           currentUser = profileData.user || profileData.data || profileData; 
         }
       } catch (error) {
@@ -90,16 +89,27 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
       return; 
     }
 
-    // Ekstraksi ID User secara aman dari berbagai kemungkinan struktur objek auth/profile Anda
     const targetUserId = currentUser.id || currentUser.user?.id || currentUser.data?.id;
 
     try {
-      // ✨ PERBAIKAN 2: Kirimkan user_id ke dalam body request API Checkout
+      // ✨ NORMALISASI PAYLOAD AGAR COCOK DENGAN STRUKTUR BARU BACKEND & DB RELASIONAL
+      const normalizedItems = items.map((item) => {
+        const meteran = item.input_panjang || item.gulungan?.panjang_sisa || 0;
+        const harga = item.gulungan?.harga_per_meter || item.gulungan?.harga || 0;
+        return {
+          id: item.id, // Untuk referensi pembersihan keranjang
+          gulungan_id: item.gulungan_id || item.gulungan?.id,
+          panjang_dibeli: Number(meteran),       // Pastikan tipe data numeric aman
+          harga_per_meter: Number(harga),       // Pastikan tipe data numeric aman
+          subtotal: Number(meteran * harga)
+        };
+      });
+
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items,
+          items: normalizedItems, 
           totalNet: total,
           user_id: targetUserId, 
         }),
@@ -165,7 +175,6 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
           }
 
           return (
-
             <div key={item.id} className="flex items-center gap-4 p-3 border bg-[#ffffff] border-white/5 rounded-xl shadow-md text-xs">
               <div className="relative w-24 h-24 overflow-hidden border rounded-lg bg-zinc-900 border-white/5 shrink-0">
                 {miniVisual}
@@ -185,15 +194,12 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
       <div className="p-4 border bg-[#d7b46d] border-[#E5BA73]/10 rounded-xl shadow-lg space-y-2">
         <div className="flex justify-between text-xs text-[#2a2826]"><span>Total Sebelum Pembayaran</span><span>Rp {subTotal.toLocaleString('id-ID')}</span></div>
         <div className="flex justify-between pt-3 text-base font-bold border-t border-white/5 text-[#000000]"><span>Total Pembayaran Net</span><span className="text-lg font-black">Rp {total.toLocaleString('id-ID')}</span></div>
-
       </div>
 
       <button 
         onClick={handleBayarMidtrans}
         disabled={loading || items.length === 0}
-
         className="flex items-center justify-center w-full gap-2 py-3.5 text-xs font-bold uppercase tracking-wider transition-all text-[#ffffff] bg-[#635032] hover:bg-[#d4982f] rounded-xl shadow-xl disabled:bg-white/5 disabled:text-white/20"
-
       >
         {loading ? (
           <><Loader2 className="animate-spin" size={14} /> Membuka Gerbang Pembayaran...</>

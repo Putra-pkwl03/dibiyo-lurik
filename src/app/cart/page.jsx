@@ -23,7 +23,7 @@ export default function CartPage() {
 
   // Hitung total panjang meter kain real-time
   const totalPanjangMeter = useMemo(() => {
-    return cartItems.reduce((acc, item) => acc + (item.input_panjang || 0), 0);
+    return cartItems.reduce((acc, item) => acc + (item.input_panjang || item.gulungan?.panjang_sisa || 0), 0);
   }, [cartItems]);
 
   // ====================================================================
@@ -99,7 +99,7 @@ export default function CartPage() {
               onClick={() => router.push('/produk')}
               className="px-6 py-2.5 text-xs font-bold rounded-xl text-[#12110F] bg-[#E5BA73] hover:bg-[#f3cb85] transition-all shadow-md"
             >
-              Lihat Katalog Kain
+              See Catalog
             </button>
           </div>
         ) : (
