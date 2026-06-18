@@ -80,8 +80,14 @@ function CustomizerContent() {
     }
   }
 
-  const handleAddToCartConfirm = (specs) => {
+const handleAddToCartConfirm = (specs) => {
     setIsModalOpen(false);
+    
+    // Pastikan kita mengambil konfigurasi warna yang pas berdasarkan mode studio aktif saat itu
+    const currentBgColor = studioMode === 'combo' ? comboBgColor : customBgColor;
+    const currentDensity = studioMode === 'combo' ? comboPatternDensity : customPatternDensity;
+    const currentStripes = studioMode === 'combo' ? comboStripes : customStripes;
+
     const productData = {
       kode_produk: studioMode === 'combo' ? "Lurik Hasil Padu Padan" : "Lurik Desain Kustom",
       gambar_url: '/placeholder-kain.jpg',
@@ -96,14 +102,26 @@ function CustomizerContent() {
       harga_per_meter: specs.hargaPerMeter,
       harga: specs.hargaPerMeter,
       configurasi: { 
-        bgColor: activeBgColor, 
-        patternDensity: activePatternDensity, 
-        stripes: activeStripes 
+        bgColor: currentBgColor, 
+        patternDensity: currentDensity, 
+        stripes: currentStripes 
       }
     };
     
     const qty = specs.panjang; 
-    if (addToCart) addToCart(productData, gulunganData, qty);
+    if (addToCart) {
+      addToCart(productData, gulunganData, qty);
+      
+      // // Opsional: Beri alert sukses kecil agar user tahu barang masuk keranjang
+      // Swal.fire({
+      //   toast: true,
+      //   position: 'top-end',
+      //   icon: 'success',
+      //   title: 'Kain kustom berhasil ditambahkan!',
+      //   showConfirmButton: false,
+      //   timer: 2000
+      // });
+    }
   }
 
   return (
@@ -240,6 +258,11 @@ function CustomizerContent() {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         onConfirm={handleAddToCartConfirm} 
+          customProperties={{
+          bgColor: activeBgColor,
+          patternDensity: activePatternDensity,
+          stripes: activeStripes
+        }}
       />
     </main>
     <Footer />
