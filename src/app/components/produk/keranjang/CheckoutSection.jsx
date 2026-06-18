@@ -102,7 +102,6 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
     const targetUserId = currentUser.id || currentUser.user?.id || currentUser.data?.id;
 
     try {
-<<<<<<< HEAD
       // ✨ NORMALISASI PAYLOAD AGAR COCOK DENGAN STRUKTUR BARU BACKEND & DB RELASIONAL
       const normalizedItems = items.map((item) => {
         const meteran = item.input_panjang || item.gulungan?.panjang_sisa || 0;
@@ -116,8 +115,6 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
         };
       });
 
-=======
->>>>>>> f849c07665e58bbfa9b591d02920f64a37804572
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
