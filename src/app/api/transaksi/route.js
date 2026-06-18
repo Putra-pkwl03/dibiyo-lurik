@@ -9,15 +9,7 @@ export const GET = async (request) => {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("user_id");
 
-    if (!userId) {
-      return NextResponse.json(
-        { message: "User ID wajib dikirim via query parameter (?user_id=...)" }, 
-        { status: 400 }
-      );
-    }
-
-    // Mengambil data transaksi beserta relasi item, gulungan, produk, dan motifnya
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('transaksi')
       .select(`
         *,
@@ -38,12 +30,17 @@ export const GET = async (request) => {
           )
         )
       `)
-      .eq('user_id', userId)
       .order('created_at', { ascending: false });
+
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
-    return NextResponse.json({ data: data || [] }, { status: 200 });
+    return NextResponse.json(data || [], { status: 200 });
   } catch (err) {
     console.error("=== SERVER CRASH IN GET TRANSAKSI ===", err);
     return NextResponse.json({ message: err.message }, { status: 500 });
@@ -51,18 +48,12 @@ export const GET = async (request) => {
 };
 
 // =====================================================
-// POST: Mencatat transaksi baru & item terkait ke Database
+// POST: Mencatat transaksi baru secara manual
 // =====================================================
 export const POST = async (request) => {
   try {
     const body = await request.json();
-    const { 
-      order_id, 
-      user_id, 
-      gross_amount, // Data mentah dari payload checkout/Midtrans
-      snap_token, 
-      items 
-    } = body;
+    const { order_id, user_id, gross_amount, snap_token, items } = body;
 
     if (!order_id || !user_id || !gross_amount) {
       return NextResponse.json(
@@ -71,7 +62,7 @@ export const POST = async (request) => {
       );
     }
 
-    // 1. Insert data ke tabel induk: transaksi
+    // 🌟 Kolom no_resi telah dihapus dari objek insert
     const { data: transaksiData, error: transaksiError } = await supabaseAdmin
       .from('transaksi')
       .insert({
@@ -80,6 +71,7 @@ export const POST = async (request) => {
         total_nominal: Math.round(gross_amount),
         status_transaksi: 'pending',
         snap_token: snap_token || null,
+        status_pengiriman: 'diproses', 
         created_at: new Date().toISOString()
       })
       .select();
@@ -89,12 +81,10 @@ export const POST = async (request) => {
       return NextResponse.json({ message: transaksiError.message }, { status: 400 });
     }
 
-    // 2. Insert data ke tabel anak: item_transaksi (jika ada items)
     if (items && items.length > 0) {
       const itemsData = items.map((item) => ({
         order_id: order_id,
         gulungan_id: item.gulungan_id,
-        // Antisipasi toleransi nama properti panjang dari state frontend/cart
         panjang_dibeli: Number(item.panjang_dibeli || item.jumlah_order || item.panjang || 0),
         harga_per_meter: Number(item.harga_per_meter || item.harga || 0),
         subtotal: Number(item.subtotal || 0)
@@ -113,12 +103,8 @@ export const POST = async (request) => {
       }
     }
 
-    // Otomatis bersihkan keranjang setelah transaksi dicatat
     try {
-      await supabaseAdmin
-        .from('cart')
-        .delete()
-        .eq('user_id', user_id);
+      await supabaseAdmin.from('cart').delete().eq('user_id', user_id);
     } catch (cartErr) {
       console.error("[CLEANUP WARNING] Gagal mengosongkan keranjang:", cartErr.message);
     }
@@ -129,6 +115,37 @@ export const POST = async (request) => {
     );
   } catch (err) {
     console.error("=== SERVER CRASH IN POST TRANSAKSI ===", err);
+    return NextResponse.json({ message: err.message }, { status: 500 });
+  }
+};
+
+// =====================================================
+// PATCH: Hanya Update Status Pengiriman (Tanpa Resi)
+// =====================================================
+export const PATCH = async (request) => {
+  try {
+    const body = await request.json();
+    // 🌟 no_resi dihapus dari destructuring
+    const { order_id, status_pengerjaan } = body;
+
+    if (!order_id) {
+      return NextResponse.json({ message: "Order ID wajib dilampirkan." }, { status: 400 });
+    }
+
+    // 🌟 no_resi dihapus dari query update
+    const { data, error } = await supabaseAdmin
+      .from('transaksi')
+      .update({
+        status_pengiriman: status_pengerjaan 
+      })
+      .eq('order_id', order_id)
+      .select();
+
+    if (error) throw error;
+
+    return NextResponse.json({ message: "Alur pengiriman berhasil diperbarui", data: data[0] }, { status: 200 });
+  } catch (err) {
+    console.error("=== SERVER CRASH IN PATCH TRANSAKSI ===", err);
     return NextResponse.json({ message: err.message }, { status: 500 });
   }
 };

@@ -5,7 +5,7 @@ import Link from "next/link"
 import Footer from "../components/home/Footer.jsx"
 import SkeletonPesananSaya from "../components/home/pesanan/SkeletonPesananSaya.jsx" 
 import ListPesananSaya from "../components/home/pesanan/ListPesananSaya.jsx" 
-import Swal from "sweetalert2" // Ditambahkan untuk alert real-time yang interaktif
+import Swal from "sweetalert2" 
 
 export default function PesananSayaPage() {
   const [pesanan, setPesanan] = useState([])
@@ -31,7 +31,7 @@ export default function PesananSayaPage() {
           const resTransaksi = await fetch(`/api/transaksi?user_id=${user.id}`, { cache: 'no-store' })
           if (resTransaksi.ok) {
             const jsonTx = await resTransaksi.json()
-            setPesanan(jsonTx.data || [])
+            setPesanan(jsonTx || []) // API transaksi mengembalikan array langsung [{...}]
           }
         } else {
           setUnauthorized(true)
@@ -50,29 +50,25 @@ export default function PesananSayaPage() {
   useEffect(() => {
     if (pesanan.length === 0) return;
 
-    // Konek ke endpoint SSE Upstash Realtime
     const eventSource = new EventSource('/api/realtime')
 
     eventSource.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data)
         
-        // Memastikan event berasal dari skema 'notification.status_changed'
         if (message.event === 'notification.status_changed') {
           const { id_order, status_baru, pesan: pesanNotif } = message.data
 
-          // Cek apakah ID order yang berubah ada dalam daftar pesanan milik user ini
-          const apakahPesananSaya = pesanan.some(p => p.id === id_order)
+          const apakahPesananSaya = pesanan.some(p => p.order_id === id_order)
 
           if (apakahPesananSaya) {
-            // Update state pesanan secara instant tanpa reload page
+            // ✨ SINKRONISASI: Ubah properti status menjadi status_pengiriman
             setPesanan(prevPesanan => 
               prevPesanan.map(p => 
-                p.id === id_order ? { ...p, status_pengerjaan: status_baru } : p
+                p.order_id === id_order ? { ...p, status_pengiriman: status_baru } : p
               )
             )
 
-            // Tampilkan Toast Notification premium ke layar pelanggan
             Swal.fire({
               title: 'Update Pesanan!',
               text: pesanNotif,
@@ -91,7 +87,7 @@ export default function PesananSayaPage() {
     }
 
     return () => {
-      eventSource.close() // Bersihkan koneksi saat unmount
+      eventSource.close()
     }
   }, [pesanan])
 
