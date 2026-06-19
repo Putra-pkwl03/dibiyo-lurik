@@ -2,10 +2,10 @@ import React from "react";
 
 export default function ListPesananSaya({ pesanan }) {
   
-  // 1. FILTER UTAMA: Loloskan transaksi yang sudah berhasil dibayar maupun yang masih pending
+  // 1. FILTER UTAMA: Loloskan transaksi yang sudah berhasil dibayar (settlement/success/berhasil) maupun yang masih pending
   const transaksiValid = pesanan.filter((tx) => {
     const s = tx.status_transaksi?.toLowerCase();
-    return s === "settlement" || s === "success" || s === "capture" || s === "pending";
+    return s === "settlement" || s === "success" || s === "capture" || s === "pending" || s === "berhasil";
   });
 
   // Jika setelah difilter benar-benar tidak ada riwayat transaksi sama sekali
@@ -40,53 +40,56 @@ export default function ListPesananSaya({ pesanan }) {
     });
   };
 
-  // ✨ SINKRONISASI: Menampilkan Tombol Informasi Status Tanpa Kolom Resi
+  // ✨ SINKRONISASI: Menampilkan Banner Informasi Status Berdasarkan Aturan Constraint DB Baru
   const renderStatusPengirimanButton = (statusPengiriman) => {
     const status = statusPengiriman?.toLowerCase();
 
-    // JIKA STATUS: DIKIRIM
-    if (status === "dikirim") {
+    // JIKA STATUS: PESANAN BISA DIAMBIL DI TOKO SEKARANG
+    if (status === "pesanan bisa diambil di toko sekarang") {
       return (
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full justify-between bg-blue-50 border border-blue-200 p-3.5 rounded-xl">
           <div className="flex items-center gap-2.5 text-blue-700">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-blue-600 animate-pulse" />
+            <span className="flex h-2.5 w-2.5 rounded-full bg-blue-600延 animate-pulse" />
             <p className="text-xs font-semibold">
-              Status: <span className="uppercase font-bold text-blue-900">Pesanan Dikirim</span>
+              Status: <span className="uppercase font-bold text-blue-900">Bisa Diambil Di Toko</span>
             </p>
           </div>
           <span className="text-[11px] text-blue-600 font-medium italic">
-            Pesanan Anda sedang dalam perjalanan oleh kurir
+            Kain siap! Silakan ambil langsung di Griya Kain Lurik Dibiyo.
           </span>
         </div>
       );
     }
 
-    // JIKA STATUS: BATAL
-    if (status === "batal") {
+    // JIKA STATUS: PESANAN DI TERIMA
+    if (status === "pesanan di terima") {
       return (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full justify-between bg-red-50 border border-red-200 p-3.5 rounded-xl">
-          <div className="flex items-center gap-2.5 text-red-700">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-red-600" />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full justify-between bg-green-50 border border-green-200 p-3.5 rounded-xl">
+          <div className="flex items-center gap-2.5 text-green-700">
+            <span className="flex h-2.5 w-2.5 rounded-full bg-green-600" />
             <p className="text-xs font-semibold">
-              Status: <span className="uppercase font-bold text-red-900">Pengiriman Dibatalkan</span>
+              Status: <span className="uppercase font-bold text-green-900">Pesanan Diterima</span>
             </p>
           </div>
+          <span className="text-[11px] text-green-600 font-medium italic">
+            Selesai • Terima kasih telah melestarikan tenun ATBM tradisional.
+          </span>
         </div>
       );
     }
 
-    // JIKA STATUS DEFAULT: DIPROSES
+    // JIKA STATUS DEFAULT / PESANAN DI PROSES
     return (
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full justify-between bg-amber-50 border border-amber-200 p-3.5 rounded-xl">
         <div className="flex items-center gap-2.5 text-[#917c4b]">
           <span className="flex h-2.5 w-2.5 rounded-full bg-[#d9a05b] animate-pulse" />
           <p className="text-xs font-semibold">
-            Status: <span className="uppercase font-bold text-black">Sedang Diproses (Tenun ATBM)</span>
+            Status: <span className="uppercase font-bold text-black">Pesanan Di Proses (Tenun ATBM)</span>
           </p>
         </div>
         <button 
           disabled
-          className="bg-[#2D2219] text-white text-[10px] font-bold tracking-widest px-4 py-1.5 rounded-lg opacity-90"
+          className="bg-[#2D2219] text-white text-[10px] font-bold tracking-widest px-4 py-1.5 rounded-lg opacity-90 font-sans"
         >
           DALAM ANTREAN PRODUKSI
         </button>
@@ -117,7 +120,7 @@ export default function ListPesananSaya({ pesanan }) {
               </div>
             </div>
 
-            {/* CONTAINER BUTTON INFORMASI: Menyesuaikan status pembayaran */}
+            {/* CONTAINER BANNER INFORMASI: Menyesuaikan status pembayaran */}
             <div className="mx-6 mt-4">
               {isPending ? (
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full justify-between bg-red-50 border border-red-200 p-3.5 rounded-xl">
@@ -132,7 +135,7 @@ export default function ListPesananSaya({ pesanan }) {
                   </span>
                 </div>
               ) : (
-                // ✨ SINKRONISASI: Hanya mengirimkan status_pengiriman saja
+                // SINKRONISASI VALUE STATUS PENGIRIMAN
                 renderStatusPengirimanButton(tx.status_pengiriman)
               )}
             </div>

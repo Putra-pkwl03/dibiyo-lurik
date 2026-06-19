@@ -99,7 +99,7 @@ export async function POST(request) {
       price: item.price
     }));
 
-    // 7. Simpan ke Tabel Induk (transaksi) - 🌟 Kolom no_resi telah dihapus
+    // 7. Simpan ke Tabel Induk (transaksi)
     const { error: dbError } = await supabaseAdmin
       .from('transaksi')
       .insert({
@@ -109,7 +109,7 @@ export async function POST(request) {
         status_transaksi: 'pending',
         snap_token: data.token,
         items_transaksi: formatJsonBackup,
-        status_pengiriman: 'diproses'
+        status_pengiriman: 'pesanan di proses' // 🌟 DIUBAH AGAR SESUAI ATURAN CONSTRAINT BARU DATABASE
       });
 
     if (dbError) {

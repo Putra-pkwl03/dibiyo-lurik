@@ -15,7 +15,7 @@ export async function POST(request) {
       fraud_status 
     } = body;
 
-    // 1. VERIFIKASI KEAMANAN
+    // 1. VERIFIKASI KEAMANAN SIGNATURE MIDTRANS
     const rawServerKey = process.env.MIDTRANS_SERVER_KEY;
     const serverKey = rawServerKey ? rawServerKey.trim() : '';
     
@@ -31,35 +31,37 @@ export async function POST(request) {
 
     console.log(`=== WEBHOOK MIDTRANS MASUK: ${order_id} [Status: ${transaction_status}] ===`);
 
-    // 2. AMBIL DATA TRANSAKSI
+    // 2. AMBIL DATA TRANSAKSI DARI DATABASE
     const { data: transaksiSaatIni, error: txError } = await supabaseAdmin
       .from('transaksi')
       .select('status_transaksi')
       .eq('order_id', order_id)
       .single();
 
+    // 💡 MITIGASI ERROR 404: Jika order_id palsu/pengujian Midtrans, berikan 200 OK agar Midtrans tidak mencap endpoint mati
     if (txError || !transaksiSaatIni) {
-      console.error(`[WEBHOOK ERROR] Order ID ${order_id} tidak ditemukan di database.`);
-      return NextResponse.json({ message: "Data transaksi tidak terdaftar" }, { status: 404 });
+      console.warn(`[WEBHOOK WARNING] Order ID ${order_id} tidak ditemukan di database. Kemungkinan transaksi simulasi.`);
+      return NextResponse.json({ message: "Data transaksi tidak terdaftar, diabaikan aman." }, { status: 200 });
     }
 
-    // 3. PEMETAAN STATUS
+    // 3. PEMETAAN STATUS (SINKRON DENGAN CONSTRAINT DATABASE & FRONTEND)
     let statusBaru = 'pending';
-    let statusKirimBaru = 'diproses'; 
+    let statusKirimBaru = 'pesanan di proses'; // Default disamakan dengan aturan ENUM database
 
     if (transaction_status === 'settlement' || (transaction_status === 'capture' && fraud_status === 'accept')) {
-      statusBaru = 'settlement';
-      statusKirimBaru = 'diproses'; 
+      statusBaru = 'berhasil'; // ✨ Diubah menjadi 'berhasil' agar lolos check_status_transaksi Supabase
+      statusKirimBaru = 'pesanan di proses'; // Sesuai dengan langkah ke-1 Tracker UI
     } else if (transaction_status === 'cancel' || transaction_status === 'deny' || transaction_status === 'expire') {
       statusBaru = 'batal';
-      statusKirimBaru = 'batal';   
+      statusKirimBaru = 'pesanan di proses'; // Tetap biarkan default agar tidak melanggar CHECK CONSTRAINT DB
     } else if (transaction_status === 'pending') {
       statusBaru = 'pending';
+      statusKirimBaru = 'pesanan di proses';
     }
 
-    // 4. LOGIKA MUTASI POTONG PANJANG KAIN
-    const statusLamaSukses = ['settlement', 'capture', 'success'].includes(transaksiSaatIni.status_transaksi?.toLowerCase());
-    const statusBaruSukses = statusBaru === 'settlement';
+    // 4. LOGIKA MUTASI POTONG PANJANG KAIN (Hanya jika status berubah dari pending ke sukses)
+    const statusLamaSukses = ['settlement', 'capture', 'success', 'berhasil'].includes(transaksiSaatIni.status_transaksi?.toLowerCase());
+    const statusBaruSukses = statusBaru === 'berhasil'; // ✨ Disesuaikan dengan pemetaan baru
 
     if (statusBaruSukses && !statusLamaSukses) {
       console.log(`[PROSES STOK] Menghitung pemotongan sisa kain untuk Order ID: ${order_id}`);
@@ -125,7 +127,7 @@ export async function POST(request) {
       }
     }
 
-    // 5. UPDATE TABEL TRANSAKSI KESELURUHAN
+    // 5. UPDATE TABEL TRANSAKSI KESELURUHAN (AMAN DARI CONSTRAINT VIOLATION)
     const { error: updateError } = await supabaseAdmin
       .from('transaksi')
       .update({ 
