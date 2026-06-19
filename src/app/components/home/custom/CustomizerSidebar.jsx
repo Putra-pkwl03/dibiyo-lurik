@@ -213,7 +213,7 @@ export default function CustomizerSidebar({
                   <button
                     type="button"
                     onClick={() => removeStripe(stripe.id)}
-                    className="p-1 transition-colors text-zinc-500 hover:text-red-400"
+                    className="p-1 transition-colors text-red-500 hover:text-red-700"
                     title="Hapus baris benang"
                   >
                     <Trash2 size={12} />

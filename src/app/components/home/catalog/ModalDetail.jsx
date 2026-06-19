@@ -441,7 +441,7 @@ export default function ModalDetail({ isOpen, onClose, product }) {
                       `Mohon informasi lebih lanjut untuk proses produksinya. Terima kasih!`,
                   );
                   window.open(
-                    `https://wa.me/6289692721400?text=${pesan}`,
+                    `https://wa.me/628995252083?text=${pesan}`,
                     "_blank",
                   );
                 }}
