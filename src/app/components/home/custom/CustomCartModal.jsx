@@ -53,6 +53,24 @@ export default function CustomCartModal({
     return () => hentikanAksi();
   }, []);
 
+  // ─── LOGIKA HOISTED FUNCTIONS ───
+  // Menggunakan function declaration agar terhindar dari TDZ (Temporal Dead Zone)
+  function eksekusiKuantitas(tipe) {
+    setPanjang((currentPanjang) => {
+      if (tipe === "tambah") {
+        return Math.min(MAKSIMAL_PANJANG_KUSTOM, currentPanjang + 1);
+      } else if (tipe === "kurang") {
+        return Math.max(1, currentPanjang - 1);
+      }
+      return currentPanjang;
+    });
+  }
+
+  function hentikanAksi() {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+  }
+
   if (!isOpen) return null;
 
   const { bgColor, patternDensity, stripes } = customProperties;
@@ -73,23 +91,6 @@ export default function CustomCartModal({
 
   const hargaPerMeter = lebar === 70 ? 500000 : 700000;
   const totalHarga = panjang * hargaPerMeter;
-
-  // ─── LOGIKA AUTO-LOOP METERAN SAAT DIHOLD (SAMA SEPERTI MODAL DETAIL) ───
-  const eksekusiKuantitas = (tipe) => {
-    setPanjang((currentPanjang) => {
-      if (tipe === "tambah") {
-        return Math.min(MAKSIMAL_PANJANG_KUSTOM, currentPanjang + 1);
-      } else if (tipe === "kurang") {
-        return Math.max(1, currentPanjang - 1);
-      }
-      return currentPanjang;
-    });
-  };
-
-  const hentikanAksi = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (intervalRef.current) clearInterval(intervalRef.current);
-  };
 
   const mulaiAksi = (tipe) => {
     if (isCrumpling) return;
@@ -283,7 +284,7 @@ export default function CustomCartModal({
                   </div>
                 </div>
 
-                {/* Input Panjang Kain (Telah disesuaikan menjadi counter tombol) */}
+                {/* Input Panjang Kain */}
                 <div className="space-y-2.5">
                   <label className="text-[10px] font-bold tracking-widest text-[#4A3F3B] uppercase block">
                     Panjang Kain Yang Dibeli (Meter)
