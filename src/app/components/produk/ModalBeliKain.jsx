@@ -85,10 +85,20 @@ export default function ModalDetail({ isOpen, onClose, product }) {
   const timerRef = useRef(null);
   const intervalRef = useRef(null);
 
+  // ─── PENGURUTAN GULUNGAN ───
   const gulunganList = product?.gulungan ?? [];
+  const sortedGulunganList = [...gulunganList].sort((a, b) => {
+    return Number(a.nomor_gulungan) - Number(b.nomor_gulungan);
+  });
+
+  // Menghitung jumlah gulungan yang masih memiliki stok/tersedia
+  const jumlahGulunganTersedia = sortedGulunganList.filter(
+    (g) => g.panjang_sisa > 0,
+  ).length;
+
   const panjangSisa = gulunganDipilih?.panjang_sisa ?? 0;
 
-  // ─── LOGIKA UTAMA AUTO-LOOP METERAN SAAT DIHOLD (DIPINDAH KE ATAS) ───
+  // ─── LOGIKA UTAMA AUTO-LOOP METERAN SAAT DIHOLD ───
   const eksekusiKuantitas = (tipe) => {
     setQty((currentQty) => {
       if (tipe === "tambah") {
@@ -108,10 +118,8 @@ export default function ModalDetail({ isOpen, onClose, product }) {
   const mulaiAksi = (tipe) => {
     if (isCrumpling) return;
 
-    // Jalankan 1x secara instan untuk klik tunggal
     eksekusiKuantitas(tipe);
 
-    // Set delay hold 400ms, lalu auto-loop setiap 80ms
     timerRef.current = setTimeout(() => {
       intervalRef.current = setInterval(() => {
         eksekusiKuantitas(tipe);
@@ -124,11 +132,10 @@ export default function ModalDetail({ isOpen, onClose, product }) {
     if (!isOpen || !product) return;
     setQty(1);
 
-    const gulunganAktif = product.gulungan?.find((g) => g.panjang_sisa > 0);
-    setGulunganDipilih(gulunganAktif ?? product.gulungan?.[0] ?? null);
+    const gulunganAktif = sortedGulunganList.find((g) => g.panjang_sisa > 0);
+    setGulunganDipilih(gulunganAktif ?? sortedGulunganList[0] ?? null);
   }, [isOpen, product]);
 
-  // Sekarang aman karena hentikanAksi sudah dideklarasikan di atas
   useEffect(() => {
     return () => hentikanAksi();
   }, []);
@@ -233,11 +240,18 @@ export default function ModalDetail({ isOpen, onClose, product }) {
           {/* KOLOM KIRI: GAMBAR BESAR */}
           <div className="w-full md:w-5/12 bg-[#EAE7E0] md:border-r border-b md:border-b-0 border-[#E5BA73]/10 min-h-[280px] md:min-h-full p-4">
             <div className="relative w-full h-full">
+              {/* Tambahan Badge Informasi Jumlah Gulungan */}
+              {jumlahGulunganTersedia > 0 && (
+                <div className="absolute top-3 left-3 z-10 bg-[#D48F43] text-white text-[11px] font-bold px-3 py-1.5 rounded shadow-sm uppercase tracking-wider">
+                  Tersedia: {jumlahGulunganTersedia} Gulungan
+                </div>
+              )}
+
               {product.gambar_url ? (
                 <img
                   src={product.gambar_url}
                   alt={productTitle}
-                  className="absolute inset-0 w-full h-full object-cover rounded-lg"
+                  className="absolute inset-0 object-cover w-full h-full rounded-lg"
                 />
               ) : (
                 <div className="flex items-center justify-center w-full h-full">
@@ -248,7 +262,7 @@ export default function ModalDetail({ isOpen, onClose, product }) {
           </div>
 
           {/* KOLOM KANAN: INFORMASI & INTERAKSI */}
-          <div className="w-full md:w-7/12 flex flex-col overflow-y-auto">
+          <div className="flex flex-col w-full overflow-y-auto md:w-7/12">
             {/* Header Internal */}
             <div className="p-6 border-b border-[#E5BA73]/10 flex justify-between items-start">
               <div>
@@ -307,13 +321,13 @@ export default function ModalDetail({ isOpen, onClose, product }) {
               </div>
 
               {/* PILIH GULUNGAN */}
-              {gulunganList.length > 0 && (
+              {sortedGulunganList.length > 0 && (
                 <div>
                   <p className="text-[11px] font-medium tracking-widest uppercase text-[#706E6B] mb-2">
                     Pilih Gulungan Kain
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {gulunganList.map((g) => {
+                    {sortedGulunganList.map((g) => {
                       const habis = g.panjang_sisa <= 0;
                       const dipilih = gulunganDipilih?.id === g.id;
                       return (
@@ -435,13 +449,13 @@ export default function ModalDetail({ isOpen, onClose, product }) {
                   const pesan = encodeURIComponent(
                     `Halo Dibyo Lurik, saya ingin memesan "${product.motif?.nama ?? "—"}"\n\n` +
                       `- Lebar Kain: ${lebar} cm\n` +
-                      `- Gulungan No. {gulunganDipilih?.nomor_gulungan}\n` +
+                      `- Gulungan No. ${gulunganDipilih?.nomor_gulungan}\n` +
                       `- Panjang: ${qty} meter\n` +
                       `- Estimasi Subtotal: ${formatRupiah(total)}\n\n` +
                       `Mohon informasi lebih lanjut untuk proses produksinya. Terima kasih!`,
                   );
                   window.open(
-                    `https://wa.me/6289692721400?text=${pesan}`,
+                    `https://wa.me/628995252083?text=${pesan}`,
                     "_blank",
                   );
                 }}

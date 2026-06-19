@@ -86,11 +86,15 @@ export default function ModalDetail({ isOpen, onClose, product }) {
   const intervalRef = useRef(null);
 
   // ─── PENGURUTAN GULUNGAN ───
-  // Menyalin array asli agar tidak mengubah state asal, lalu diurutkan dari nomor terkecil ke terbesar
   const gulunganList = product?.gulungan ?? [];
   const sortedGulunganList = [...gulunganList].sort((a, b) => {
     return Number(a.nomor_gulungan) - Number(b.nomor_gulungan);
   });
+
+  // Menghitung jumlah gulungan yang masih memiliki stok/tersedia
+  const jumlahGulunganTersedia = sortedGulunganList.filter(
+    (g) => g.panjang_sisa > 0,
+  ).length;
 
   const panjangSisa = gulunganDipilih?.panjang_sisa ?? 0;
 
@@ -128,7 +132,6 @@ export default function ModalDetail({ isOpen, onClose, product }) {
     if (!isOpen || !product) return;
     setQty(1);
 
-    // Otomatis pilih gulungan pertama yang masih ada stoknya dari list yang sudah terurut
     const gulunganAktif = sortedGulunganList.find((g) => g.panjang_sisa > 0);
     setGulunganDipilih(gulunganAktif ?? sortedGulunganList[0] ?? null);
   }, [isOpen, product]);
@@ -145,7 +148,8 @@ export default function ModalDetail({ isOpen, onClose, product }) {
   const panjangTotal = gulunganDipilih?.panjang_total ?? 1;
 
   const stokPersen = (panjangSisa / panjangTotal) * 100;
-  const hargaPerMeter = gulunganDipilih?.harga_per_meter ?? gulunganDipilih?.harga ?? 0;
+  const hargaPerMeter =
+    gulunganDipilih?.harga_per_meter ?? gulunganDipilih?.harga ?? 0;
   const total = hargaPerMeter * qty;
 
   // ─── VARIAN ANIMASI REMAS & TERBANG ───
@@ -236,6 +240,13 @@ export default function ModalDetail({ isOpen, onClose, product }) {
           {/* KOLOM KIRI: GAMBAR BESAR */}
           <div className="w-full md:w-5/12 bg-[#EAE7E0] md:border-r border-b md:border-b-0 border-[#E5BA73]/10 min-h-[280px] md:min-h-full p-4">
             <div className="relative w-full h-full">
+              {/* Tambahan Badge Informasi Jumlah Gulungan */}
+              {jumlahGulunganTersedia > 0 && (
+                <div className="absolute top-3 left-3 z-10 bg-[#D48F43] text-white text-[11px] font-bold px-3 py-1.5 rounded shadow-sm uppercase tracking-wider">
+                  Tersedia: {jumlahGulunganTersedia} Gulungan
+                </div>
+              )}
+
               {product.gambar_url ? (
                 <img
                   src={product.gambar_url}
@@ -309,7 +320,7 @@ export default function ModalDetail({ isOpen, onClose, product }) {
                 </div>
               </div>
 
-              {/* PILIH GULUNGAN (MENGGUNAKAN sortedGulunganList) */}
+              {/* PILIH GULUNGAN */}
               {sortedGulunganList.length > 0 && (
                 <div>
                   <p className="text-[11px] font-medium tracking-widest uppercase text-[#706E6B] mb-2">
