@@ -127,7 +127,7 @@ export default function KelolaAkunSayaPage() {
   if (!loading && unauthorized) {
     return (
       <div className="bg-[#fcfbf9] text-black min-h-screen flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center border border-neutral-200 bg-white p-8 rounded-2xl shadow-sm">
+        <div className="w-full max-w-md p-8 text-center bg-white border shadow-sm border-neutral-200 rounded-2xl">
           <h3 className="text-xl font-serif font-bold text-[#2D2219] mb-2">Sesi Tidak Ditemukan</h3>
           <p className="text-sm text-[#6a5848] mb-6">Silakan masuk terlebih dahulu untuk mengakses akun Anda.</p>
           <Link href="/auth/login" className="inline-block bg-[#2D2219] text-white px-8 py-3 rounded-xl text-xs font-bold tracking-wider hover:bg-[#d9a05b] transition-colors w-full">
@@ -140,15 +140,15 @@ export default function KelolaAkunSayaPage() {
 
   return (
     <div className="bg-[#fcfbf9] text-black min-h-screen flex flex-col pt-24 md:pt-28">
-      <div className="flex-1 flex flex-col md:flex-row w-full">
-        <aside className="w-full md:w-80 bg-white border-b md:border-b-0 md:border-r border-neutral-200/80 p-6 md:p-8 flex flex-col shrink-0">
+      <div className="flex flex-col flex-1 w-full md:flex-row">
+        <aside className="flex flex-col w-full p-6 bg-white border-b md:w-80 md:border-b-0 md:border-r border-neutral-200/80 md:p-8 shrink-0">
           {!loading && (
-            <div className="mb-8 pb-6 border-b border-neutral-100 flex items-center space-x-4">
+            <div className="flex items-center pb-6 mb-8 space-x-4 border-b border-neutral-100">
               <div className="w-12 h-12 rounded-full bg-[#2D2219] text-[#fcfbf9] flex items-center justify-center font-serif text-lg font-bold">
                 {username ? username.charAt(0).toUpperCase() : "U"}
               </div>
               <div className="overflow-hidden">
-                <h4 className="text-sm font-bold text-neutral-800 truncate">{username || "Pengguna"}</h4>
+                <h4 className="text-sm font-bold truncate text-neutral-800">{username || "Pengguna"}</h4>
                 <p className="text-[11px] text-neutral-400 font-mono truncate">{email}</p>
                 <span className="inline-block text-[9px] font-bold font-mono bg-amber-50 text-[#d9a05b] px-2 py-0.5 rounded mt-1 uppercase border border-[#d9a05b]/20">
                   {role}
@@ -176,18 +176,18 @@ export default function KelolaAkunSayaPage() {
 
         <main className="flex-1 p-6 md:p-10 lg:p-12 bg-[#faf9f6]">
           {loading ? (
-            <div className="text-center py-12 font-mono text-xs text-gray-400 tracking-widest animate-pulse">
+            <div className="py-12 font-mono text-xs tracking-widest text-center text-gray-400 animate-pulse">
               MEMUAT INFORMASI AKUN...
             </div>
           ) : (
             <div className="w-full animate-fadeIn">
-              <div className="space-y-8 w-full max-w-4xl">
+              <div className="w-full max-w-full space-y-8">
                 <div>
                   <h2 className="text-2xl font-serif font-bold text-[#2D2219]">Pengaturan Akun & Kontak</h2>
-                  <p className="text-xs text-neutral-400 mt-1">Mutakhirkan informasi kontak personal dan penataan koordinat alamat kurir Anda</p>
+                  <p className="mt-1 text-xs text-neutral-400">Mutakhirkan informasi kontak personal dan penataan koordinat alamat kurir Anda</p>
                 </div>
 
-                <div className="bg-white border border-neutral-200/60 rounded-2xl p-6 md:p-8 shadow-sm space-y-6 w-full">
+                <div className="w-full p-6 space-y-6 bg-white border shadow-sm border-neutral-200/60 rounded-2xl md:p-8">
                   
                   {/* Komponen 1: Mengurus Info Kontak Utama */}
                   <FormContactAkun 
@@ -219,7 +219,7 @@ export default function KelolaAkunSayaPage() {
                     setDetailAlamat={setDetailAlamat}
                   />
 
-                  <div className="pt-4 border-t border-neutral-100 flex justify-end">
+                  <div className="flex justify-end pt-4 border-t border-neutral-100">
                     <button
                       type="button"
                       onClick={handleSimpanPerubahanAkun}

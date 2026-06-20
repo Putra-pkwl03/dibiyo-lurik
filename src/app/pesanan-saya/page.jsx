@@ -13,7 +13,7 @@ function OrderTracker({ status }) {
 
   return (
     <div className="w-full py-4">
-      <div className="flex items-center justify-between relative">
+      <div className="relative flex items-center justify-between">
         <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-neutral-100 z-0">
           <div 
             className="h-full bg-[#d9a05b] transition-all duration-500" 
@@ -22,7 +22,7 @@ function OrderTracker({ status }) {
         </div>
         
         {steps.map((step, idx) => (
-          <div key={step} className="flex flex-col items-center relative z-10 bg-white px-3">
+          <div key={step} className="relative z-10 flex flex-col items-center px-3 bg-white">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
               idx <= currentIdx ? "bg-[#2D2219] text-white shadow-sm" : "bg-neutral-100 text-neutral-400"
             }`}>
@@ -116,7 +116,7 @@ export default function PesananSayaPage() {
   if (!loading && unauthorized) {
     return (
       <div className="bg-[#fcfbf9] text-black min-h-screen flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center border border-neutral-200 bg-white p-8 rounded-2xl shadow-sm">
+        <div className="w-full max-w-md p-8 text-center bg-white border shadow-sm border-neutral-200 rounded-2xl">
           <h3 className="text-xl font-serif font-bold text-[#2D2219] mb-2">Sesi Tidak Ditemukan</h3>
           <p className="text-sm text-[#6a5848] mb-6">Silakan masuk terlebih dahulu untuk mengakses pesanan Anda.</p>
           <Link href="/auth/login" className="inline-block bg-[#2D2219] text-white px-8 py-3 rounded-xl text-xs font-bold tracking-wider hover:bg-[#d9a05b] transition-colors w-full">
@@ -129,40 +129,68 @@ export default function PesananSayaPage() {
 
   return (
     <div className="bg-[#fcfbf9] text-black min-h-screen flex flex-col pt-24 md:pt-28">
-      <div className="flex-1 flex flex-col md:flex-row w-full">
-        <aside className="w-full md:w-80 bg-white border-b md:border-b-0 md:border-r border-neutral-200/80 p-6 md:p-8 flex flex-col shrink-0">
-          {!loading && (
-            <div className="mb-8 pb-6 border-b border-neutral-100 flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-full bg-[#2D2219] text-[#fcfbf9] flex items-center justify-center font-serif text-lg font-bold">
-                {username ? username.charAt(0).toUpperCase() : "U"}
+      <div className="flex flex-col flex-1 w-full md:flex-row">
+        
+        {/* SIDEBAR: Ditambahkan penyesuaian min-h serta layout flex-col justify-between */}
+        <aside className="flex flex-col w-full p-6 bg-white border-b md:w-80 md:min-h-[calc(100vh-7rem)] md:border-b-0 md:border-r border-neutral-200/80 md:p-8 shrink-0 justify-between">
+          <div className="w-full">
+            {!loading && (
+              <div className="flex items-center pb-6 mb-8 space-x-4 border-b border-neutral-100">
+                <div className="w-12 h-12 rounded-full bg-[#2D2219] text-[#fcfbf9] flex items-center justify-center font-serif text-lg font-bold">
+                  {username ? username.charAt(0).toUpperCase() : "U"}
+                </div>
+                <div className="overflow-hidden">
+                  <h4 className="text-sm font-bold truncate text-neutral-800">{username || "Pengguna"}</h4>
+                  <p className="text-[11px] text-neutral-400 font-mono truncate">{email}</p>
+                  <span className="inline-block text-[9px] font-bold font-mono bg-amber-50 text-[#d9a05b] px-2 py-0.5 rounded mt-1 uppercase border border-[#d9a05b]/20">
+                    {role}
+                  </span>
+                </div>
               </div>
-              <div className="overflow-hidden">
-                <h4 className="text-sm font-bold text-neutral-800 truncate">{username || "Pengguna"}</h4>
-                <p className="text-[11px] text-neutral-400 font-mono truncate">{email}</p>
-                <span className="inline-block text-[9px] font-bold font-mono bg-amber-50 text-[#d9a05b] px-2 py-0.5 rounded mt-1 uppercase border border-[#d9a05b]/20">
-                  {role}
-                </span>
-              </div>
+            )}
+
+            <nav className="space-y-1.5 mb-8">
+              <Link href="/pesanan-saya" className="w-full flex items-center space-x-3.5 px-4 py-3.5 rounded-xl text-xs font-bold tracking-wider bg-[#2D2219] text-white shadow-sm shadow-[#2D2219]/10">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                </svg>
+                <span>{role === 'customer_service' ? "PESANAN MASUK (CS)" : "PESANAN SAYA"}</span>
+              </Link>
+
+              <Link href="/kelola-akun-saya" className="w-full flex items-center space-x-3.5 px-4 py-3.5 rounded-xl text-xs font-bold tracking-wider text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span>KELOLA AKUN</span>
+              </Link>
+            </nav>
+          </div>
+
+          {/* 📍 INFORMASI ALAMAT TOKO (Sekarang menetap bersih di bawah sidebar) */}
+          <div className="pt-6 mt-auto border-t border-neutral-100 space-y-2.5">
+            <div>
+              <span className="text-[9px] bg-[#2D2219] text-white font-bold px-2 py-0.5 rounded font-mono tracking-wider">LOKASI WORKSHOP</span>
+              <h4 className="mt-1 font-serif text-xs font-bold text-black">Griya Kain Lurik Dibiyo</h4>
+              <p className="text-[11px] leading-relaxed text-neutral-400 mt-1">
+                Jl. Pangeran Wirosobo, Kel. Gg. Kakaktua No.80, Sorosutan, Kec. Umbulharjo, Kota Yogyakarta, DI Yogyakarta 55162
+              </p>
             </div>
-          )}
-
-          <nav className="space-y-1.5 flex-1">
-            <Link href="/pesanan-saya" className="w-full flex items-center space-x-3.5 px-4 py-3.5 rounded-xl text-xs font-bold tracking-wider bg-[#2D2219] text-white shadow-sm shadow-[#2D2219]/10">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+            
+            <a 
+              href="https://maps.google.com/?q=-7.8246473,110.3807577" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center space-x-1.5 text-[11px] font-bold text-[#d9a05b] hover:underline"
+            >
+              <span>🗺️ Buka Rute di Google Maps</span>
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
               </svg>
-              <span>{role === 'customer_service' ? "PESANAN MASUK (CS)" : "PESANAN SAYA"}</span>
-            </Link>
-
-            <Link href="/kelola-akun-saya" className="w-full flex items-center space-x-3.5 px-4 py-3.5 rounded-xl text-xs font-bold tracking-wider text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-              </svg>
-              <span>KELOLA AKUN</span>
-            </Link>
-          </nav>
+            </a>
+          </div>
         </aside>
 
+        {/* AREA UTAMA: Bersih dan langsung menampilkan pesanan */}
         <main className="flex-1 p-6 md:p-10 lg:p-12 bg-[#faf9f6]">
           {loading ? (
             <div className="w-full">
@@ -170,57 +198,26 @@ export default function PesananSayaPage() {
             </div>
           ) : (
             <div className="w-full animate-fadeIn">
-              <div className="space-y-8 w-full">
+              <div className="w-full space-y-8">
                 <div>
                   <h2 className="text-2xl font-serif font-bold text-[#2D2219]">
                     {role === 'customer_service' ? "Manajemen Pesanan Masuk" : "Daftar Riwayat Pesanan"}
                   </h2>
-                  <p className="text-xs text-neutral-400 mt-1">Pantau status pengerjaan kain lurik secara real-time</p>
-                </div>
-
-                <div className="bg-white border border-neutral-200/60 rounded-2xl p-6 shadow-sm grid grid-cols-1 xl:grid-cols-12 gap-6 items-center w-full">
-                  <div className="xl:col-span-5 space-y-2">
-                    <span className="text-[9px] bg-[#2D2219] text-white font-bold px-2 py-0.5 rounded font-mono tracking-wider">LOKASI WORKSHOP</span>
-                    <h4 className="text-base font-serif font-bold text-black">Griya Kain Lurik Dibiyo</h4>
-                    <p className="text-xs text-neutral-500 leading-relaxed">
-                      Jl. Pangeran Wirosobo, Kel. Gg. Kakaktua No.80, Sorosutan, Kec. Umbulharjo, Kota Yogyakarta, DI Yogyakarta 55162
-                    </p>
-                    <a 
-                      href="https://maps.google.com" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center space-x-1.5 text-xs font-bold text-[#d9a05b] hover:underline pt-2"
-                    >
-                      <span>🗺️ Buka Rute di Google Maps</span>
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                      </svg>
-                    </a>
-                  </div>
-                  
-                  <div className="xl:col-span-7 h-48 rounded-xl overflow-hidden border border-neutral-200/70 shadow-inner">
-                    <iframe 
-                      src="https://maps.google.com"
-                      className="w-full h-full border-0"
-                      allowFullScreen="" 
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                    ></iframe>
-                  </div>
+                  <p className="mt-1 text-xs text-neutral-400">Pantau status pengerjaan kain lurik secara real-time</p>
                 </div>
 
                 {pesanan.length === 0 ? (
-                  <div className="bg-white border border-dashed border-neutral-300 rounded-2xl p-16 text-center shadow-sm w-full">
-                    <h3 className="text-lg font-serif font-bold text-black">Belum Ada Transaksi</h3>
+                  <div className="w-full p-16 text-center bg-white border border-dashed shadow-sm border-neutral-300 rounded-2xl">
+                    <h3 className="font-serif text-lg font-bold text-black">Belum Ada Transaksi</h3>
                     <p className="text-sm text-[#6a5848] mt-1">Tidak ada riwayat kustomisasi atau pembelian kain lurik.</p>
                   </div>
                 ) : (
-                  <div className="space-y-6 w-full">
+                  <div className="w-full space-y-6">
                     {pesanan.map((p, index) => (
-                      <div key={p.order_id || index} className="border border-neutral-200/60 rounded-2xl p-6 bg-white shadow-sm transition-all duration-300 hover:shadow-md w-full">
-                        <div className="flex flex-wrap justify-between items-center gap-4 border-b border-neutral-100 pb-4 mb-5">
+                      <div key={p.order_id || index} className="w-full p-6 transition-all duration-300 bg-white border shadow-sm border-neutral-200/60 rounded-2xl hover:shadow-md">
+                        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-5 border-b border-neutral-100">
                           <div className="flex items-center space-x-3">
-                            <span className="text-xs font-mono font-bold text-neutral-700 bg-neutral-100 px-3 py-1 rounded-lg">ID ORDER: #{p.order_id}</span>
+                            <span className="px-3 py-1 font-mono text-xs font-bold rounded-lg text-neutral-700 bg-neutral-100">ID ORDER: #{p.order_id}</span>
                             <span className="text-[11px] text-emerald-500 flex items-center space-x-1 font-medium">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
                               <span>Live Monitor</span>
@@ -249,7 +246,7 @@ export default function PesananSayaPage() {
                         
                         <OrderTracker status={p.status_pengiriman || 'pesanan di proses'} />
                         
-                        <div className="mt-6 border-t border-neutral-100 pt-5">
+                        <div className="pt-5 mt-6 border-t border-neutral-100">
                           <ListPesananSaya pesanan={[p]} />
                         </div>
                       </div>
