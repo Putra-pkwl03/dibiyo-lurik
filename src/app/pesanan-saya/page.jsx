@@ -47,6 +47,9 @@ export default function PesananSayaPage() {
   const [role, setRole] = useState("customer")
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
+  
+  // State filter status aktif
+  const [filterStatus, setFilterStatus] = useState("semua")
 
   useEffect(() => {
     async function initPesananData() {
@@ -113,6 +116,27 @@ export default function PesananSayaPage() {
     }
   }
 
+  // Fungsi memfilter list data pesanan berdasarkan tab aktif yang baru
+  const pesananTerfilter = pesanan.filter(p => {
+    const statusBayar = p.status_transaksi?.toLowerCase() || ""
+    const statusKirim = p.status_pengiriman?.toLowerCase() || "pesanan di proses"
+    const isBelumBayar = statusBayar === "pending"
+
+    if (filterStatus === "belum_bayar") {
+      return isBelumBayar
+    }
+    if (filterStatus === "diproses") {
+      return !isBelumBayar && statusKirim === "pesanan di proses"
+    }
+    if (filterStatus === "dikirim") {
+      return !isBelumBayar && statusKirim === "pesanan bisa diambil di toko sekarang"
+    }
+    if (filterStatus === "selesai") {
+      return !isBelumBayar && statusKirim === "pesanan di terima"
+    }
+    return true // 'semua'
+  })
+
   if (!loading && unauthorized) {
     return (
       <div className="bg-[#fcfbf9] text-black min-h-screen flex items-center justify-center p-4">
@@ -129,10 +153,10 @@ export default function PesananSayaPage() {
 
   return (
     <div className="bg-[#fcfbf9] text-black min-h-screen flex flex-col pt-24 md:pt-28">
-      <div className="flex flex-col flex-1 w-full md:flex-row">
+      <div className="flex flex-col flex-1 w-full md:flex-row items-start">
         
-        {/* SIDEBAR: Ditambahkan penyesuaian min-h serta layout flex-col justify-between */}
-        <aside className="flex flex-col w-full p-6 bg-white border-b md:w-80 md:min-h-[calc(100vh-7rem)] md:border-b-0 md:border-r border-neutral-200/80 md:p-8 shrink-0 justify-between">
+        {/* SIDEBAR */}
+        <aside className="flex flex-col w-full p-6 bg-white border-b md:w-80 md:sticky md:top-28 md:h-[calc(100vh-7rem)] md:border-b-0 md:border-r border-neutral-200/80 md:p-8 shrink-0 justify-between overflow-y-auto">
           <div className="w-full">
             {!loading && (
               <div className="flex items-center pb-6 mb-8 space-x-4 border-b border-neutral-100">
@@ -166,7 +190,6 @@ export default function PesananSayaPage() {
             </nav>
           </div>
 
-          {/* 📍 INFORMASI ALAMAT TOKO (Sekarang menetap bersih di bawah sidebar) */}
           <div className="pt-6 mt-auto border-t border-neutral-100 space-y-2.5">
             <div>
               <span className="text-[9px] bg-[#2D2219] text-white font-bold px-2 py-0.5 rounded font-mono tracking-wider">LOKASI WORKSHOP</span>
@@ -175,45 +198,75 @@ export default function PesananSayaPage() {
                 Jl. Pangeran Wirosobo, Kel. Gg. Kakaktua No.80, Sorosutan, Kec. Umbulharjo, Kota Yogyakarta, DI Yogyakarta 55162
               </p>
             </div>
-            
-            <a 
-              href="https://maps.google.com/?q=-7.8246473,110.3807577" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center space-x-1.5 text-[11px] font-bold text-[#d9a05b] hover:underline"
-            >
+            <a href="http://maps.google.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-1.5 text-[11px] font-bold text-[#d9a05b] hover:underline">
               <span>🗺️ Buka Rute di Google Maps</span>
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-              </svg>
             </a>
           </div>
         </aside>
 
-        {/* AREA UTAMA: Bersih dan langsung menampilkan pesanan */}
-        <main className="flex-1 p-6 md:p-10 lg:p-12 bg-[#faf9f6]">
+        {/* AREA UTAMA */}
+        <main className="flex-1 w-full p-6 md:p-10 lg:p-12 bg-[#faf9f6]">
           {loading ? (
             <div className="w-full">
               <SkeletonPesananSaya />
             </div>
           ) : (
             <div className="w-full animate-fadeIn">
-              <div className="w-full space-y-8">
-                <div>
-                  <h2 className="text-2xl font-serif font-bold text-[#2D2219]">
-                    {role === 'customer_service' ? "Manajemen Pesanan Masuk" : "Daftar Riwayat Pesanan"}
-                  </h2>
-                  <p className="mt-1 text-xs text-neutral-400">Pantau status pengerjaan kain lurik secara real-time</p>
+              <div className="w-full space-y-6">
+                
+                {/* Header Judul */}
+                <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center border-b border-neutral-200/60 pb-5">
+                  <div>
+                    <h2 className="text-2xl font-serif font-bold text-[#2D2219]">
+                      {role === 'customer_service' ? "Manajemen Pesanan Masuk" : "Daftar Riwayat Pesanan"}
+                    </h2>
+                    <p className="mt-1 text-xs text-neutral-400">Pantau status pengerjaan kain lurik secara real-time</p>
+                  </div>
+                  
+                  {/* 🌟 GRUP BUTTON FILTER (TAB) SEKARANG TERPISAH: DIPROSES, DIKIRIM, SELESAI */}
+                  <div className="flex flex-wrap p-1 bg-neutral-200/60 rounded-xl gap-1 self-start lg:self-center text-[11px] font-bold tracking-wider">
+                    <button 
+                      onClick={() => setFilterStatus("semua")}
+                      className={`px-3 py-2 rounded-lg transition-all ${filterStatus === "semua" ? "bg-[#2D2219] text-white shadow-sm" : "text-neutral-500 hover:text-neutral-800"}`}
+                    >
+                      SEMUA ({pesanan.length})
+                    </button>
+                    <button 
+                      onClick={() => setFilterStatus("belum_bayar")}
+                      className={`px-3 py-2 rounded-lg transition-all ${filterStatus === "belum_bayar" ? "bg-[#2D2219] text-white shadow-sm" : "text-neutral-500 hover:text-neutral-800"}`}
+                    >
+                      BELUM BAYAR ({pesanan.filter(p => p.status_transaksi?.toLowerCase() === "pending").length})
+                    </button>
+                    <button 
+                      onClick={() => setFilterStatus("diproses")}
+                      className={`px-3 py-2 rounded-lg transition-all ${filterStatus === "diproses" ? "bg-[#2D2219] text-white shadow-sm" : "text-neutral-500 hover:text-neutral-800"}`}
+                    >
+                      DIPROSES ({pesanan.filter(p => p.status_transaksi?.toLowerCase() !== "pending" && (p.status_pengiriman?.toLowerCase() === "pesanan di proses" || !p.status_pengiriman)).length})
+                    </button>
+                    <button 
+                      onClick={() => setFilterStatus("dikirim")}
+                      className={`px-3 py-2 rounded-lg transition-all ${filterStatus === "dikirim" ? "bg-[#2D2219] text-white shadow-sm" : "text-neutral-500 hover:text-neutral-800"}`}
+                    >
+                      SIAP AMBIL ({pesanan.filter(p => p.status_transaksi?.toLowerCase() !== "pending" && p.status_pengiriman?.toLowerCase() === "pesanan bisa diambil di toko sekarang").length})
+                    </button>
+                    <button 
+                      onClick={() => setFilterStatus("selesai")}
+                      className={`px-3 py-2 rounded-lg transition-all ${filterStatus === "selesai" ? "bg-[#2D2219] text-white shadow-sm" : "text-neutral-500 hover:text-neutral-800"}`}
+                    >
+                      SELESAI ({pesanan.filter(p => p.status_transaksi?.toLowerCase() !== "pending" && p.status_pengiriman?.toLowerCase() === "pesanan di terima").length})
+                    </button>
+                  </div>
                 </div>
 
-                {pesanan.length === 0 ? (
+                {/* Konten Utama */}
+                {pesananTerfilter.length === 0 ? (
                   <div className="w-full p-16 text-center bg-white border border-dashed shadow-sm border-neutral-300 rounded-2xl">
-                    <h3 className="font-serif text-lg font-bold text-black">Belum Ada Transaksi</h3>
-                    <p className="text-sm text-[#6a5848] mt-1">Tidak ada riwayat kustomisasi atau pembelian kain lurik.</p>
+                    <h3 className="font-serif text-lg font-bold text-black">Tidak Ada Transaksi</h3>
+                    <p className="text-sm text-[#6a5848] mt-1">Tidak ada pesanan dengan kategori filter ini.</p>
                   </div>
                 ) : (
                   <div className="w-full space-y-6">
-                    {pesanan.map((p, index) => (
+                    {pesananTerfilter.map((p, index) => (
                       <div key={p.order_id || index} className="w-full p-6 transition-all duration-300 bg-white border shadow-sm border-neutral-200/60 rounded-2xl hover:shadow-md">
                         <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-5 border-b border-neutral-100">
                           <div className="flex items-center space-x-3">

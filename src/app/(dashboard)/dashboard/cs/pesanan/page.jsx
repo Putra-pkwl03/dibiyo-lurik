@@ -12,7 +12,8 @@ export default function CSManagePesananPage() {
 
   const selectedOrder = orders.find(o => o.order_id === selectedOrderId)
 
-  const [inputStatusPengerjaan, setInputStatusPengerjaan] = useState('dikirim')
+  // 🌟 Diubah default-nya ke format database asli
+  const [inputStatusPengerjaan, setInputStatusPengerjaan] = useState('pesanan di proses')
   const [inputNoResi, setInputNoResi] = useState('')
 
   // 1. FETCH DATA UTAMA DARI DATABASE
@@ -26,8 +27,8 @@ export default function CSManagePesananPage() {
         setOrders(data)
         if (data.length > 0 && !selectedOrderId) {
           setSelectedOrderId(data[0].order_id)
-          // 🌟 Diubah dari status_pengerjaan ke status_pengiriman
-          setInputStatusPengerjaan(data[0].status_pengiriman === 'diproses' ? 'dikirim' : data[0].status_pengiriman || 'dikirim')
+          // 🌟 Sinkronisasi awal menggunakan fallback status database yang benar
+          setInputStatusPengerjaan(data[0].status_pengiriman || 'pesanan di proses')
           setInputNoResi(data[0].no_resi || '')
         }
       }
@@ -55,7 +56,6 @@ export default function CSManagePesananPage() {
 
           setOrders(prevOrders => 
             prevOrders.map(o => 
-              // 🌟 Diubah dari status_pengerjaan ke status_pengiriman
               o.order_id === id_order ? { ...o, status_pengiriman: status_baru } : o
             )
           )
@@ -81,8 +81,8 @@ export default function CSManagePesananPage() {
   // Sinkronisasi input form ketika order terpilih berganti
   useEffect(() => {
     if (selectedOrder) {
-      // 🌟 Diubah dari status_pengerjaan ke status_pengiriman
-      setInputStatusPengerjaan(selectedOrder.status_pengiriman === 'diproses' ? 'dikirim' : selectedOrder.status_pengiriman || 'dikirim')
+      // 🌟 Menggunakan status murni database langsung
+      setInputStatusPengerjaan(selectedOrder.status_pengiriman || 'pesanan di proses')
       setInputNoResi(selectedOrder.no_resi || '')
     }
   }, [selectedOrderId, orders])
@@ -118,19 +118,9 @@ export default function CSManagePesananPage() {
   const handleSimpanPerubahanStatus = async (e) => {
     e.preventDefault()
 
-    if (inputStatusPengerjaan === 'dikirim' && !inputNoResi.trim()) {
-      Swal.fire({
-        title: 'Gagal!',
-        text: 'Mohon isi nomor resi pengiriman terlebih dahulu jika status diganti menjadi dikirim.',
-        icon: 'warning',
-        confirmButtonColor: '#1A335A',
-      })
-      return
-    }
-
     Swal.fire({
       title: 'Simpan Perubahan?',
-      text: `Apakah Anda ingin memperbarui status menjadi [${inputStatusPengerjaan.toUpperCase()}] untuk order ${selectedOrder.order_id}?`,
+      text: `Apakah Anda ingin memperbarui status untuk order ${selectedOrder.order_id}?`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#1A335A',
@@ -145,23 +135,22 @@ export default function CSManagePesananPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               order_id: selectedOrder.order_id,
-              status_pengiriman: inputStatusPengerjaan, // 🌟 Diubah agar sesuai ekspektasi Backend
-              no_resi: inputStatusPengerjaan === 'dikirim' ? inputNoResi : selectedOrder.no_resi
+              status_pengiriman: inputStatusPengerjaan, 
+              no_resi: inputStatusPengerjaan === 'pesanan bisa diambil di toko sekarang' ? inputNoResi : selectedOrder.no_resi
             })
           })
 
           if (response.ok) {
             setOrders(prevOrders => 
               prevOrders.map(o => o.order_id === selectedOrder.order_id 
-                // 🌟 Diubah dari status_pengerjaan ke status_pengiriman
-                ? { ...o, status_pengiriman: inputStatusPengerjaan, no_resi: inputStatusPengerjaan === 'dikirim' ? inputNoResi : o.no_resi } 
+                ? { ...o, status_pengiriman: inputStatusPengerjaan, no_resi: inputStatusPengerjaan === 'pesanan bisa diambil di toko sekarang' ? inputNoResi : o.no_resi } 
                 : o
               )
             )
 
             Swal.fire({
               title: 'Berhasil Diperbarui!',
-              text: `Status pengerjaan berhasil diperbarui menjadi ${inputStatusPengerjaan}.`,
+              text: `Status pengerjaan berhasil diperbarui.`,
               icon: 'success',
               confirmButtonColor: '#1A335A',
             })
@@ -210,7 +199,6 @@ export default function CSManagePesananPage() {
       </div>
     )
   }
-
 
   return (
     <div className="flex flex-col min-h-screen gap-6 p-6 bg-gray-50 lg:flex-row">
@@ -261,9 +249,9 @@ export default function CSManagePesananPage() {
                   const statusTx = order.status_transaksi?.toLowerCase();
                   const isPaid = statusTx === 'settlement' || statusTx === 'success' || statusTx === 'capture';
                   
-                  // Ambil data profile secara aman (antisipasi mapping nested objek hasil join Supabase)
                   const noTelp = order.nomor_telp || order.profiles?.nomor_telp || '-';
                   const alamatLengkap = order.alamat_lengkap || order.profiles?.alamat_lengkap || '-';
+                  const currentStatus = order.status_pengiriman;
 
                   return (
                     <tr 
@@ -279,14 +267,13 @@ export default function CSManagePesananPage() {
                         <div className="text-[10px] text-gray-400 mt-0.5">{formatTanggal(order.created_at)}</div>
                       </td>
                       
-                      {/* KOLOM NO TELP (WHATSAPP LINK) */}
                       <td className="p-3">
                         {noTelp !== '-' ? (
                           <a 
                             href={formatWhatsAppLink(noTelp, order.order_id)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()} // Supaya klik link tidak men-trigger select row ulang
+                            onClick={(e) => e.stopPropagation()} 
                             className="inline-flex items-center gap-1 text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 px-2 py-1 rounded border border-green-200 transition-colors font-medium font-mono text-[11px]"
                           >
                             <MessageCircle size={12} className="fill-green-600" />
@@ -297,7 +284,6 @@ export default function CSManagePesananPage() {
                         )}
                       </td>
 
-                      {/* KOLOM ALAMAT LENGKAP (GOOGLE MAPS LINK) */}
                       <td className="p-3 max-w-[180px]">
                         {alamatLengkap !== '-' ? (
                           <a
@@ -327,18 +313,20 @@ export default function CSManagePesananPage() {
                           </span>
                         )}
                       </td>
+
+                      {/* 🌟 Kolom pemetaan label status alur kain sesuai Supabase */}
                       <td className="p-3">
-                        {order.status_pengerjaan === 'dikirim' && (
+                        {currentStatus === 'pesanan bisa diambil di toko sekarang' && (
                           <span className="inline-flex items-center gap-1 text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                            <Truck size={12} /> Dikirim
+                            <Truck size={12} /> Siap Ambil
                           </span>
                         )}
-                        {order.status_pengerjaan === 'selesai' && (
+                        {currentStatus === 'pesanan di terima' && (
                           <span className="inline-flex items-center gap-1 text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded border border-green-100">
                             <CheckCircle size={12} /> Selesai
                           </span>
                         )}
-                        {(order.status_pengerjaan === 'diproses' || !order.status_pengerjaan) && (
+                        {(currentStatus === 'pesanan di proses' || !currentStatus) && (
                           <span className="inline-flex items-center gap-1 text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
                             <Package size={12} /> Diproses ATBM
                           </span>
@@ -371,55 +359,56 @@ export default function CSManagePesananPage() {
               <h2 className="mt-1 text-xs text-gray-400 font-mono truncate">UID: {selectedOrder.user_id}</h2>
             </div>
 
-            {/* FORM KONTROL STATUS (DIKIRIM & SELESAI) */}
+            {/* FORM KONTROL STATUS (DIPROSES, DIKIRIM, & SELESAI) */}
             <form onSubmit={handleSimpanPerubahanStatus} className="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
               <h3 className="text-xs font-bold text-[#1A335A] uppercase tracking-wider">Update Alur Pengerjaan Kain</h3>
               
               <div>
                 <label className="block text-[11px] text-gray-500 font-medium mb-1.5">Pilih Status Berikutnya:</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {/* Tombol Dikirim */}
+                <div className="grid grid-cols-3 gap-1">
+                  
+                  {/* 🌟 BUTTON 1: Diproses (Baru ditambahkan) */}
                   <button
                     type="button"
-                    onClick={() => setInputStatusPengerjaan('dikirim')}
-                    className={`p-2 text-xs rounded-lg font-bold border flex items-center justify-center gap-1 transition-all ${
-                      inputStatusPengerjaan === 'dikirim'
+                    onClick={() => setInputStatusPengerjaan('pesanan di proses')}
+                    className={`py-2 px-1 text-[10px] rounded-lg font-bold border flex flex-col items-center justify-center gap-1 transition-all ${
+                      inputStatusPengerjaan === 'pesanan di proses'
+                        ? 'bg-amber-100 border-amber-300 text-amber-800 ring-1 ring-amber-400'
+                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Package size={13} /> Proses
+                  </button>
+
+                  {/* BUTTON 2: Dikirim */}
+                  <button
+                    type="button"
+                    onClick={() => setInputStatusPengerjaan('pesanan bisa diambil di toko sekarang')}
+                    className={`py-2 px-1 text-[10px] rounded-lg font-bold border flex flex-col items-center justify-center gap-1 transition-all ${
+                      inputStatusPengerjaan === 'pesanan bisa diambil di toko sekarang'
                         ? 'bg-blue-100 border-blue-300 text-blue-800 ring-1 ring-blue-400'
                         : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-100'
                     }`}
                   >
-                    <Truck size={14} /> Dikirim
+                    <Truck size={13} /> Siap Ambil
                   </button>
 
-                  {/* Tombol Selesai */}
+                  {/* BUTTON 3: Selesai */}
                   <button
                     type="button"
-                    onClick={() => { setInputStatusPengerjaan('selesai'); }}
-                    className={`p-2 text-xs rounded-lg font-bold border flex items-center justify-center gap-1 transition-all ${
-                      inputStatusPengerjaan === 'selesai'
+                    onClick={() => setInputStatusPengerjaan('pesanan di terima')}
+                    className={`py-2 px-1 text-[10px] rounded-lg font-bold border flex flex-col items-center justify-center gap-1 transition-all ${
+                      inputStatusPengerjaan === 'pesanan di terima'
                         ? 'bg-green-100 border-green-300 text-green-800 ring-1 ring-green-400'
                         : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-100'
                     }`}
                   >
-                    <CheckCircle size={14} /> Selesai
+                    <CheckCircle size={13} /> Selesai
                   </button>
                 </div>
               </div>
 
-              {/* Input Nomor Resi muncul jika status bernilai 'dikirim' */}
-              {inputStatusPengerjaan === 'dikirim' && (
-                <div className="space-y-1 animate-fadeIn">
-                  <label className="block text-[11px] text-gray-600 font-bold">Input Nomor Resi Logistik:</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Contoh: REG-ATBM-XXXXX"
-                    value={inputNoResi}
-                    onChange={(e) => setInputNoResi(e.target.value)}
-                    className="w-full p-2 text-xs border border-gray-300 rounded-lg outline-none uppercase font-mono font-bold bg-white focus:border-blue-500"
-                  />
-                </div>
-              )}
+              
 
               <button
                 type="submit"

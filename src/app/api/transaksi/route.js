@@ -75,9 +75,9 @@ export const POST = async (request) => {
         order_id: order_id,
         user_id: user_id,
         total_nominal: Math.round(gross_amount),
-        status_transaksi: 'pending', // Awal mula pending, nanti diupdate midtrans webhook menjadi 'berhasil' atau 'gagal'
+        status_transaksi: 'pending', 
         snap_token: snap_token || null,
-        status_pengiriman: 'pesanan di proses', // Sesuai dengan value baru di database
+        status_pengiriman: 'pesanan di proses', 
         created_at: new Date().toISOString()
       })
       .select();
@@ -130,20 +130,44 @@ export const POST = async (request) => {
 };
 
 // =====================================================
-// PATCH: Update Status Pengiriman
+// PATCH: Update Status Pengiriman (SUDAH AMAN)
 // =====================================================
 export const PATCH = async (request) => {
   try {
     const body = await request.json();
-    const { order_id, status_pengiriman } = body; 
+    let { order_id, status_pengiriman } = body; 
 
     if (!order_id || !status_pengiriman) {
       return NextResponse.json({ message: "Order ID dan Status Pengiriman wajib dilampirkan." }, { status: 400 });
     }
 
+    // 🌟 1. PEMETAAN NILAI: Ubah keyword singkat dari frontend menjadi teks valid database
+    const statusClean = status_pengiriman.toLowerCase().trim();
+    let statusFinal = statusClean;
+
+    if (statusClean === 'dikirim') {
+      statusFinal = 'pesanan bisa diambil di toko sekarang';
+    } else if (statusClean === 'selesai') {
+      statusFinal = 'pesanan di terima';
+    }
+
+    // 🌟 2. PROTEKSI: Validasi kecocokan dengan check constraint Supabase
+    const nilaiValid = [
+      'pesanan di proses',
+      'pesanan bisa diambil di toko sekarang',
+      'pesanan di terima'
+    ];
+
+    if (!nilaiValid.includes(statusFinal)) {
+      return NextResponse.json({ 
+        message: `Status '${status_pengiriman}' tidak valid. Database hanya menerima: ${nilaiValid.join(', ')}` 
+      }, { status: 400 });
+    }
+
+    // 🌟 3. EKSEKUSI UPDATE: Menggunakan status yang sudah divalidasi aman
     const { data, error } = await supabaseAdmin
       .from('transaksi')
-      .update({ status_pengiriman })
+      .update({ status_pengiriman: statusFinal })
       .eq('order_id', order_id)
       .select();
 
