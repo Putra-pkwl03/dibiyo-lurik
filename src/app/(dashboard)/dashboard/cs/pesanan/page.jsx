@@ -1,8 +1,73 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Search, Eye, ShoppingBag, Truck, Package, Save, Loader2, MessageCircle, MapPin, CheckCircle } from 'lucide-react'
+import { Search, Eye, ShoppingBag, Truck, Package, Save, MessageCircle, MapPin, CheckCircle } from 'lucide-react'
 import Swal from 'sweetalert2'
+
+// 🌟 HELPER GENERATOR GRADASI LURIK UNTUK BARANG KUSTOM
+const generateLurikGradient = (stripes) => {
+  let gradientString = '';
+  let currentOffset = 0;
+  
+  if (!stripes || stripes.length === 0) return { gradient: 'none', totalWidth: 0 };
+  
+  stripes.forEach((stripe) => {
+    const thickness = Number(stripe.thickness) || 0;
+    const startPoint = currentOffset;
+    const endPoint = currentOffset + thickness;
+    
+    gradientString += `${stripe.color} ${startPoint}px, ${stripe.color} ${endPoint}px, `;
+    gradientString += `transparent ${endPoint}px, transparent ${endPoint + 2}px, `;
+    
+    currentOffset = endPoint + 2; 
+  });
+  
+  const cleanGradient = gradientString.trim().replace(/,$/, '');
+  
+  return {
+    gradient: `linear-gradient(90deg, ${cleanGradient})`,
+    totalWidth: currentOffset
+  };
+};
+
+// 💀 SKELETON COMPONENT FOR LOADING STATE
+const SkeletonRow = () => (
+  <tr className="animate-pulse">
+    <td className="p-3"><div className="w-16 h-4 bg-gray-200 rounded"></div></td>
+    <td className="p-3">
+      <div className="w-24 h-3 mb-1 bg-gray-200 rounded"></div>
+      <div className="h-2.5 bg-gray-200 rounded w-16"></div>
+    </td>
+    <td className="p-3"><div className="h-6 bg-gray-200 rounded w-28"></div></td>
+    <td className="p-3"><div className="w-32 h-4 bg-gray-200 rounded"></div></td>
+    <td className="p-3"><div className="h-4 bg-gray-200 rounded w-14"></div></td>
+    <td className="p-3"><div className="w-24 h-5 bg-gray-200 rounded"></div></td>
+    <td className="p-3 text-center"><div className="w-8 h-6 mx-auto bg-gray-200 rounded"></div></td>
+  </tr>
+)
+
+const SkeletonDetail = () => (
+  <div className="bg-white rounded-xl border border-gray-100 shadow-md p-4 space-y-4 animate-pulse h-[calc(100vh-5rem)]">
+    <div className="pb-3 space-y-2 border-b border-gray-100">
+      <div className="flex justify-between">
+        <div className="w-24 h-4 bg-gray-200 rounded"></div>
+        <div className="w-20 h-3 bg-gray-200 rounded"></div>
+      </div>
+      <div className="w-40 h-3 bg-gray-200 rounded"></div>
+    </div>
+    <div className="h-32 bg-gray-100 rounded-xl"></div>
+    <div className="space-y-2">
+      <div className="w-24 h-3 bg-gray-200 rounded"></div>
+      <div className="flex gap-2">
+        <div className="w-10 h-10 bg-gray-200 rounded"></div>
+        <div className="flex-1 py-1 space-y-2">
+          <div className="w-3/4 h-3 bg-gray-200 rounded"></div>
+          <div className="h-2.5 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+)
 
 export default function CSManagePesananPage() {
   const [orders, setOrders] = useState([])
@@ -12,7 +77,6 @@ export default function CSManagePesananPage() {
 
   const selectedOrder = orders.find(o => o.order_id === selectedOrderId)
 
-  // 🌟 Diubah default-nya ke format database asli
   const [inputStatusPengerjaan, setInputStatusPengerjaan] = useState('pesanan di proses')
   const [inputNoResi, setInputNoResi] = useState('')
 
@@ -27,7 +91,6 @@ export default function CSManagePesananPage() {
         setOrders(data)
         if (data.length > 0 && !selectedOrderId) {
           setSelectedOrderId(data[0].order_id)
-          // 🌟 Sinkronisasi awal menggunakan fallback status database yang benar
           setInputStatusPengerjaan(data[0].status_pengiriman || 'pesanan di proses')
           setInputNoResi(data[0].no_resi || '')
         }
@@ -81,7 +144,6 @@ export default function CSManagePesananPage() {
   // Sinkronisasi input form ketika order terpilih berganti
   useEffect(() => {
     if (selectedOrder) {
-      // 🌟 Menggunakan status murni database langsung
       setInputStatusPengerjaan(selectedOrder.status_pengiriman || 'pesanan di proses')
       setInputNoResi(selectedOrder.no_resi || '')
     }
@@ -114,7 +176,6 @@ export default function CSManagePesananPage() {
     )
   })
 
-  // 4. SIMPAN PERUBAHAN STATUS KE DATABASE
   const handleSimpanPerubahanStatus = async (e) => {
     e.preventDefault()
 
@@ -191,27 +252,25 @@ export default function CSManagePesananPage() {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 gap-2">
-        <Loader2 className="w-8 h-8 text-[#1A335A] animate-spin" />
-        <p className="text-xs text-gray-500 font-medium">Memuat data transaksi dari Supabase...</p>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex flex-col min-h-screen gap-6 p-6 bg-gray-50 lg:flex-row">
-      
-      {/* KIRI: MONITORING TABEL ANTREAN */}
-      <div className="flex flex-col flex-1 p-4 bg-white border border-gray-100 shadow-sm rounded-xl">
-        <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-[#1A335A] flex items-center gap-2">
-              <ShoppingBag size={22} /> Manajemen Transaksi & Alur Kain
-            </h1>
-            <p className="text-xs text-gray-500 mt-0.5">Memproses invoice masuk, detail kontak pelanggan, dan pengiriman resi.</p>
-          </div>
+    <div className="w-full mx-auto space-y-4 text-black font-inter">
+      <div className="relative overflow-x-visible">
+        <h2 className="text-lg sm:text-[24px] font-medium text-black pb-2 sm:pb-5 border-b border-gray-500 tracking-wide -mx-4 px-4 sm:-mx-6 sm:px-6">
+          Manajemen Transaksi
+        </h2>
+      </div>
+
+      <div className="flex flex-col gap-6 bg-gray-50 lg:flex-row">
+        
+        {/* KIRI: MONITORING TABEL ANTREAN */}
+        <div className="flex flex-col flex-1 p-4 bg-white border border-gray-100 shadow-sm rounded-xl">
+          <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-[#1A335A] flex items-center gap-2">
+                <ShoppingBag size={22} /> Manajemen Transaksi 
+              </h1>
+              <p className="text-xs text-gray-500 mt-0.5">Memproses invoice masuk, detail kontak pelanggan, dan pengiriman resi.</p>
+            </div>
 
           <div className="relative w-full sm:w-60">
             <Search className="absolute w-4 h-4 text-gray-400 top-2.5 left-3" />
@@ -240,9 +299,18 @@ export default function CSManagePesananPage() {
               </tr>
             </thead>
             <tbody className="text-xs divide-y divide-gray-50">
-              {filteredOrders.length === 0 ? (
+              {loading ? (
+                // Tampilkan skeleton baris tabel saat loading data
+                <>
+                  <SkeletonRow />
+                  <SkeletonRow />
+                  <SkeletonRow />
+                  <SkeletonRow />
+                  <SkeletonRow />
+                </>
+              ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="p-8 text-center text-gray-400 italic">Tidak ada data transaksi ditemukan</td>
+                  <td colSpan="7" className="p-8 italic text-center text-gray-400">Tidak ada data transaksi ditemukan</td>
                 </tr>
               ) : (
                 filteredOrders.map((order) => {
@@ -258,7 +326,7 @@ export default function CSManagePesananPage() {
                       key={order.order_id} 
                       onClick={() => handleSelectOrder(order)}
                       className={`cursor-pointer transition-colors ${
-                        selectedOrderId === order.order_id ? 'bg-[#1A335A]/5 font-medium' : 'hover:bg-gray-50/50'
+                        selectedOrderId === order.order_id ? 'bg-[#1A335A]/10 font-medium' : 'hover:bg-gray-50/60'
                       }`}
                     >
                       <td className="p-3 font-mono font-bold text-gray-700">{order.order_id}</td>
@@ -280,25 +348,25 @@ export default function CSManagePesananPage() {
                             {noTelp}
                           </a>
                         ) : (
-                          <span className="text-gray-400 italic">-</span>
+                          <span className="italic text-gray-400">-</span>
                         )}
                       </td>
 
                       <td className="p-3 max-w-[180px]">
                         {alamatLengkap !== '-' ? (
                           <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(alamatLengkap)}`}
+                            href={`https://maps.google.com/?q=${encodeURIComponent(alamatLengkap)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1 text-gray-700 hover:text-blue-600 transition-colors group"
+                            className="inline-flex items-center gap-1 text-gray-700 transition-colors hover:text-blue-600 group"
                             title="Klik untuk buka di Google Maps"
                           >
                             <MapPin size={13} className="text-gray-400 group-hover:text-blue-600 shrink-0" />
                             <span className="truncate block max-w-[150px]">{alamatLengkap}</span>
                           </a>
                         ) : (
-                          <span className="text-gray-400 italic">-</span>
+                          <span className="italic text-gray-400">-</span>
                         )}
                       </td>
 
@@ -314,7 +382,6 @@ export default function CSManagePesananPage() {
                         )}
                       </td>
 
-                      {/* 🌟 Kolom pemetaan label status alur kain sesuai Supabase */}
                       <td className="p-3">
                         {currentStatus === 'pesanan bisa diambil di toko sekarang' && (
                           <span className="inline-flex items-center gap-1 text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
@@ -348,7 +415,9 @@ export default function CSManagePesananPage() {
 
       {/* KANAN: FORM UPDATE PROGRESS */}
       <div className="w-full lg:w-96 shrink-0">
-        {selectedOrder ? (
+        {loading ? (
+          <SkeletonDetail />
+        ) : selectedOrder ? (
           <div className="sticky top-6 bg-white rounded-xl border border-gray-100 shadow-md p-4 flex flex-col h-[calc(100vh-5rem)]">
             
             <div className="pb-3 border-b border-gray-100">
@@ -356,18 +425,17 @@ export default function CSManagePesananPage() {
                 <span className="text-[11px] font-mono font-bold text-[#1A335A]">{selectedOrder.order_id}</span>
                 <span className="text-[10px] text-gray-500">{formatTanggal(selectedOrder.created_at)}</span>
               </div>
-              <h2 className="mt-1 text-xs text-gray-400 font-mono truncate">UID: {selectedOrder.user_id}</h2>
+              <h2 className="mt-1 font-mono text-xs text-gray-400 truncate">UID: {selectedOrder.user_id}</h2>
             </div>
 
-            {/* FORM KONTROL STATUS (DIPROSES, DIKIRIM, & SELESAI) */}
-            <form onSubmit={handleSimpanPerubahanStatus} className="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
+            {/* FORM KONTROL STATUS */}
+            <form onSubmit={handleSimpanPerubahanStatus} className="p-3 mt-4 space-y-3 border border-gray-200 bg-gray-50 rounded-xl">
               <h3 className="text-xs font-bold text-[#1A335A] uppercase tracking-wider">Update Alur Pengerjaan Kain</h3>
               
               <div>
                 <label className="block text-[11px] text-gray-500 font-medium mb-1.5">Pilih Status Berikutnya:</label>
                 <div className="grid grid-cols-3 gap-1">
                   
-                  {/* 🌟 BUTTON 1: Diproses (Baru ditambahkan) */}
                   <button
                     type="button"
                     onClick={() => setInputStatusPengerjaan('pesanan di proses')}
@@ -380,7 +448,6 @@ export default function CSManagePesananPage() {
                     <Package size={13} /> Proses
                   </button>
 
-                  {/* BUTTON 2: Dikirim */}
                   <button
                     type="button"
                     onClick={() => setInputStatusPengerjaan('pesanan bisa diambil di toko sekarang')}
@@ -393,7 +460,6 @@ export default function CSManagePesananPage() {
                     <Truck size={13} /> Siap Ambil
                   </button>
 
-                  {/* BUTTON 3: Selesai */}
                   <button
                     type="button"
                     onClick={() => setInputStatusPengerjaan('pesanan di terima')}
@@ -407,8 +473,6 @@ export default function CSManagePesananPage() {
                   </button>
                 </div>
               </div>
-
-              
 
               <button
                 type="submit"
@@ -426,16 +490,48 @@ export default function CSManagePesananPage() {
                   const namaProduk = item.name || item.nama || "Kain Lurik Eksklusif";
                   const kuantitas = item.quantity || item.qty || item.panjang_dibeli || 1;
                   const hargaItem = item.price || item.harga || item.harga_per_meter || 0;
+                  
+                  // 🌟 DETEKSI METODE VISUALISASI GAMBAR ATAU KUSTOM GRADASI
+                  const isCustomItem = item.is_custom === true || item.isCustom === true;
+                  let visualBox;
+
+                  if (isCustomItem && item.konfigurasi && item.konfigurasi.stripes) {
+                    const { bgColor, patternDensity, stripes } = item.konfigurasi;
+                    const { gradient, totalWidth } = generateLurikGradient(stripes);
+                    const kerapatanDinamis = (totalWidth * (patternDensity / 100)) || 20;
+
+                    visualBox = (
+                      <div 
+                        style={{
+                          backgroundColor: bgColor || '#ffffff',
+                          backgroundImage: gradient,
+                          backgroundSize: `${kerapatanDinamis}px 100%`
+                        }}
+                        className="w-10 h-10 border border-gray-300 rounded shadow-inner shrink-0"
+                        title="Motif Kain Kustom ATBM"
+                      />
+                    );
+                  } else {
+                    const srcGambar = item.image_url || item.gambar_url || '/placeholder-kain.jpg';
+                    visualBox = (
+                      <img 
+                        src={srcGambar} 
+                        alt="Produk" 
+                        className="object-cover w-10 h-10 border border-gray-200 rounded shrink-0"
+                        onError={(e) => { e.target.src = '/placeholder-kain.jpg' }}
+                      />
+                    );
+                  }
 
                   return (
-                    <div key={idx} className="flex gap-3 p-2 border border-gray-100 rounded-lg bg-gray-50/50">
-                      <div className="w-10 h-10 bg-[#1A335A]/10 border border-gray-200 rounded shrink-0 flex items-center justify-center text-[10px] font-bold text-[#1A335A]">
-                        ATBM
-                      </div>
+                    <div key={idx} className="flex items-center gap-3 p-2 border border-gray-100 rounded-lg bg-gray-50/50">
+                      {/* 🌟 MERENDER MEDIA BOX BERDASARKAN HASIL IDENTIFIKASI */}
+                      {visualBox}
+                      
                       <div className="flex flex-col justify-center flex-1 min-w-0">
                         <h4 className="text-xs font-bold text-gray-800 truncate">{namaProduk}</h4>
                         <div className="flex items-center justify-between mt-0.5 text-[10px] text-gray-500">
-                          <span>{kuantitas} Meter / Pcs</span>
+                          <span>{kuantitas} Meter</span>
                           <span className="font-bold text-[#1A335A]">Rp {Number(hargaItem).toLocaleString('id-ID')}</span>
                         </div>
                       </div>
@@ -443,11 +539,11 @@ export default function CSManagePesananPage() {
                   )
                 })
               ) : (
-                <div className="text-xs italic text-gray-400 p-2">Tidak ada rincian produk (JSONB kosong)</div>
+                <div className="p-2 text-xs italic text-gray-400">Tidak ada rincian produk (JSONB kosong)</div>
               )}
             </div>
 
-            <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
               <span className="text-xs font-medium text-gray-500">Total Transaksi</span>
               <span className="text-base font-bold text-[#1A335A]">
                 Rp {Number(selectedOrder.total_nominal).toLocaleString('id-ID')}
@@ -462,6 +558,7 @@ export default function CSManagePesananPage() {
         )}
       </div>
 
+      </div>
     </div>
   )
 }

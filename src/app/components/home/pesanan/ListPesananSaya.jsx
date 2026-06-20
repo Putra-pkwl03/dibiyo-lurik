@@ -12,7 +12,7 @@ export default function ListPesananSaya({ pesanan }) {
   if (transaksiValid.length === 0) {
     return (
       <div className="bg-[#ffffff] border border-dashed border-gray-300 rounded-2xl p-12 text-center">
-        <h3 className="text-lg font-serif font-bold text-black">Belum Ada Riwayat Pesanan</h3>
+        <h3 className="font-serif text-lg font-bold text-black">Belum Ada Riwayat Pesanan</h3>
         <p className="text-sm text-[#6a5848] mt-2">
           Seluruh riwayat pesanan Anda akan muncul di sini.
         </p>
@@ -51,7 +51,7 @@ export default function ListPesananSaya({ pesanan }) {
           <div className="flex items-center gap-2.5 text-blue-700">
             <span className="flex h-2.5 w-2.5 rounded-full bg-blue-600延 animate-pulse" />
             <p className="text-xs font-semibold">
-              Status: <span className="uppercase font-bold text-blue-900">Bisa Diambil Di Toko</span>
+              Status: <span className="font-bold text-blue-900 uppercase">Bisa Diambil Di Toko</span>
             </p>
           </div>
           <span className="text-[11px] text-blue-600 font-medium italic">
@@ -68,7 +68,7 @@ export default function ListPesananSaya({ pesanan }) {
           <div className="flex items-center gap-2.5 text-green-700">
             <span className="flex h-2.5 w-2.5 rounded-full bg-green-600" />
             <p className="text-xs font-semibold">
-              Status: <span className="uppercase font-bold text-green-900">Pesanan Diterima</span>
+              Status: <span className="font-bold text-green-900 uppercase">Pesanan Diterima</span>
             </p>
           </div>
           <span className="text-[11px] text-green-600 font-medium italic">
@@ -84,7 +84,7 @@ export default function ListPesananSaya({ pesanan }) {
         <div className="flex items-center gap-2.5 text-[#917c4b]">
           <span className="flex h-2.5 w-2.5 rounded-full bg-[#d9a05b] animate-pulse" />
           <p className="text-xs font-semibold">
-            Status: <span className="uppercase font-bold text-black">Pesanan Di Proses (Tenun ATBM)</span>
+            Status: <span className="font-bold text-black uppercase">Pesanan Di Proses (Tenun ATBM)</span>
           </p>
         </div>
         <button 
@@ -109,10 +109,10 @@ export default function ListPesananSaya({ pesanan }) {
             className="bg-[#ffffff] border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
           >
             {/* Top Bar Card */}
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div>
                 <p className="text-xs text-[#6a5848]">ID Transaksi / Order ID</p>
-                <p className="text-sm font-mono font-bold text-black">{tx.order_id}</p>
+                <p className="font-mono text-sm font-bold text-black">{tx.order_id}</p>
               </div>
               <div className="text-left sm:text-right">
                 <p className="text-xs text-[#6a5848]">Tanggal Pembelian</p>
@@ -127,7 +127,7 @@ export default function ListPesananSaya({ pesanan }) {
                   <div className="flex items-center gap-2.5 text-red-700">
                     <span className="flex h-2.5 w-2.5 rounded-full bg-red-600 animate-pulse" />
                     <p className="text-xs font-semibold">
-                      Status: <span className="uppercase font-bold text-red-900">Menunggu Pembayaran</span>
+                      Status: <span className="font-bold text-red-900 uppercase">Menunggu Pembayaran</span>
                     </p>
                   </div>
                   <span className="text-[11px] text-red-600 font-medium italic">
@@ -143,24 +143,110 @@ export default function ListPesananSaya({ pesanan }) {
             {/* Body Isi Item Transaksi */}
             <div className="p-6 space-y-4">
               {Array.isArray(tx.items_transaksi) && tx.items_transaksi.length > 0 ? (
-                tx.items_transaksi.map((item, idx) => {
-                  const namaProduk = item.name || item.nama || item.produk?.kode_produk || "Kain Lurik Eksklusif";
-                  const kuantitas = item.quantity || item.jumlah_order || 1;
-                  const hargaItem = item.price || item.harga || 0;
+  tx.items_transaksi.map((item, idx) => {
+    const namaProduk = item.name || item.nama || "Kain Lurik";
+    const kuantitas = item.quantity || 1;
+    const hargaItem = item.price || 0;
 
-                  return (
-                    <div key={idx} className="flex items-start justify-between border-b border-gray-50 pb-3 last:border-b-0 last:pb-0">
-                      <div>
-                        <h4 className="text-sm font-bold text-black">{namaProduk}</h4>
-                        <p className="text-xs text-[#6a5848] mt-0.5">Jumlah kuantitas: {kuantitas} Pcs / Gulung / Meter</p>
-                      </div>
-                      <p className="text-sm font-medium text-black">{formatRupiah(hargaItem)}</p>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-xs text-gray-400 italic">Detail produk tidak terlampir</p>
+    // 🌟 PERBAIKAN LOGIKA DETEKSI TERAKHIR & PALING AMAN:
+const isCustom = 
+  item.is_custom !== undefined 
+    ? item.is_custom === true  // Jika transaksi baru, murni ikuti true/false dari database
+    : (item.image_url === null && !item.name?.includes("(G-")); // Jika transaksi lama, pakai fallback nama
+    const konfig = item.konfigurasi;
+
+    return (
+      <div key={idx} className="flex items-center justify-between gap-4 pb-3 border-b border-gray-50 last:border-b-0 last:pb-0">
+        <div className="flex items-center gap-4">
+          
+         {/* 🖼️ DYNAMIC BOX PREVIEW */}
+<div className="relative flex items-center justify-center w-16 h-16 overflow-hidden border rounded-xl bg-neutral-100 border-neutral-200/60 shrink-0">
+  
+  {isCustom ? (
+    /* 🌟 JIKA PRODUK CUSTOM */
+    konfig?.stripes ? (() => {
+      // 1. Rekonstruksi gradient string persis seperti generator checkout
+      let gradientString = '';
+      let currentOffset = 0;
+      
+      konfig.stripes.forEach((stripe) => {
+        const thickness = Number(stripe.thickness) || 0;
+        const startPoint = currentOffset;
+        const endPoint = currentOffset + thickness;
+        
+        gradientString += `${stripe.color} ${startPoint}px, ${stripe.color} ${endPoint}px, `;
+        gradientString += `transparent ${endPoint}px, transparent ${endPoint + 2}px, `;
+        currentOffset = endPoint + 2; 
+      });
+      
+      const cleanGradient = gradientString.trim().replace(/,$/, '');
+      const dynamicGradient = `linear-gradient(90deg, ${cleanGradient})`;
+      const ukuranKerapatanDinamis = (currentOffset * ((konfig.patternDensity || konfig.configuration?.patternDensity || 100) / 100)) || 20;
+
+      return (
+        <div className="relative w-full h-full">
+          {/* Layer Pola Kain Warna Diberi Masking Shading */}
+          <div 
+            style={{ 
+              backgroundColor: konfig.bgColor || '#1A1917', 
+              backgroundImage: dynamicGradient, 
+              backgroundSize: `${ukuranKerapatanDinamis}px 100%`,
+              maskImage: "url('/mockups/kain-gantung-mask.png')", 
+              WebkitMaskImage: "url('/mockups/kain-gantung-mask.png')", 
+              maskSize: 'cover', 
+              WebkitMaskSize: 'cover'
+            }} 
+            className="absolute inset-0 w-full h-full" 
+          />
+          {/* Layer Bayangan Tekstur Kain Realistis */}
+          <img 
+            src="/mockups/kain-gantung-mask.png" 
+            alt="Shading" 
+            className="absolute inset-0 object-cover w-full h-full pointer-events-none mix-blend-multiply opacity-60" 
+          />
+        </div>
+      );
+    })() : (
+      /* Fallback Pattern untuk Transaksi Lama */
+      <div 
+        className="w-full h-full" 
+        style={{
+          backgroundImage: 'repeating-linear-gradient(90deg, #2D2219, #2D2219 4px, #d9a05b 4px, #d9a05b 8px, #6a5848 8px, #6a5848 12px)'
+        }}
+      />
+    )
+  ) : (
+    /* 🖼️ JIKA PRODUK REGULER */
+    <img 
+      src={item.image_url || "https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=150&auto=format&fit=crop"} 
+      alt={namaProduk}
+      className="object-cover w-full h-full"
+      onError={(e) => {
+        e.target.src = "https://placehold.co/150x150?text=Kain+Lurik"; 
+      }}
+    />
+  )}
+</div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-bold text-black">{namaProduk}</h4>
+              {isCustom && (
+                <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded uppercase font-mono">
+                  Custom
+                </span>
               )}
+            </div>
+            <p className="text-xs text-[#6a5848] mt-0.5">Jumlah kuantitas: {kuantitas} Pcs / Gulung / Meter</p>
+          </div>
+        </div>
+        
+        <p className="text-sm font-medium text-black shrink-0">{formatRupiah(hargaItem)}</p>
+      </div>
+    );
+  })
+) : (
+  <p className="text-xs italic text-gray-400">Detail produk tidak terlampir</p>
+)}
             </div>
 
             {/* Footer Card Ringkasan Total */}
@@ -168,17 +254,17 @@ export default function ListPesananSaya({ pesanan }) {
               <div className="flex items-center gap-3">
                 <span className="text-xs font-medium text-black">Status Pembayaran:</span>
                 {isPending ? (
-                  <span className="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                  <span className="px-3 py-1 text-xs font-bold tracking-wider uppercase rounded-full bg-amber-100 text-amber-800">
                     Belum Dibayar
                   </span>
                 ) : (
-                  <span className="bg-green-100 text-green-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                  <span className="px-3 py-1 text-xs font-bold tracking-wider text-green-800 uppercase bg-green-100 rounded-full">
                     Berhasil
                   </span>
                 )}
               </div>
               
-              <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+              <div className="flex items-center justify-between w-full gap-4 sm:w-auto sm:justify-end">
                 <div className="text-right">
                   <span className="text-xs text-[#6a5848] block">Total Pembayaran</span>
                   <span className="text-base font-serif font-black text-[#d9a05b]">

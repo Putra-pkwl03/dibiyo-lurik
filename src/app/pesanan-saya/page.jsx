@@ -153,7 +153,7 @@ export default function PesananSayaPage() {
 
   return (
     <div className="bg-[#fcfbf9] text-black min-h-screen flex flex-col pt-24 md:pt-28">
-      <div className="flex flex-col flex-1 w-full md:flex-row items-start">
+      <div className="flex flex-col items-start flex-1 w-full md:flex-row">
         
         {/* SIDEBAR */}
         <aside className="flex flex-col w-full p-6 bg-white border-b md:w-80 md:sticky md:top-28 md:h-[calc(100vh-7rem)] md:border-b-0 md:border-r border-neutral-200/80 md:p-8 shrink-0 justify-between overflow-y-auto">
@@ -205,17 +205,17 @@ export default function PesananSayaPage() {
         </aside>
 
         {/* AREA UTAMA */}
-        <main className="flex-1 w-full p-6 md:p-10 lg:p-12 bg-[#faf9f6]">
+        <main className="flex-1 w-full p-2 md:p-4 lg:p-4 bg-[#faf9f6]">
           {loading ? (
             <div className="w-full">
               <SkeletonPesananSaya />
             </div>
           ) : (
-            <div className="w-full animate-fadeIn">
+            <div className="w-full -mt-5 animate-fadeIn">
               <div className="w-full space-y-6">
                 
                 {/* Header Judul */}
-                <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center border-b border-neutral-200/60 pb-5">
+                <div className="flex flex-col justify-between gap-4 border-b lg:flex-row lg:items-center border-neutral-200/60">
                   <div>
                     <h2 className="text-2xl font-serif font-bold text-[#2D2219]">
                       {role === 'customer_service' ? "Manajemen Pesanan Masuk" : "Daftar Riwayat Pesanan"}

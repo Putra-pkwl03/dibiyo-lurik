@@ -69,6 +69,38 @@ export const POST = async (request) => {
       );
     }
 
+    // 🌟 GENERATE BACKUP JSON UNTUK DITAMPILKAN DI LIST PESANAN FRONTEND
+    const formatJsonBackup = items.map((item) => {
+      // Deteksi nama produk
+      const namaProduk = item.kode_produk || item.gulungan?.produk?.kode_produk || item.name || item.nama || "Kain Lurik";
+      const noGulung = item.nomor_gulungan || item.gulungan?.nomor_gulungan || "-";
+      const finalName = item.is_custom ? namaProduk : `${namaProduk} (G-${noGulung})`;
+
+      // Di dalam POST api/transaksi/route.js
+const imageUrl = item.gulungan?.produk?.gambar_url || 
+                 item.produk?.gambar_url || 
+                 item.gambar_url || 
+                 null;
+
+      // Parsing konfigurasi warna/garis jika item tersebut kustom
+      let konfigurasiObj = null;
+      if (item.konfigurasi) {
+        konfigurasiObj = typeof item.konfigurasi === 'string' 
+          ? JSON.parse(item.konfigurasi) 
+          : item.konfigurasi;
+      }
+
+      return {
+        name: finalName,
+        quantity: Number(item.panjang_dibeli || item.jumlah_order || item.panjang || 1),
+        price: Number(item.subtotal || item.harga || item.price || 0),
+        image_url: imageUrl,
+        is_custom: item.is_custom || false,
+        konfigurasi: konfigurasiObj
+      };
+    });
+
+    // 🌟 MASUKKAN KE TABEL TRANSAKSI (IKUT SERTAKAN ITEMS_TRANSAKSI)
     const { data: transaksiData, error: transaksiError } = await supabaseAdmin
       .from('transaksi')
       .insert({
@@ -77,6 +109,7 @@ export const POST = async (request) => {
         total_nominal: Math.round(gross_amount),
         status_transaksi: 'pending', 
         snap_token: snap_token || null,
+        items_transaksi: formatJsonBackup, // ✨ Data visualisasi masuk ke sini
         status_pengiriman: 'pesanan di proses', 
         created_at: new Date().toISOString()
       })
@@ -89,13 +122,18 @@ export const POST = async (request) => {
 
     transactionCreated = true;
 
-    const itemsData = items.map((item) => ({
-      order_id: order_id,
-      gulungan_id: item.gulungan_id,
-      panjang_dibeli: Number(item.panjang_dibeli || item.jumlah_order || item.panjang || 0),
-      harga_per_meter: Number(item.harga_per_meter || item.harga || 0),
-      subtotal: Number(item.subtotal || 0)
-    }));
+    const itemsData = items.map((item) => {
+      const isCustomProduct = String(item.gulungan_id || item.id).startsWith('CUSTOM-') || item.is_custom;
+      
+      return {
+        order_id: order_id,
+        // Jika kustom set null agar tipe UUID database aman
+        gulungan_id: isCustomProduct ? null : (item.gulungan_id || item.id),
+        panjang_dibeli: Number(item.panjang_dibeli || item.jumlah_order || item.panjang || 0),
+        harga_per_meter: Number(item.harga_per_meter || item.harga || 0),
+        subtotal: Number(item.subtotal || 0)
+      };
+    });
 
     const { error: itemsError } = await supabaseAdmin
       .from('item_transaksi')
@@ -128,6 +166,7 @@ export const POST = async (request) => {
     return NextResponse.json({ message: err.message }, { status: 500 });
   }
 };
+
 
 // =====================================================
 // PATCH: Update Status Pengiriman (SUDAH AMAN)

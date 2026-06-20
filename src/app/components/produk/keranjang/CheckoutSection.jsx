@@ -54,7 +54,7 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
 
   const total = useMemo(() => subTotal, [subTotal]);
 
-  const handleBayarMidtrans = async () => {
+ const handleBayarMidtrans = async () => {
     if (items.length === 0) return;
 
     setIsModalOpen(true);
@@ -102,15 +102,39 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
     const targetUserId = currentUser.id || currentUser.user?.id || currentUser.data?.id;
 
     try {
+      // 🌟 NORMALISASI DENGAN PENCARIAN STRUKTUR DATA AGRESIF
       const normalizedItems = items.map((item) => {
         const meteran = item.input_panjang || item.gulungan?.panjang_sisa || 0;
         const harga = item.gulungan?.harga_per_meter || item.gulungan?.harga || 0;
+        
+        // Ambil konfigurasi (cek objek mentah, cek properti gulungan, cek typos konfigurasi/configuration)
+        const konfigurasiData = 
+          item.konfigurasi || 
+          item.configuration || 
+          item.gulungan?.configurasi || 
+          item.gulungan?.konfigurasi || 
+          item.gulungan?.configuration || 
+          item.custom_metadata?.konfigurasi || 
+          null;
+        
+        // Deteksi valid kain custom
+        const isCustomItem = 
+          item.is_custom === true || 
+          item.isCustom === true || 
+          item.gulungan?.nomor_gulungan === "CUSTOM" || 
+          item.gulungan?.nomor_gulungan === "COMBO-STUDIO" ||
+          (!item.gulungan_id && !item.gulungan);
+
         return {
           id: item.id,
-          gulungan_id: item.gulungan_id || item.gulungan?.id,
+          gulungan_id: item.gulungan_id || item.gulungan?.id || null,
           panjang_dibeli: Number(meteran), 
           harga_per_meter: Number(harga), 
-          subtotal: Number(meteran * harga)
+          subtotal: Number(meteran * harga),
+          is_custom: isCustomItem,
+          konfigurasi: konfigurasiData, // Mengirim objek konfigurasi lengkap (bgColor, stripes, patternDensity)
+          custom_metadata: item.custom_metadata || null,
+          image_url: item.gambar_url || item.gulungan?.gambar_url || null
         };
       });
 
@@ -144,6 +168,7 @@ export default function CheckoutSection({ items, onBack, onOrderSuccess }) {
     }
   };
 
+  
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-sans text-[#F9F6F0]">
       
